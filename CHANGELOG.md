@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Require English titles and descriptions for all pull requests, including proposed bodies, updates and embedded changelog excerpts.
+- Require English for all GitHub-bound documentation and publication text, including READMEs, changelogs, commits, pull requests, release notes and artifact documentation.
 
 ## 0.2.0 — 2026-11-13
 
