@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Require English titles and descriptions for all pull requests, including proposed bodies, updates and embedded changelog excerpts.
+
 ## 0.2.0 — 2026-11-13
 
 - El usuario reporta conexión satisfactoria en PSP-2010 con una red 2.4 GHz,

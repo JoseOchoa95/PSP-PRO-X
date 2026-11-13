@@ -87,6 +87,14 @@ For every completed feature:
 
 Preparing a changelog does not authorize creating a tag or publishing a release.
 
+## Pull request language
+
+Always write pull request titles and descriptions in **English**, including proposed descriptions, drafts, newly created PRs and updates to existing PRs.
+
+Use English for every narrative section in the PR body, including summaries, validation results, limitations, pending work and embedded changelog/release-note excerpts. If repository notes are written in another language, translate the relevant content accurately for the PR without changing the reported results or scope.
+
+Preserve literal code identifiers, file paths, version strings, commands and exact diagnostic/error messages when translating. This rule governs PR content; it does not change the language of the conversation or require translating unrelated repository documents.
+
 ## Tests and evidence
 
 Run the checks and tests appropriate to the change and required by the relevant workflow specification.
