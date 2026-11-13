@@ -87,13 +87,17 @@ For every completed feature:
 
 Preparing a changelog does not authorize creating a tag or publishing a release.
 
-## Pull request language
+## Language for GitHub publication
 
-Always write pull request titles and descriptions in **English**, including proposed descriptions, drafts, newly created PRs and updates to existing PRs.
+Use **English for all human-authored documentation and publication text intended for GitHub**, not only pull requests. This includes repository documentation and READMEs, changelogs, commit messages, PR titles and descriptions, release titles and notes, issue/review text when posting it is authorized, and documentation shipped with downloadable artifacts.
 
-Use English for every narrative section in the PR body, including summaries, validation results, limitations, pending work and embedded changelog/release-note excerpts. If repository notes are written in another language, translate the relevant content accurately for the PR without changing the reported results or scope.
+Apply the same rule to proposed text, drafts, new publications and updates. Every authored or revised narrative section must be in English, including summaries, validation results, limitations, pending work and embedded changelog/release-note excerpts. Before committing or publishing, review the material being sent to GitHub and translate any new or updated non-English narrative accurately without changing reported results, evidence or scope.
 
-Preserve literal code identifiers, file paths, version strings, commands and exact diagnostic/error messages when translating. This rule governs PR content; it does not change the language of the conversation or require translating unrelated repository documents.
+Local notes or implementation records may use the conversation's language while they remain private/ignored. If their content is later included in a public document, commit, PR, release or downloadable package, translate the published narrative into English first. Do not force-add ignored records to satisfy this rule.
+
+Preserve literal code identifiers, file paths, version strings, commands, exact diagnostic/error messages, original legal notices and intentionally localized application resources. Do not rewrite third-party notices or remove supported translations as part of this editorial policy. Existing historical publications are not automatically rewritten by a policy change; apply the rule when preparing new or revised material for publication.
+
+This rule does not change the language of the conversation or grant permission to commit, push, post comments, create PRs, or publish releases. The existing authorization requirements still apply.
 
 ## Tests and evidence
 
