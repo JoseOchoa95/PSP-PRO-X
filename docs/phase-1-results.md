@@ -1,7 +1,15 @@
 # Resultado de implementación de la Fase 1
 
-Fecha: **2026-11-13**. Producto: **0.1.0-alpha.1**, objetivo **6.61**.
-Estado: **implementación preparada para pruebas; no validada en PSP física**.
+Fecha: **2026-11-13**. Versión declarada: **0.1.0-beta.1**, objetivo **6.61**.
+Estado: **validación física parcial reportada por el usuario**.
+Las compilaciones y artefactos documentados se generaron como `0.1.0-alpha.1`.
+La promoción a beta registra las pruebas del usuario sin una nueva compilación
+ni cambios funcionales de firmware.
+
+Las rutas `artifacts/` citadas a continuación identifican evidencias locales
+de los builds realizados; ya no se incluyen en el árbol versionado. Este resumen
+y los hashes se conservan en Git. Los paquetes y sus metadatos se publican por
+separado en [Releases](https://github.com/JoseOchoa95/PSP-PRO-X/releases).
 
 ## Cambios entregados
 
@@ -61,16 +69,22 @@ Artefactos: `artifacts/pro-x-0.1.0-alpha.1-661.zip`, su `-source.zip`,
 `artifacts/pro-x-0.1.0-alpha.1-661.sha256` y `artifacts/manifest.json`.
 El hash del ZIP se publica externamente para evitar una referencia circular.
 
-## Pruebas que requieren PSP física
+## Reporte físico y pendientes
 
-**NOT RUN**: instalación, identidad en pantalla, Fast Recovery, funciones
-VSH/Recovery, arranque Infinity en tres ciclos de apagado completo, reinicio,
-suspender/reanudar en XMB y aplicación, juego/homebrew, plugins, persistencia
-de configuración y salida/recuperación específica.
+El usuario comunicó **PASS** para instalación, Recovery y suspensión y eligió
+`v0.1.0-beta.1` como nombre de release. El [reporte físico](hardware-report-0.1.0-beta.1.md)
+conserva el alcance de esa comunicación: aún no se precisaron el modelo, hash
+ensayado, tipo de Recovery o contexto de suspensión; no hay fotos/logs adjuntos.
 
-No se dispone de modelo/generación, firmware actual ni versión binaria de
-Infinity de una consola probada. La [ficha y matriz física](install-and-validation.md)
-deben completarse antes de una prueba real. Infinity se inspeccionó en
+**NOT RUN**: Infinity (tres ciclos), juegos y plugins, expresamente pendientes
+según el usuario. Las demás pruebas específicas no comunicadas, como identidad
+en pantalla, Fast Recovery identificado, funciones VSH, reinicio, contextos
+concretos de suspensión, homebrew, configuración y salida/recuperación, conservan
+su estado pendiente en la [matriz física](install-and-validation.md).
+
+No se dispone todavía de modelo/generación, firmware actual ni versión binaria
+de Infinity de la consola probada. La ficha debe completarse para vincular los
+resultados con una combinación concreta. Infinity se inspeccionó en
 `6a4f269f8abcf65696064cad94ba9ac8b845bd74`; se conserva su contrato PRO y se
 prevé usar su selección **PRO**. Esto no acredita compatibilidad en ejecución.
 No se usó un emulador como evidencia de instalación o Infinity.

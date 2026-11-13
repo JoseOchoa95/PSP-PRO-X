@@ -64,7 +64,7 @@ Toolchain fijado íntegramente mediante la imagen oficial archivada
 (creada 2021-11-12): GCC 9.3.0, binutils 2.23.2, Make 4.2.1, Python 3.8.10,
 zlib 1.2.11, newlib 1.20.0 y PSPSDK incluido en esa imagen. PSPSDK no comunica una versión
 mediante `psp-config --version`; se fija por el digest de la imagen y hashes de
-sus herramientas y reglas en `artifacts/toolchain.txt`. No se ha identificado
+sus herramientas y reglas en [build-toolchain.txt](build-toolchain.txt). No se ha identificado
 un SHA fuente independiente de ese SDK binario. Ver [build.md](build.md).
 
 ## Referencia de Infinity
@@ -86,5 +86,8 @@ la referencia; únicamente admite las sustituciones de texto enumeradas.
 La entrada existente **PRO** de Infinity es la ruta prevista para PRO-X.
 Comparar fuentes acredita que estos contratos se conservaron; no demuestra
 que arranquen juntos. Versión binaria de Infinity probada: **ninguna**.
-Modelo/generación PSP probados: **ninguno**. PRO-X ocupa el espacio de PRO-C;
+Al generar los artefactos alpha no había pruebas físicas. Posteriormente el
+usuario reportó instalación, Recovery y suspensión funcionando para la versión
+declarada beta; el modelo/generación aún no se ha comunicado. Véase el
+[reporte físico](hardware-report-0.1.0-beta.1.md). PRO-X ocupa el espacio de PRO-C;
 esta versión no ofrece una instalación paralela.

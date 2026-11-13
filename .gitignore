@@ -1,5 +1,14 @@
 .phase1/
-artifacts/work/
+/artifacts/
+/release/
+/releases/
+dist/
+*.o
+*.elf
+*.map
+*.log
+EBOOT.PBP
+PARAM.SFO
 workflow/
 context/
 __pycache__/

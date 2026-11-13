@@ -1,6 +1,10 @@
 # Compilar y comprobar la Fase 1
 
-Objetivo exclusivo del paquete: **6.61**, producto **0.1.0-alpha.1**.
+Objetivo exclusivo del paquete documentado: **6.61**, producto **0.1.0-alpha.1**.
+La versión declarada posteriormente por el responsable es **0.1.0-beta.1**, con
+[validación física parcial reportada](hardware-report-0.1.0-beta.1.md).
+Estos comandos/scripts conservan el empaquetado alpha original; esta actualización
+de documentación no produce ni publica nuevos ZIP beta.
 Se necesitan Git, Docker con contenedores Linux y Python **3.12 o posterior en
 el host** (solo biblioteca estándar). El compilador y Python de construcción
 están dentro de la imagen fijada en `scripts/Dockerfile`; no se instala un SDK
@@ -25,8 +29,9 @@ En esta máquina `python` apunta al alias de Windows Store; se usó realmente
 `C:\Users\diala\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe`
 (Python 3.12). Sustituir `python` por la ruta del intérprete local si es necesario.
 No se necesita Python 2. Las herramientas PSP no admiten todas `--version`;
-se registraron versiones disponibles y hashes ejecutables en
-`artifacts/toolchain.txt`.
+las versiones disponibles y hashes del entorno fijado se conservan en
+[build-toolchain.txt](build-toolchain.txt). El empaquetador incorpora ese registro
+documentado sin depender de un `artifacts/toolchain.txt` previamente versionado.
 
 `reference` obtiene el SHA upstream completo, valida los 499 hashes y aplica
 únicamente `build-compat.patch`. Se compiló correctamente antes de cambiar la
@@ -42,13 +47,19 @@ de `scripts/compile.sh`. El ejecutable PROUPDATE procede de **PXE/Launcher**;
 live de `Rebootex_bin` de la misma ejecución. No se ejecuta `make all` del
 Makefile raíz porque también construye herramientas IPL ajenas al paquete.
 
-Las salidas quedan en `artifacts/work/<modo>-<id>/` (ignoradas por Git).
+Todas las salidas de `artifacts/`, incluidos paquetes, logs y metadatos, se
+generan localmente y están ignoradas por Git. No vienen en un checkout nuevo;
+los comandos anteriores las crean. Las salidas intermedias quedan en
+`artifacts/work/<modo>-<id>/`.
 `artifacts/reference-build.json` y `pro-x-build.json` registran las fuentes,
 hash de todo el árbol, HEAD del repositorio, digest local de imagen, script,
 comando real, log y hashes de los dos EBOOT y módulos. El HEAD inicial por sí
 solo no describe los cambios sin commit: **el inventario y su hash identifican
 la revisión exacta del firmware construido**. El manifiesto del paquete conserva
-esa identidad. Los logs y metadatos finales permanecen fuera de `work/`.
+esa identidad. Los logs y metadatos finales permanecen fuera de `work/`, pero
+dentro de `artifacts/`. Los paquetes, fuentes correspondientes, manifiesto y
+hashes se distribuyen como assets de release; los resúmenes de resultados se
+conservan en documentación. Véase [artifacts-and-releases.md](artifacts-and-releases.md).
 
 ## Comprobaciones automáticas
 
@@ -93,5 +104,7 @@ reconstrucción íntegra desde fuentes de todos sus componentes. Tampoco se
 promete reproducibilidad byte a byte de los contenedores o de paquetes futuros;
 se fijan entradas y herramientas y se entregan hashes de esta ejecución.
 
-La compilación y la inspección estática no acreditan instalación, compatibilidad
-de ejecución ni arranque mediante Infinity. Estas pruebas siguen **NOT RUN**.
+La compilación y la inspección estática no acreditan por sí mismas instalación,
+compatibilidad de ejecución ni arranque mediante Infinity. Separadamente, el
+usuario reportó instalación, Recovery y suspensión funcionando. Infinity,
+juegos y plugins siguen **NOT RUN**; véase la [matriz](install-and-validation.md).

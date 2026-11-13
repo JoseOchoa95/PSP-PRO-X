@@ -1,9 +1,0 @@
-test_pbp_rejects_invalid_offsets (test_release.PackagingTests.test_pbp_rejects_invalid_offsets) ... ok
-test_pbp_rejects_truncated_header (test_release.PackagingTests.test_pbp_rejects_truncated_header) ... ok
-test_pbp_rejects_wrong_magic (test_release.PackagingTests.test_pbp_rejects_wrong_magic) ... ok
-test_python3_prx_header_roundtrip (test_release.PackagingTests.test_python3_prx_header_roundtrip) ... ok
-
-----------------------------------------------------------------------
-Ran 4 tests in 0.012s
-
-OK

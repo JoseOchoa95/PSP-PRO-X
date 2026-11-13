@@ -1,7 +1,11 @@
 # Instalación experimental y validación física
 
-Producto: **PRO-X 0.1.0-alpha.1 / 6.61**. Estado: compilado y comprobado en
-desarrollo; **ninguna PSP física validada**. No es una versión estable.
+Versión declarada: **PRO-X 0.1.0-beta.1**, objetivo **6.61**. Estado:
+**validación física parcial reportada por el usuario**; no es una versión estable.
+Instalación, Recovery y suspensión se reportaron funcionando. Infinity, juegos
+y plugins siguen pendientes. Los ZIP/manifiestos locales conservan la identidad
+`0.1.0-alpha.1` de su generación; el hash exacto probado no se ha comunicado.
+Véase el [reporte físico](hardware-report-0.1.0-beta.1.md).
 
 ## Ficha obligatoria antes de usar la consola
 
@@ -76,12 +80,16 @@ fallo. La evidencia de contrato en código no permite marcar estas filas PASS.
 
 ## Matriz actual
 
-Fecha de registro: **2026-11-13**. Consola e Infinity: no disponibles para estas
-pruebas. Evidencia de desarrollo en `artifacts/verification.json` y logs de build.
+Fecha de registro: **2026-11-13**. Evidencia física: reporte del usuario, sin
+modelo, hash del paquete ni evidencias adjuntas todavía. Las filas generales
+recogen lo comunicado; no sustituyen las pruebas de sus variantes específicas.
+Evidencia de desarrollo en `artifacts/verification.json` y logs de build.
 
 | Prueba física | Estado | Evidencia / criterio pendiente |
 | --- | --- | --- |
-| Instalación inicial y carga manual | NOT RUN | Foto/log del instalador, revisión y códigos; termina sin error |
+| Instalación inicial | PASS | Usuario reporta que funciona; faltan modelo, hash y foto/log del instalador |
+| Recovery, reporte general | PASS | Usuario reporta que funciona; falta precisar menú Recovery o Fast Recovery |
+| Suspensión, reporte general | PASS | Usuario reporta que funciona; falta precisar contexto XMB/aplicación |
 | Identidad en sistema, XMB y menús | NOT RUN | Fotos de las cinco superficies y sufijo Infinity |
 | Fast Recovery | NOT RUN | Carga manual desde estado de arranque documentado; misma revisión |
 | Funciones básicas VSH/Recovery | NOT RUN | Acceso, navegación y retorno al XMB |
@@ -113,10 +121,10 @@ Con Infinity, confirmar primero una ruta que permita omitir el CFW seleccionado
 antes de cualquier eliminación de sus módulos. Una restauración del CFW previo,
 si se acuerda para esa consola, debe usar sus instaladores reales y su revisión
 conservada. El orden concreto y su resultado siguen pendientes de la ficha.
-Un rollback de Git no recupera una PSP. No se han ensayado maniobras de escritura,
-reflasheo o desinstalación en hardware.
+Un rollback de Git no recupera una PSP. La instalación normal tiene un reporte
+PASS del usuario; no se han comunicado pruebas de reflasheo o desinstalación.
 
 **Implementación preparada para pruebas** exige código, compilación, comprobaciones
 y paquete completos. **Fase 1 validada** exige además resultados físicos PASS de
-instalación y arranque Infinity para cada combinación anunciada. Actualmente solo
-se alcanza el primer estado.
+instalación y arranque Infinity para cada combinación anunciada. Actualmente hay
+validación física parcial reportada; la Fase 1 completa sigue pendiente.

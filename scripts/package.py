@@ -77,7 +77,7 @@ def main():
         files['licenses/' + name] = (ROOT / 'docs/licenses' / name).read_bytes()
     files['credit.txt'] = (ROOT / 'firmware/credit.txt').read_bytes()
     files['SOURCE.md'] = source_note + ('\nCompanion: ' + source_zip.name + '\nSHA-256: ' + sha(source_zip.read_bytes()) + '\n').encode()
-    files['toolchain.txt'] = (ROOT / 'artifacts/toolchain.txt').read_bytes()
+    files['toolchain.txt'] = (ROOT / 'docs/build-toolchain.txt').read_bytes()
     manifest = {
         'product': 'PRO-X', 'version': '0.1.0-alpha.1', 'firmware_target': '6.61',
         'status': 'implementation-prepared-for-testing', 'hardware': 'NOT RUN', 'infinity': 'NOT RUN',
