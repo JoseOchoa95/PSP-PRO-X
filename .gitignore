@@ -1,0 +1,15 @@
+.phase1/
+/artifacts/
+/release/
+/releases/
+dist/
+*.o
+*.elf
+*.map
+*.log
+EBOOT.PBP
+PARAM.SFO
+workflow/
+context/
+__pycache__/
+*.pyc
