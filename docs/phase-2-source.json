@@ -1,0 +1,34 @@
+{
+  "base_revision": "827e407b4dc8fa10d19a1b5430138946f145320c",
+  "description": "Explicit reviewed phase 2 changes; other firmware still checked byte-for-byte against reference with branding reversed.",
+  "modified": {
+    "Recovery/Makefile": "073f9dfc7d2a259ca1188c276f732125ee984091a8429a8eeb5f157b8137bd03",
+    "Recovery/menu.c": "a30028ac219e72d18698f35242f47265eeff647b6d73040ae754dbf7159d754c",
+    "SystemControl/Makefile": "13f946167b3e57cc5d126f768dfdc92d1ff7c9b69cb63a292c05057afd9be615",
+    "SystemControl/syspatch.c": "ea2d91ccdf0c4f889cfa80ebd81571ae95cb40fcee98aba4b03273cbc0423d57"
+  },
+  "added": {
+    "Common/prox_network.c": "8bddda8b304466af8de00480eab540ee035f3c2d24e1988601afc4c23ade205d",
+    "Common/prox_network.h": "b8c8d50ef2ba2425796907ad374e5dad1b64bc28c25aa8c31a25251c27237928",
+    "Common/wpa2_patch.c": "7a05336aef3e0185354e7cb964ebe2cc05aa385ce7d703b4c91a7a380d248180",
+    "Common/wpa2_patch.h": "27aa7b1cdf899554fdb3fc3fce3e62e47118a8a696cdbaa8acb8906ff46dd630",
+    "SystemControl/wpa2.c": "2c6f250afc69b367f49424af956f50c4640ac279acf40fbf237cff19a1e27ad6",
+    "SystemControl/wpa2.h": "3fc8ada64b344747a1e4e04ed3b1406850fba6c54e074210ac6b771598214fad",
+    "SystemControl/wpa2_variant_661.h": "21a6e3a5776d433d5b0192b4c6a43741a1161d84255ddc666bf0c955cb894049",
+    "tools/wpa2diag/main.c": "1f800787a3b82f80fdaead626c10aa283b1683394130eb5441519fa8baf19e0a",
+    "tools/wpa2diag/Makefile": "f7729cda25935458655f282a07c2cf00ebee36ac333076947b88803a22eae1ed"
+  },
+  "preserved_public_contracts": [
+    "include/systemctrl.h",
+    "include/systemctrl_se.h",
+    "SystemControl/conf.c",
+    "SystemControl/exports.exp",
+    "SystemControl/systemctrl.c",
+    "Recovery/main.h",
+    "Recovery/trans_en.c",
+    "Recovery/trans.c",
+    "Rebootex",
+    "FastRecovery",
+    "Installer"
+  ]
+}

@@ -1,0 +1,255 @@
+{
+  "inspected": "2026-11-13",
+  "sources": [
+    {
+      "project": "ARK-5",
+      "revision": "04138ec494e6e0a97000cc84e940576febbd5855",
+      "path": "Compat/PSP/src/wpa2.c",
+      "url": "https://github.com/PSP-Arkfive/ARK-5/blob/04138ec494e6e0a97000cc84e940576febbd5855/Compat/PSP/src/wpa2.c",
+      "sha256": "5e424f3fb6eec54748ee68ec7633d435b18ff12a67f62d11be8f576c10b88f91"
+    },
+    {
+      "project": "ARK-5",
+      "revision": "04138ec494e6e0a97000cc84e940576febbd5855",
+      "path": "LICENSE",
+      "url": "https://github.com/PSP-Arkfive/ARK-5/blob/04138ec494e6e0a97000cc84e940576febbd5855/LICENSE",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    },
+    {
+      "project": "wpa2psp",
+      "revision": "7e6f2b967bdfff8e8fdf8645c5a9fa089262b73b",
+      "path": "wpa2.c",
+      "url": "https://github.com/Kethen/wpa2psp/blob/7e6f2b967bdfff8e8fdf8645c5a9fa089262b73b/wpa2.c",
+      "sha256": "6cb04b7ee0bbc86794fe65d2700c68091fafad20e290edbc086c6787d9b5d481"
+    },
+    {
+      "project": "wpa2psp",
+      "revision": "7e6f2b967bdfff8e8fdf8645c5a9fa089262b73b",
+      "path": "main.c",
+      "url": "https://github.com/Kethen/wpa2psp/blob/7e6f2b967bdfff8e8fdf8645c5a9fa089262b73b/main.c",
+      "sha256": "e92cf27dd42d29bd2fd6b7f421f29e5ca484635f004724f17091d316489f43ff"
+    },
+    {
+      "project": "wpa2psp",
+      "revision": "7e6f2b967bdfff8e8fdf8645c5a9fa089262b73b",
+      "path": "README.md",
+      "url": "https://github.com/Kethen/wpa2psp/blob/7e6f2b967bdfff8e8fdf8645c5a9fa089262b73b/README.md",
+      "sha256": "cbecebf35c8407e6ba10241331402abd93bff979550bbbb2fa13da03460de132"
+    }
+  ],
+  "payload_comparison": "identical after normalizing includes and SceModule/SceModule2 type",
+  "credit": "Moment (@moment0253), ARK contributors, wpa2psp/Kethen",
+  "license": "GNU GPL v3; wpa2psp README defers wpa2.c licensing to ARK",
+  "target": "sceNetApctl_Library; offsets relative to text_addr",
+  "verified_variants": [
+    {
+      "id": "apctl-661-11e9c-160-6a60",
+      "firmware": "6.61",
+      "identification_report_sha256": "43d1d38733d68b8dda59b3e728833964628774a5ac7150cdb0aafcbae76abffc",
+      "signature_header": "firmware/SystemControl/wpa2_variant_661.h",
+      "guard_offsets": [
+        "0x100",
+        "0x200",
+        "0xeef0"
+      ],
+      "relocation_rule": "Original JAL targets are compared relative to each current text base",
+      "network_hardware_validation": "Owner-reported connection on PSP-2010; extended hardware matrix pending"
+    }
+  ],
+  "sites": [
+    {
+      "offset": 5340,
+      "width": 4,
+      "replacement": "LI_V0(4)",
+      "kind": "code"
+    },
+    {
+      "offset": 61320,
+      "width": 4,
+      "replacement": "0x24050075",
+      "kind": "code"
+    },
+    {
+      "offset": 61336,
+      "width": 4,
+      "replacement": "0x24190002",
+      "kind": "code"
+    },
+    {
+      "offset": 61496,
+      "width": 4,
+      "replacement": "0x24080016",
+      "kind": "code"
+    },
+    {
+      "offset": 61524,
+      "width": 4,
+      "replacement": "0x24060030",
+      "kind": "code"
+    },
+    {
+      "offset": 61528,
+      "width": 4,
+      "replacement": "0x24050014",
+      "kind": "code"
+    },
+    {
+      "offset": 73128,
+      "width": 20,
+      "replacement": "rsn_info",
+      "kind": "data"
+    },
+    {
+      "offset": 61548,
+      "width": 4,
+      "replacement": "0x24060014",
+      "kind": "code"
+    },
+    {
+      "offset": 71808,
+      "width": 32,
+      "replacement": "wpa2_seed",
+      "kind": "data"
+    },
+    {
+      "offset": 61564,
+      "width": 4,
+      "replacement": "0",
+      "kind": "code"
+    },
+    {
+      "offset": 61568,
+      "width": 4,
+      "replacement": "0",
+      "kind": "code"
+    },
+    {
+      "offset": 61600,
+      "width": 4,
+      "replacement": "0",
+      "kind": "code"
+    },
+    {
+      "offset": 61836,
+      "width": 4,
+      "replacement": "0",
+      "kind": "code"
+    },
+    {
+      "offset": 61616,
+      "width": 4,
+      "replacement": "0",
+      "kind": "code"
+    },
+    {
+      "offset": 61628,
+      "width": 4,
+      "replacement": "0",
+      "kind": "code"
+    },
+    {
+      "offset": 61632,
+      "width": 4,
+      "replacement": "0",
+      "kind": "code"
+    },
+    {
+      "offset": 61640,
+      "width": 4,
+      "replacement": "0",
+      "kind": "code"
+    },
+    {
+      "offset": 61644,
+      "width": 4,
+      "replacement": "0",
+      "kind": "code"
+    },
+    {
+      "offset": 61800,
+      "width": 4,
+      "replacement": "0",
+      "kind": "code"
+    },
+    {
+      "offset": 61700,
+      "width": 1,
+      "replacement": "0x79",
+      "kind": "code"
+    },
+    {
+      "offset": 61748,
+      "width": 1,
+      "replacement": "0x75",
+      "kind": "code"
+    },
+    {
+      "offset": 61928,
+      "width": 1,
+      "replacement": "0x02",
+      "kind": "code"
+    },
+    {
+      "offset": 63104,
+      "width": 1,
+      "replacement": "0x02",
+      "kind": "code"
+    },
+    {
+      "offset": 62744,
+      "width": 1,
+      "replacement": "0x02",
+      "kind": "code"
+    },
+    {
+      "offset": 62276,
+      "width": 1,
+      "replacement": "0x02",
+      "kind": "code"
+    },
+    {
+      "offset": 57552,
+      "width": 1,
+      "replacement": "0x02",
+      "kind": "code"
+    },
+    {
+      "offset": 61984,
+      "width": 2,
+      "replacement": "0x308",
+      "kind": "code"
+    },
+    {
+      "offset": 59896,
+      "width": 4,
+      "replacement": "0",
+      "kind": "code"
+    },
+    {
+      "offset": 62176,
+      "width": 4,
+      "replacement": "0x3C050000 | (end_msg_4 >> 16)",
+      "kind": "code"
+    },
+    {
+      "offset": 62180,
+      "width": 4,
+      "replacement": "0x34A50000 | (end_msg_4 & 0xFFFF)",
+      "kind": "code"
+    },
+    {
+      "offset": 62184,
+      "width": 4,
+      "replacement": "0x00A00008",
+      "kind": "code"
+    },
+    {
+      "offset": 62188,
+      "width": 4,
+      "replacement": "0x02009825",
+      "kind": "code"
+    }
+  ],
+  "jump_target_offset": 62564,
+  "identification_status": "One signature identified from authorized pre-start report; owner reports connection success, extended validation pending"
+}

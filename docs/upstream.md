@@ -1,5 +1,36 @@
 # Procedencia de PRO-X 0.1.0-alpha.1
 
+## Incorporación WPA2 de Fase 2 (0.2.0-beta.1)
+
+Revisión PRO-X de partida: `827e407b4dc8fa10d19a1b5430138946f145320c`.
+El 2026-11-13 se descargaron e inspeccionaron las fuentes exactas:
+
+- [ARK-5 wpa2.c](https://github.com/PSP-Arkfive/ARK-5/blob/04138ec494e6e0a97000cc84e940576febbd5855/Compat/PSP/src/wpa2.c),
+  revisión `04138ec494e6e0a97000cc84e940576febbd5855`.
+- [wpa2psp wpa2.c](https://github.com/Kethen/wpa2psp/blob/7e6f2b967bdfff8e8fdf8645c5a9fa089262b73b/wpa2.c),
+  revisión `7e6f2b967bdfff8e8fdf8645c5a9fa089262b73b`, además de main.c y README.
+- [LICENSE de ARK en esa revisión](https://github.com/PSP-Arkfive/ARK-5/blob/04138ec494e6e0a97000cc84e940576febbd5855/LICENSE):
+  GPL v3. El README wpa2psp atribuye el trabajo a Moment/ARK y declara que wpa2.c
+  sigue la licencia ARK. Se conservan esos créditos en el port y los avisos.
+
+Las 32 escrituras, seed, RSN y cálculo del salto coinciden entre ambos archivos;
+sus diferencias son includes y el tipo de módulo SceModule/SceModule2. PRO-X usa
+el SceModule2 de su interfaz de handler existente y lo adapta campo por campo a
+un descriptor propio del validador. No importa estructuras de otro SDK ni instala
+el handler paralelo del plugin. El payload se convierte a una tabla validada,
+se integra con la cadena PRO, añade configuración privada y sincroniza cachés.
+
+Los SHA-256 de las descargas y el inventario de destinos se registran en
+[wpa2-upstream.json](wpa2-upstream.json). Ninguna referencia aporta layout y
+firmas originales suficientes por sí sola. Posteriormente el reporte autorizado
+de una PSP-2010 proporcionó layout, sitios originales y guardas. La firma mínima
+se incorpora a `SystemControl/wpa2_variant_661.h`, con JAL relativas a la base
+actual; no se incluye un módulo Sony completo ni el reporte crudo en Git/ZIP.
+Estado actual: una variante identificada en v0.2.0 experimental; el propietario
+reporta conexión a un AP WPA2-only. Captura independiente y transferencia
+prolongada siguen sin reportarse.
+La procedencia de Fase 1 que sigue se conserva sin cambiar la base de PRO-C.
+
 Fecha de comprobación: 2026-11-13. Objetivo del paquete: firmware **6.61**.
 
 ## Base seleccionada

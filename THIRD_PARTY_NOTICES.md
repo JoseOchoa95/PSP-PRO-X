@@ -22,8 +22,12 @@ en la documentación y en el manifiesto de fuentes del paquete.
   `licenses/` dentro del paquete de prueba.
   PrxEncrypter es una herramienta GPL de construcción, no una copia de Infinity.
 - Infinity de Davee solo se inspeccionó como referencia de los contratos de
-  arranque. No se modifica ni distribuye en este paquete. ARK y WPA2 son
-  referencias de fases futuras, sin código integrado en esta fase.
+  arranque. No se modifica ni distribuye en este paquete.
+- `firmware/Common/wpa2_patch.c`: payload WPA2 de **Moment (@moment0253)**,
+  colaboradores de **ARK** y **wpa2psp/Kethen**. Adaptación e infraestructura de
+  validación PRO-X. ARK-5 fija GPL v3 en su LICENSE; wpa2psp declara que wpa2.c
+  sigue la licencia ARK. Se conservan atribución y texto GPL en el paquete.
+  Revisiones, diferencias y hashes: `docs/upstream.md` y `docs/wpa2-upstream.json`.
 
 El paquete experimental se acompaña de un archivo de fuentes para sus
 componentes compilables, scripts y documentación. Los componentes precompilados

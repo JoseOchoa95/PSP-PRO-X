@@ -8,5 +8,5 @@ Makefile text eol=lf
 *.a -text
 *.bin -text
 *.PNG -text
-firmware/** -text
+firmware/** -text whitespace=cr-at-eol
 scripts/*.patch -text

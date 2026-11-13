@@ -8,6 +8,19 @@ PRO-X aims to continue the PRO lineage through regular updates, bug fixes, and n
 
 ## Project status
 
+**v0.2.0 — experimental, limited owner-reported connection testing.**
+WPA2 is enabled by default for one identified 6.61 Wi-Fi module variant. The
+firmware checks original contents, layout and relocated calls before applying
+the integrated patch; other variants remain unchanged. Identification comes
+from an owner-provided PSP-2010 diagnostic report. The owner reports creating a
+new profile and connecting on a WPA2-only, 2.4 GHz b/g/n network with PRO-X;
+the same connection failed after full shutdown without starting PRO-X.
+Extended transfer tests, Recovery toggling, suspend/reconnect, Infinity and
+additional routers/models have not been reported as tested.
+See [WPA2 support](docs/wpa2-support.md) and [validation](docs/wpa2-validation.md).
+This report does not establish universal compatibility or completion of the
+hardware test matrix. The phase 1 report below remains historical evidence.
+
 **0.1.0-beta.1 — partial physical testing reported by the project owner.**
 
 The repository contains a PRO-C-based experimental build for PSP firmware **6.61**, with PRO-X text in the installer, Fast Recovery, system version, VSH and Recovery menus, including bundled translations. Clean reference and branded builds passed development checks. The project owner reports installation, Recovery and suspension working on a physical PSP and selected the release tag `v0.1.0-beta.1`. Infinity, games and plugins remain untested. The console model, exact tested build and detailed test conditions have not yet been recorded; see the [physical test report](docs/hardware-report-0.1.0-beta.1.md).
@@ -25,7 +38,7 @@ The repository contains a PRO-C-based experimental build for PSP firmware **6.61
 | Milestone | Scope | Status |
 | --- | --- | --- |
 | **0.1.0 — Initial foundation** | Select and pin the PRO-C baseline, establish the build process, update visible branding, and validate installation and Infinity startup on real hardware. | Beta: installation, Recovery and suspension reported working; Infinity, games and plugins pending |
-| **WPA2 integration** | Integrate WPA2 support, enabled by default, using the ARK implementation as a technical reference. | Planned |
+| **WPA2 integration** | Integrate WPA2 support, enabled by default, using the ARK implementation as a technical reference. | Connection working on PSP-2010 reported by owner; extended hardware matrix pending |
 | **PRO-X updates** | Adapt the XMB system update entry to retrieve compatible stable releases from the PRO-X repository and verify packages before installation. | Planned |
 
 Roadmap items are development targets and do not describe features currently available in PRO-X.
@@ -42,9 +55,29 @@ Acceptance requires checking installation, full shutdown and startup through Inf
 
 See [docs/build.md](docs/build.md) for the pinned Docker toolchain, actual commands and checks, and [docs/install-and-validation.md](docs/install-and-validation.md) for the console information required before installation and the physical test matrix.
 
-Installable packages are distributed through [GitHub Releases](https://github.com/JoseOchoa95/PSP-PRO-X/releases), together with corresponding build sources, a manifest and SHA-256 hashes. Download the assets attached to your chosen release when published; the automatic GitHub source-code archive is not an installable package. Packages contain `PSP/GAME/PROUPDATE/EBOOT.PBP` and `PSP/GAME/FastRecovery/EBOOT.PBP` from the same build, translations, notices and a build manifest. They exclude Infinity, Sony firmware and IPL/cIPL tools. Local build output remains under the ignored `artifacts/` directory and is not versioned with the source. [Development results](docs/phase-1-results.md) distinguish completed checks from pending hardware tests. See [artifact and release guidance](docs/artifacts-and-releases.md) for the distribution policy.
+Installable packages are distributed through [GitHub Releases](https://github.com/JoseOchoa95/PSP-PRO-X/releases), together with corresponding build sources, a manifest and SHA-256 hashes. Download the assets attached to your chosen release when published; the automatic GitHub source-code archive is not an installable package. Packages contain `PSP/GAME/PROUPDATE/EBOOT.PBP` and `PSP/GAME/FastRecovery/EBOOT.PBP` from the same build, translations, notices and a build manifest. They exclude Infinity, Sony firmware and IPL/cIPL tools. Ready-to-use local ZIP packages, corresponding sources, manifests and hashes are placed in the ignored `builds/` directory. Logs, internal build metadata and intermediate files remain in the ignored `artifacts/` directory. [Development results](docs/phase-1-results.md) distinguish completed checks from pending hardware tests. See [artifact and release guidance](docs/artifacts-and-releases.md) for the distribution policy.
 
 PRO-X packages should be treated as experimental until the relevant build and console configuration have passed hardware validation. A successful compilation alone does not establish that a build is ready to install.
+
+### Wi-Fi requirements for phase 2
+
+The PSP-2000 family, including PSP-2010, has an **IEEE 802.11b** radio. The WPA2
+patch changes security support; it does not upgrade that radio to g/n/ac/ax.
+See [Sony's PSP-2000 specifications](https://www.sony.com/en/SonyInfo/IR/news/qfhh7c00000d2yu7-att/psp.pdf).
+
+| Parameter | Target test network |
+| --- | --- |
+| Frequency band | **2.4 GHz** |
+| Access-point wireless mode | **802.11b**, **b/g mixed** or **b/g/n mixed**, with b clients enabled |
+| Security | **WPA2-Personal / WPA2-PSK, AES/CCMP** |
+| IP configuration | IPv4 with DHCP for the initial test |
+| Protected Management Frames (PMF) | Must not be required |
+
+A 2.4 GHz network running g/n-only or n-only is insufficient because it excludes
+b clients. Mixed-mode terminology is illustrated in [TP-Link's wireless-mode guide](https://www.tp-link.com/us/configuration-guides/configuring_the_wireless_parameters_cpe_and_wbs_/?configurationId=18611).
+Record the router/AP model and firmware, actual mode, channel and channel-width
+settings with the test result. Hardware validation currently covers only the
+owner-reported connection test described above.
 
 ### Installation requirements
 
@@ -97,7 +130,7 @@ PRO-X is an independent fork and is not an official release from Team PRO, the A
 
 - **Team PRO**, including Coldbird and Virtuous Flame, for the original PRO custom firmware. [PRO source](https://github.com/MrColdbird/procfw)
 - **Davee** for Infinity. [Infinity](https://github.com/DaveeFTW/Infinity)
-- **ARK contributors** and **Moment** for the WPA2 work informing the planned networking milestone. [ARK-5](https://github.com/PSP-Arkfive/ARK-5) · [wpa2psp](https://github.com/Kethen/wpa2psp)
+- **ARK contributors**, **Moment** and **wpa2psp contributors** for the WPA2 payload adapted in phase 2. [ARK-5](https://github.com/PSP-Arkfive/ARK-5) · [wpa2psp](https://github.com/Kethen/wpa2psp)
 
 Original copyright notices, license notices, and contributor acknowledgments must be retained.
 

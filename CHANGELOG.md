@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+- Require English titles and descriptions for all pull requests, including proposed bodies, updates and embedded changelog excerpts.
+
+## 0.2.0 — 2026-11-13
+
+- El usuario reporta conexión satisfactoria en PSP-2010 con una red 2.4 GHz,
+  b/g/n y WPA2 solamente, y fallo de esa conexión al arrancar sin activar PRO-X.
+  Validación física parcial reportada; transferencia prolongada, Recovery,
+  suspensión/reconexión, Infinity y otros AP/modelos siguen pendientes.
+
+- Organización local: entregas finales en `builds/`, registros y temporales en
+  `artifacts/`; exclusiones de Git ampliadas y política de artefactos documentada
+  en `AGENTS.md`. Se eliminan paquetes/hashes/manifiestos finales duplicados de
+  `artifacts/` después de verificar sus copias. Sin cambios en firmware ni versión.
+
+- Fase 2, **v0.2.0 experimental**: soporte WPA2 de Moment/ARK/wpa2psp integrado
+  y habilitado por defecto para una variante 6.61 identificada con el reporte
+  de una PSP-2010. Se comprueban contenido, límites y direcciones relativas
+  antes de modificar el módulo; las variantes desconocidas se omiten.
+- Requisitos de la red de prueba documentados: 2.4 GHz, compatibilidad 802.11b
+  habilitada en el AP y WPA2-Personal AES/CCMP; canal/ancho y parámetros del
+  router se registran por separado del resultado de conexión.
+- Preferencia privada habilitada por defecto y opción de Recovery con efecto
+  tras reiniciar, sin modificar SEConfig, exports/NIDs o contratos PRO/Infinity.
+- Diagnóstico PSP voluntario separado del instalador; pruebas C sintéticas,
+  compilación, procedencia fijada, manifiesto y documentación de pendientes.
+- Diagnóstico: lectura del mando mediante la interfaz kernel, espera limitada
+  a 15 segundos y salida por la API de PRO. Corrección de salida pendiente
+  de comprobación física; reporte ampliado con coincidencias del parche.
+- Se conserva el alcance limitado del reporte físico; no se anuncia compatibilidad
+  universal. Infinity y los demás pendientes físicos de Fase 1 se conservan.
+
 - Fix: paquetes ZIP, logs, manifiestos y demás salidas generadas de `artifacts/`
   dejan de seguirse en Git y se conservan localmente para su publicación en Releases.
 - Reglas de exclusión para artefactos, carpetas de release y salidas de compilación.

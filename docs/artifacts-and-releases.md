@@ -21,6 +21,14 @@ de desarrollo con sus salidas generadas.
 | ZIP instalable, fuentes correspondientes, manifiesto y SHA-256 de cada release | Assets de la release |
 | Logs completos y archivos intermedios | Artefactos de CI o almacenamiento local |
 
+Para el trabajo local actual, `builds/` reúne los ZIP listos para usar, sus fuentes,
+hashes y manifiestos. `scripts/package.py` escribe allí las siguientes entregas.
+`artifacts/` conserva logs, metadatos internos y los árboles intermedios de
+compilación. Los ZIP, hashes y manifiestos finales se conservan solo en `builds/`;
+se eliminaron sus copias duplicadas de `artifacts/` tras verificar sus SHA-256.
+Ambas carpetas están ignoradas por Git. Esta organización no publica una release
+ni cambia los resultados de validación del firmware.
+
 [GitHub Releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
 permite distribuir versiones asociadas a tags, notas y archivos binarios. Para
 PRO-X debe adjuntar el paquete, su fuente acompañante, manifiesto y hashes
