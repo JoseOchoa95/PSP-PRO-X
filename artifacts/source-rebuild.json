@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "same_eboot_sha256": true,
+  "artifacts": {
+    "GAME/FastRecovery/EBOOT.PBP": "9e2fc87e3d275388c051b1179c9f1978c39956b363c7e2ac47e80546e9e3e56d",
+    "GAME/PROUPDATE/EBOOT.PBP": "b58b860437d1ccd9c5f64c47ead1329d4355bffdc049a97a18aac3bbcb2a8e14"
+  },
+  "log": "artifacts/logs/source-rebuild.log"
+}

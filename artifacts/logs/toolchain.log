@@ -1,0 +1,695 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 731B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/pspdev/pspdev@sha256:ee385df3aa783189d5a033af5eb1d4a9cdd93718fb8bf652ec7bb48e54038a8b
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/3] FROM docker.io/pspdev/pspdev@sha256:ee385df3aa783189d5a033af5eb1d4a9cdd93718fb8bf652ec7bb48e54038a8b
+#4 resolve docker.io/pspdev/pspdev@sha256:ee385df3aa783189d5a033af5eb1d4a9cdd93718fb8bf652ec7bb48e54038a8b 0.0s done
+#4 DONE 0.0s
+
+#5 [2/3] RUN apk add --no-cache python3 build-base autoconf automake libtool zlib-dev git
+#5 CACHED
+
+#6 [3/3] RUN git clone https://github.com/pspdev/pspsdk.git /tmp/pspsdk &&     cd /tmp/pspsdk && git checkout 57d3033596b647d5f0c38c82ffc6260e5df47c27 &&     ./bootstrap &&     sh ./configure &&     make -C src install-data DESTDIR=/tmp/legacy &&     mkdir -p /opt/pspsdk-legacy &&     cp -a /tmp/legacy/usr/local/pspdev/psp/sdk/include /opt/pspsdk-legacy/ &&     cp LICENSE /opt/pspsdk-legacy/LICENSE &&     rm -rf /tmp/pspsdk /tmp/legacy
+#6 0.179 Cloning into '/tmp/pspsdk'...
+#6 8.295 Note: switching to '57d3033596b647d5f0c38c82ffc6260e5df47c27'.
+#6 8.295 
+#6 8.295 You are in 'detached HEAD' state. You can look around, make experimental
+#6 8.295 changes and commit them, and you can discard any commits you make in this
+#6 8.295 state without impacting any branches by switching back to a branch.
+#6 8.295 
+#6 8.295 If you want to create a new branch to retain commits you create, you may
+#6 8.295 do so (now or later) by using -c with the switch command. Example:
+#6 8.295 
+#6 8.295   git switch -c <new-branch-name>
+#6 8.295 
+#6 8.295 Or undo this operation with:
+#6 8.295 
+#6 8.295   git switch -
+#6 8.295 
+#6 8.295 Turn off this advice by setting config variable advice.detachedHead to false
+#6 8.295 
+#6 8.295 HEAD is now at 57d3033 Update README
+#6 8.306 .
+#6 8.934 configure.ac:11: warning: AM_INIT_AUTOMAKE: two- and three-arguments forms are deprecated.  For more info, see:
+#6 8.934 configure.ac:11: https://www.gnu.org/software/automake/manual/automake.html#Modernize-AM_005fINIT_005fAUTOMAKE-invocation
+#6 8.941 configure.ac:15: installing './compile'
+#6 8.942 configure.ac:11: installing './install-sh'
+#6 8.943 configure.ac:11: installing './missing'
+#6 8.971 src/atrac3/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 8.976 src/atrac3/Makefile.am: installing './depcomp'
+#6 8.989 src/audio/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.020 src/ctrl/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.035 src/debug/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.052 src/display/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.065 src/fpu/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.080 src/ge/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.093 src/gu/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.109 src/gum/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.123 src/hprm/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.137 src/kernel/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.154 src/libc/Makefile.am:10: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.171 src/mp3/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.185 src/mpeg/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.202 src/nand/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.216 src/net/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.234 src/openpsid/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.248 src/power/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.262 src/prof/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.276 src/registry/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.289 src/rtc/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.310 src/sdk/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.325 src/sircs/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.339 src/startup/Makefile.am:7: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.352 src/umd/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.368 src/usb/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.384 src/usbstor/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.402 src/user/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.418 src/utility/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.433 src/vfpu/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.447 src/video/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.462 src/vsh/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.483 src/wlan/Makefile.am:9: warning: 'INCLUDES' is the old name for 'AM_CPPFLAGS' (or '*_CPPFLAGS')
+#6 9.717 configure.ac:7: warning: The macro 'AC_CONFIG_HEADER' is obsolete.
+#6 9.717 configure.ac:7: You should run autoupdate.
+#6 9.717 ./lib/autoconf/status.m4:719: AC_CONFIG_HEADER is expanded from...
+#6 9.717 configure.ac:7: the top level
+#6 9.717 configure.ac:11: warning: AM_INIT_AUTOMAKE: two- and three-arguments forms are deprecated.
+#6 9.717 ./lib/autoconf/general.m4:2490: AC_DIAGNOSE is expanded from...
+#6 9.717 aclocal.m4:449: AM_INIT_AUTOMAKE is expanded from...
+#6 9.717 configure.ac:11: the top level
+#6 9.717 configure.ac:25: warning: The macro 'AC_HEADER_STDC' is obsolete.
+#6 9.717 configure.ac:25: You should run autoupdate.
+#6 9.717 ./lib/autoconf/headers.m4:664: AC_HEADER_STDC is expanded from...
+#6 9.717 configure.ac:25: the top level
+#6 9.820 checking for pspsdk version... 1.0+beta2
+#6 9.821 checking for pspdev... /usr/local/pspdev
+#6 9.821 checking for a BSD-compatible install... /usr/bin/install -c
+#6 9.897 checking whether sleep supports fractional seconds... yes
+#6 9.899 checking filesystem timestamp resolution... 2
+#6 10.13 checking whether build environment is sane... yes
+#6 12.14 checking for a race-free mkdir -p... /bin/mkdir -p
+#6 12.14 checking for gawk... no
+#6 12.14 checking for mawk... no
+#6 12.14 checking for nawk... no
+#6 12.14 checking for awk... awk
+#6 12.14 checking whether make sets $(MAKE)... yes
+#6 12.15 checking whether make supports nested variables... yes
+#6 12.15 checking xargs -n works... yes
+#6 12.16 checking whether UID '0' is supported by ustar format... yes
+#6 12.16 checking whether GID '0' is supported by ustar format... yes
+#6 12.16 checking how to create a ustar tar archive... none
+#6 12.18 checking for psp-gcc... psp-gcc
+#6 12.18 checking for psp-g++... psp-g++
+#6 12.18 checking for psp-as... psp-as
+#6 12.18 checking for psp-ld... psp-ld
+#6 12.18 checking for psp-ar... psp-ar
+#6 12.18 checking for psp-nm... psp-nm
+#6 12.18 checking for psp-ranlib... psp-ranlib
+#6 12.18 checking for gcc... gcc
+#6 12.20 checking whether the C compiler works... yes
+#6 12.23 checking for C compiler default output file name... a.out
+#6 12.23 checking for suffix of executables... 
+#6 12.26 checking whether we are cross compiling... no
+#6 12.29 checking for suffix of object files... o
+#6 12.31 checking whether the compiler supports GNU C... yes
+#6 12.33 checking whether gcc accepts -g... yes
+#6 12.35 checking for gcc option to enable C23 features... unsupported
+#6 12.39 checking for gcc option to enable C11 features... none needed
+#6 12.44 checking whether gcc understands -c and -o together... yes
+#6 12.48 checking whether make supports the include directive... yes (GNU style)
+#6 12.48 checking dependency style of gcc... gcc3
+#6 12.51 checking for g++... g++
+#6 12.52 checking whether the compiler supports GNU C++... yes
+#6 12.54 checking whether g++ accepts -g... yes
+#6 12.56 checking dependency style of g++... gcc3
+#6 12.59 checking dependency style of gcc... gcc3
+#6 12.61 checking for ranlib... ranlib
+#6 12.61 checking for stdio.h... yes
+#6 12.63 checking for stdlib.h... yes
+#6 12.65 checking for string.h... yes
+#6 12.67 checking for inttypes.h... yes
+#6 12.69 checking for stdint.h... yes
+#6 12.72 checking for strings.h... yes
+#6 12.74 checking for sys/stat.h... yes
+#6 12.76 checking for sys/types.h... yes
+#6 12.79 checking for unistd.h... yes
+#6 12.81 checking for grep that handles long lines and -e... /bin/grep
+#6 12.86 checking for egrep... /bin/grep -E
+#6 12.86 checking for fcntl.h... yes
+#6 12.89 checking for malloc.h... yes
+#6 12.91 checking for stdlib.h... (cached) yes
+#6 12.91 checking for string.h... (cached) yes
+#6 12.91 checking for unistd.h... (cached) yes
+#6 12.92 checking for zlib.h... yes
+#6 12.94 checking for compress in -lz... yes
+#6 12.97 checking for an ANSI C-conforming const... yes
+#6 12.99 checking whether byte ordering is bigendian... no
+#6 13.05 checking for working memcmp... yes
+#6 13.11 checking for getcwd... yes
+#6 13.14 checking for strchr... yes
+#6 13.17 checking for doxygen... no
+#6 13.17 configure: WARNING: doxygen not found - will not generate any doxygen documentation
+#6 13.17 checking for perl... /usr/bin/perl
+#6 13.18 checking that generated files are newer than configure... done
+#6 13.18 configure: creating ./config.status
+#6 13.24 config.status: creating Makefile
+#6 13.25 config.status: creating src/Makefile
+#6 13.26 config.status: creating src/atrac3/Makefile
+#6 13.28 config.status: creating src/audio/Makefile
+#6 13.29 config.status: creating src/base/Makefile
+#6 13.31 config.status: creating src/base/linkfile.prx
+#6 13.32 config.status: creating src/ctrl/Makefile
+#6 13.33 config.status: creating src/debug/Makefile
+#6 13.34 config.status: creating src/display/Makefile
+#6 13.36 config.status: creating src/fpu/Makefile
+#6 13.37 config.status: creating src/ge/Makefile
+#6 13.39 config.status: creating src/gu/Makefile
+#6 13.40 config.status: creating src/gum/Makefile
+#6 13.42 config.status: creating src/hprm/Makefile
+#6 13.43 config.status: creating src/kernel/Makefile
+#6 13.44 config.status: creating src/libc/Makefile
+#6 13.46 config.status: creating src/mp3/Makefile
+#6 13.47 config.status: creating src/mpeg/Makefile
+#6 13.48 config.status: creating src/nand/Makefile
+#6 13.50 config.status: creating src/net/Makefile
+#6 13.51 config.status: creating src/openpsid/Makefile
+#6 13.52 config.status: creating src/power/Makefile
+#6 13.54 config.status: creating src/prof/Makefile
+#6 13.55 config.status: creating src/registry/Makefile
+#6 13.56 config.status: creating src/rtc/Makefile
+#6 13.58 config.status: creating src/sircs/Makefile
+#6 13.59 config.status: creating src/sdk/Makefile
+#6 13.60 config.status: creating src/startup/Makefile
+#6 13.61 config.status: creating src/umd/Makefile
+#6 13.63 config.status: creating src/usb/Makefile
+#6 13.64 config.status: creating src/usbstor/Makefile
+#6 13.65 config.status: creating src/user/Makefile
+#6 13.67 config.status: creating src/utility/Makefile
+#6 13.68 config.status: creating src/vfpu/Makefile
+#6 13.69 config.status: creating src/video/Makefile
+#6 13.71 config.status: creating src/vsh/Makefile
+#6 13.72 config.status: creating src/wlan/Makefile
+#6 13.73 config.status: creating src/samples/Makefile
+#6 13.75 config.status: creating tools/Makefile
+#6 13.76 config.status: creating tools/PrxEncrypter/Makefile
+#6 13.77 config.status: creating config.h
+#6 13.78 config.status: executing depfiles commands
+#6 14.38 make: Entering directory '/tmp/pspsdk/src'
+#6 14.38 Making install-data in atrac3
+#6 14.38 make[1]: Entering directory '/tmp/pspsdk/src/atrac3'
+#6 14.38  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.39  /usr/bin/install -c -m 644 pspatrac3.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.39 make[1]: Leaving directory '/tmp/pspsdk/src/atrac3'
+#6 14.39 Making install-data in audio
+#6 14.39 make[1]: Entering directory '/tmp/pspsdk/src/audio'
+#6 14.39  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.39  /usr/bin/install -c -m 644 pspaudio_kernel.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.39  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.39  /usr/bin/install -c -m 644 pspaudiocodec.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.40  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.40  /usr/bin/install -c -m 644 pspaudio.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.40  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.40  /usr/bin/install -c -m 644 pspaudiolib.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.40 make[1]: Leaving directory '/tmp/pspsdk/src/audio'
+#6 14.40 Making install-data in base
+#6 14.40 make[1]: Entering directory '/tmp/pspsdk/src/base'
+#6 14.40  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/lib'
+#6 14.40  /usr/bin/install -c -m 644 build.mak prxspecs '/tmp/legacy/usr/local/pspdev/psp/sdk/lib'
+#6 14.41  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/lib'
+#6 14.41  /usr/bin/install -c -m 644 build_prx.mak linkfile.prx '/tmp/legacy/usr/local/pspdev/psp/sdk/lib'
+#6 14.41  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.41  /usr/bin/install -c -m 644 as_reg_compat.h psptypes.h pspstub.s pspimport.s '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.41 make[1]: Leaving directory '/tmp/pspsdk/src/base'
+#6 14.41 Making install-data in ctrl
+#6 14.41 make[1]: Entering directory '/tmp/pspsdk/src/ctrl'
+#6 14.41  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.41  /usr/bin/install -c -m 644 pspctrl.h pspctrl_kernel.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.42 make[1]: Leaving directory '/tmp/pspsdk/src/ctrl'
+#6 14.42 Making install-data in debug
+#6 14.42 make[1]: Entering directory '/tmp/pspsdk/src/debug'
+#6 14.42  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.42  /usr/bin/install -c -m 644 pspdebug.h pspdebugkb.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.42 make[1]: Leaving directory '/tmp/pspsdk/src/debug'
+#6 14.42 Making install-data in display
+#6 14.42 make[1]: Entering directory '/tmp/pspsdk/src/display'
+#6 14.42  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.42  /usr/bin/install -c -m 644 pspdisplay.h pspdisplay_kernel.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.42 make[1]: Leaving directory '/tmp/pspsdk/src/display'
+#6 14.42 Making install-data in fpu
+#6 14.43 make[1]: Entering directory '/tmp/pspsdk/src/fpu'
+#6 14.43  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.43  /usr/bin/install -c -m 644 pspfpu.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.43 make[1]: Leaving directory '/tmp/pspsdk/src/fpu'
+#6 14.43 Making install-data in ge
+#6 14.43 make[1]: Entering directory '/tmp/pspsdk/src/ge'
+#6 14.43  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.43  /usr/bin/install -c -m 644 pspge.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.43 make[1]: Leaving directory '/tmp/pspsdk/src/ge'
+#6 14.43 Making install-data in gu
+#6 14.44 make[1]: Entering directory '/tmp/pspsdk/src/gu'
+#6 14.44  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.44  /usr/bin/install -c -m 644 pspgu.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.44 make[1]: Leaving directory '/tmp/pspsdk/src/gu'
+#6 14.44 Making install-data in gum
+#6 14.44 make[1]: Entering directory '/tmp/pspsdk/src/gum'
+#6 14.44  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.44  /usr/bin/install -c -m 644 pspgum.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.44 make[1]: Leaving directory '/tmp/pspsdk/src/gum'
+#6 14.44 Making install-data in hprm
+#6 14.45 make[1]: Entering directory '/tmp/pspsdk/src/hprm'
+#6 14.45  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.45  /usr/bin/install -c -m 644 psphprm.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.45 make[1]: Leaving directory '/tmp/pspsdk/src/hprm'
+#6 14.45 Making install-data in kernel
+#6 14.45 make[1]: Entering directory '/tmp/pspsdk/src/kernel'
+#6 14.45  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.46  /usr/bin/install -c -m 644 pspiofilemgr_kernel.h pspkernel.h psploadcore.h psploadexec_kernel.h pspstdio_kernel.h pspsysreg.h psputilsforkernel.h pspkdebug.h pspintrman_kernel.h pspmodulemgr_kernel.h pspsystimer.h pspsysmem_kernel.h pspthreadman_kernel.h pspsyscon.h pspsysevent.h pspidstorage.h pspexception.h pspsysclib.h pspimpose_driver.h pspinit.h pspaudiorouting.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.46 make[1]: Leaving directory '/tmp/pspsdk/src/kernel'
+#6 14.46 Making install-data in libc
+#6 14.46 make[1]: Entering directory '/tmp/pspsdk/src/libc'
+#6 14.46  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include/libc'
+#6 14.46  /usr/bin/install -c -m 644 assert.h ctype.h malloc.h stdio.h stdlib.h string.h time.h unistd.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include/libc'
+#6 14.46 make[1]: Leaving directory '/tmp/pspsdk/src/libc'
+#6 14.46 Making install-data in mp3
+#6 14.46 make[1]: Entering directory '/tmp/pspsdk/src/mp3'
+#6 14.46  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.47  /usr/bin/install -c -m 644 pspmp3.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.47 make[1]: Leaving directory '/tmp/pspsdk/src/mp3'
+#6 14.47 Making install-data in mpeg
+#6 14.47 make[1]: Entering directory '/tmp/pspsdk/src/mpeg'
+#6 14.47  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.47  /usr/bin/install -c -m 644 pspjpeg.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.47  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.47  /usr/bin/install -c -m 644 pspmpegbase.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.47  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.48  /usr/bin/install -c -m 644 pspmpegbase.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.48  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.48  /usr/bin/install -c -m 644 pspmpeg.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.48 make[1]: Leaving directory '/tmp/pspsdk/src/mpeg'
+#6 14.48 Making install-data in nand
+#6 14.48 make[1]: Entering directory '/tmp/pspsdk/src/nand'
+#6 14.48  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.48  /usr/bin/install -c -m 644 pspnand_driver.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.48 make[1]: Leaving directory '/tmp/pspsdk/src/nand'
+#6 14.48 Making install-data in net
+#6 14.49 make[1]: Entering directory '/tmp/pspsdk/src/net'
+#6 14.49  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.49  /usr/bin/install -c -m 644 pspnet.h pspnet_apctl.h pspnet_inet.h pspnet_resolver.h pspnet_adhoc.h pspnet_adhocctl.h pspnet_adhocmatching.h psphttp.h pspssl.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.49 make[1]: Leaving directory '/tmp/pspsdk/src/net'
+#6 14.49 Making install-data in openpsid
+#6 14.49 make[1]: Entering directory '/tmp/pspsdk/src/openpsid'
+#6 14.49  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.49  /usr/bin/install -c -m 644 pspopenpsid.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.49 make[1]: Leaving directory '/tmp/pspsdk/src/openpsid'
+#6 14.49 Making install-data in power
+#6 14.50 make[1]: Entering directory '/tmp/pspsdk/src/power'
+#6 14.50  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.50  /usr/bin/install -c -m 644 psppower.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.50 make[1]: Leaving directory '/tmp/pspsdk/src/power'
+#6 14.50 Making install-data in prof
+#6 14.50 make[1]: Entering directory '/tmp/pspsdk/src/prof'
+#6 14.50  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.50  /usr/bin/install -c -m 644 pspprof.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.50 make[1]: Leaving directory '/tmp/pspsdk/src/prof'
+#6 14.50 Making install-data in registry
+#6 14.51 make[1]: Entering directory '/tmp/pspsdk/src/registry'
+#6 14.51  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.51  /usr/bin/install -c -m 644 pspreg.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.51 make[1]: Leaving directory '/tmp/pspsdk/src/registry'
+#6 14.51 Making install-data in rtc
+#6 14.51 make[1]: Entering directory '/tmp/pspsdk/src/rtc'
+#6 14.51  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.51  /usr/bin/install -c -m 644 psprtc.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.51 make[1]: Leaving directory '/tmp/pspsdk/src/rtc'
+#6 14.51 Making install-data in sircs
+#6 14.51 make[1]: Entering directory '/tmp/pspsdk/src/sircs'
+#6 14.51  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.52  /usr/bin/install -c -m 644 pspsircs.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.52 make[1]: Leaving directory '/tmp/pspsdk/src/sircs'
+#6 14.52 Making install-data in sdk
+#6 14.52 make[1]: Entering directory '/tmp/pspsdk/src/sdk'
+#6 14.52  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.52  /usr/bin/install -c -m 644 pspsdk.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.52 make[1]: Leaving directory '/tmp/pspsdk/src/sdk'
+#6 14.52 Making install-data in startup
+#6 14.52 make[1]: Entering directory '/tmp/pspsdk/src/startup'
+#6 14.52 make[1]: Nothing to be done for 'install-data'.
+#6 14.52 make[1]: Leaving directory '/tmp/pspsdk/src/startup'
+#6 14.52 Making install-data in umd
+#6 14.53 make[1]: Entering directory '/tmp/pspsdk/src/umd'
+#6 14.53  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.53  /usr/bin/install -c -m 644 pspumd.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.53 make[1]: Leaving directory '/tmp/pspsdk/src/umd'
+#6 14.53 Making install-data in usb
+#6 14.53 make[1]: Entering directory '/tmp/pspsdk/src/usb'
+#6 14.53  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.53  /usr/bin/install -c -m 644 pspusb.h pspusbbus.h pspusbcam.h pspusbacc.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.53 make[1]: Leaving directory '/tmp/pspsdk/src/usb'
+#6 14.53 Making install-data in usbstor
+#6 14.54 make[1]: Entering directory '/tmp/pspsdk/src/usbstor'
+#6 14.54  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.54  /usr/bin/install -c -m 644 pspusbstor.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.54 make[1]: Leaving directory '/tmp/pspsdk/src/usbstor'
+#6 14.54 Making install-data in user
+#6 14.54 make[1]: Entering directory '/tmp/pspsdk/src/user'
+#6 14.54  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.54  /usr/bin/install -c -m 644 pspiofilemgr.h pspiofilemgr_dirent.h pspiofilemgr_fcntl.h pspiofilemgr_stat.h pspkerneltypes.h pspkerror.h psploadexec.h pspmscm.h pspmoduleinfo.h pspmodulemgr.h pspsuspend.h pspsysmem.h pspthreadman.h pspstdio.h pspuser.h psputils.h pspintrman.h pspmoduleexport.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.54 make[1]: Leaving directory '/tmp/pspsdk/src/user'
+#6 14.55 Making install-data in utility
+#6 14.55 make[1]: Entering directory '/tmp/pspsdk/src/utility'
+#6 14.55  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.55  /usr/bin/install -c -m 644 psputility.h psputility_msgdialog.h psputility_netconf.h psputility_netparam.h psputility_savedata.h psputility_sysparam.h psputility_osk.h psputility_netmodules.h psputility_avmodules.h psputility_usbmodules.h psputility_gamesharing.h psputility_htmlviewer.h psputility_modules.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.55 make[1]: Leaving directory '/tmp/pspsdk/src/utility'
+#6 14.55 Making install-data in vfpu
+#6 14.55 make[1]: Entering directory '/tmp/pspsdk/src/vfpu'
+#6 14.55  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.55  /usr/bin/install -c -m 644 pspvfpu.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.55 make[1]: Leaving directory '/tmp/pspsdk/src/vfpu'
+#6 14.55 Making install-data in video
+#6 14.56 make[1]: Entering directory '/tmp/pspsdk/src/video'
+#6 14.56  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.56  /usr/bin/install -c -m 644 pspvideocodec.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.56 make[1]: Leaving directory '/tmp/pspsdk/src/video'
+#6 14.56 Making install-data in vsh
+#6 14.56 make[1]: Entering directory '/tmp/pspsdk/src/vsh'
+#6 14.56  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.57  /usr/bin/install -c -m 644 pspchnnlsv.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.57 make[1]: Leaving directory '/tmp/pspsdk/src/vsh'
+#6 14.57 Making install-data in wlan
+#6 14.57 make[1]: Entering directory '/tmp/pspsdk/src/wlan'
+#6 14.57  /bin/mkdir -p '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.57  /usr/bin/install -c -m 644 pspwlan.h '/tmp/legacy/usr/local/pspdev/psp/sdk/include'
+#6 14.57 make[1]: Leaving directory '/tmp/pspsdk/src/wlan'
+#6 14.57 Making install-data in samples
+#6 14.57 make[1]: Entering directory '/tmp/pspsdk/src/samples'
+#6 14.57 make  install-data-hook
+#6 14.57 make[2]: Entering directory '/tmp/pspsdk/src/samples'
+#6 14.57 /bin/sh /tmp/pspsdk/install-sh -d /tmp/legacy/usr/local/pspdev/psp/sdk/samples
+#6 14.59  /usr/bin/install -c -m 644 ./audio/polyphonic/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/audio/polyphonic/Makefile.sample
+#6 14.59  /usr/bin/install -c -m 644 ./audio/polyphonic/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/audio/polyphonic/main.c
+#6 14.60  /usr/bin/install -c -m 644 ./audio/wavegen/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/audio/wavegen/Makefile.sample
+#6 14.60  /usr/bin/install -c -m 644 ./audio/wavegen/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/audio/wavegen/main.c
+#6 14.61  /usr/bin/install -c -m 644 ./controller/basic/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/controller/basic/Makefile.sample
+#6 14.61  /usr/bin/install -c -m 644 ./controller/basic/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/controller/basic/main.c
+#6 14.62  /usr/bin/install -c -m 644 ./debug/exception/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/exception/Makefile.sample
+#6 14.62  /usr/bin/install -c -m 644 ./debug/exception/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/exception/main.c
+#6 14.63  /usr/bin/install -c -m 644 ./debug/kprintf/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/kprintf/Makefile.sample
+#6 14.64  /usr/bin/install -c -m 644 ./debug/kprintf/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/kprintf/main.c
+#6 14.64  /usr/bin/install -c -m 644 ./debug/prxdecrypt/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/prxdecrypt/Makefile.sample
+#6 14.64  /usr/bin/install -c -m 644 ./debug/prxdecrypt/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/prxdecrypt/main.c
+#6 14.65  /usr/bin/install -c -m 644 ./debug/profiler/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/profiler/Makefile.sample
+#6 14.66  /usr/bin/install -c -m 644 ./debug/profiler/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/profiler/main.c
+#6 14.66  /usr/bin/install -c -m 644 ./debug/debugkb/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/debugkb/Makefile.sample
+#6 14.67  /usr/bin/install -c -m 644 ./debug/debugkb/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/debugkb/main.c
+#6 14.67  /usr/bin/install -c -m 644 ./debug/sio/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/sio/Makefile.sample
+#6 14.68  /usr/bin/install -c -m 644 ./debug/sio/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/sio/main.c
+#6 14.68  /usr/bin/install -c -m 644 ./debug/sio/readme.txt /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/sio/readme.txt
+#6 14.69  /usr/bin/install -c -m 644 ./debug/gdb/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/gdb/Makefile.sample
+#6 14.69  /usr/bin/install -c -m 644 ./debug/gdb/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/gdb/main.c
+#6 14.70  /usr/bin/install -c -m 644 ./gu/beginobject/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/beginobject/Makefile.sample
+#6 14.70  /usr/bin/install -c -m 644 ./gu/beginobject/beginobject.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/beginobject/beginobject.c
+#6 14.71  /usr/bin/install -c -m 644 ./gu/blend/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/blend/Makefile.sample
+#6 14.71  /usr/bin/install -c -m 644 ./gu/blend/blend.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/blend/blend.c
+#6 14.72  /usr/bin/install -c -m 644 ./gu/blit/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/blit/Makefile.sample
+#6 14.72  /usr/bin/install -c -m 644 ./gu/blit/blit.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/blit/blit.c
+#6 14.73  /usr/bin/install -c -m 644 ./gu/celshading/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/celshading/Makefile.sample
+#6 14.73  /usr/bin/install -c -m 644 ./gu/celshading/celshading.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/celshading/celshading.c
+#6 14.74  /usr/bin/install -c -m 644 ./gu/celshading/lightmap.raw /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/celshading/lightmap.raw
+#6 14.75  /usr/bin/install -c -m 644 ./gu/clut/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/clut/Makefile.sample
+#6 14.75  /usr/bin/install -c -m 644 ./gu/clut/clut.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/clut/clut.c
+#6 14.76  /usr/bin/install -c -m 644 ./gu/common/callbacks.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/common/callbacks.c
+#6 14.76  /usr/bin/install -c -m 644 ./gu/common/callbacks.h /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/common/callbacks.h
+#6 14.76  /usr/bin/install -c -m 644 ./gu/common/geometry.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/common/geometry.c
+#6 14.76  /usr/bin/install -c -m 644 ./gu/common/geometry.h /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/common/geometry.h
+#6 14.76  /usr/bin/install -c -m 644 ./gu/common/menu.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/common/menu.c
+#6 14.77  /usr/bin/install -c -m 644 ./gu/common/menu.h /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/common/menu.h
+#6 14.77  /usr/bin/install -c -m 644 ./gu/common/vram.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/common/vram.c
+#6 14.77  /usr/bin/install -c -m 644 ./gu/common/vram.h /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/common/vram.h
+#6 14.78  /usr/bin/install -c -m 644 ./gu/copy/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/copy/Makefile.sample
+#6 14.78  /usr/bin/install -c -m 644 ./gu/copy/copy.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/copy/copy.c
+#6 14.79  /usr/bin/install -c -m 644 ./gu/cube/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/cube/Makefile.sample
+#6 14.79  /usr/bin/install -c -m 644 ./gu/cube/cube.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/cube/cube.c
+#6 14.79  /usr/bin/install -c -m 644 ./gu/cube/logo.raw /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/cube/logo.raw
+#6 14.80  /usr/bin/install -c -m 644 ./gu/envmap/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/envmap/Makefile.sample
+#6 14.80  /usr/bin/install -c -m 644 ./gu/envmap/env0.raw /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/envmap/env0.raw
+#6 14.81  /usr/bin/install -c -m 644 ./gu/envmap/envmap.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/envmap/envmap.c
+#6 14.82  /usr/bin/install -c -m 644 ./gu/integerdrawing/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/integerdrawing/Makefile.sample
+#6 14.82  /usr/bin/install -c -m 644 ./gu/integerdrawing/integerdrawing.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/integerdrawing/integerdrawing.c
+#6 14.83  /usr/bin/install -c -m 644 ./gu/lights/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/lights/Makefile.sample
+#6 14.83  /usr/bin/install -c -m 644 ./gu/lights/lights.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/lights/lights.c
+#6 14.84  /usr/bin/install -c -m 644 ./gu/lines/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/lines/Makefile.sample
+#6 14.84  /usr/bin/install -c -m 644 ./gu/lines/lines.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/lines/lines.c
+#6 14.85  /usr/bin/install -c -m 644 ./gu/logic/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/logic/Makefile.sample
+#6 14.85  /usr/bin/install -c -m 644 ./gu/logic/logic.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/logic/logic.c
+#6 14.86  /usr/bin/install -c -m 644 ./gu/morph/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/morph/Makefile.sample
+#6 14.86  /usr/bin/install -c -m 644 ./gu/morph/morph.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/morph/morph.c
+#6 14.87  /usr/bin/install -c -m 644 ./gu/morphskin/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/morphskin/Makefile.sample
+#6 14.87  /usr/bin/install -c -m 644 ./gu/morphskin/morphskin.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/morphskin/morphskin.c
+#6 14.88  /usr/bin/install -c -m 644 ./gu/ortho/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/ortho/Makefile.sample
+#6 14.88  /usr/bin/install -c -m 644 ./gu/ortho/ortho.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/ortho/ortho.c
+#6 14.89  /usr/bin/install -c -m 644 ./gu/reflection/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/reflection/Makefile.sample
+#6 14.89  /usr/bin/install -c -m 644 ./gu/reflection/reflection.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/reflection/reflection.c
+#6 14.90  /usr/bin/install -c -m 644 ./gu/rendertarget/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/rendertarget/Makefile.sample
+#6 14.90  /usr/bin/install -c -m 644 ./gu/rendertarget/rendertarget.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/rendertarget/rendertarget.c
+#6 14.91  /usr/bin/install -c -m 644 ./gu/shadowprojection/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/shadowprojection/Makefile.sample
+#6 14.91  /usr/bin/install -c -m 644 ./gu/shadowprojection/shadowprojection.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/shadowprojection/shadowprojection.c
+#6 14.92  /usr/bin/install -c -m 644 ./gu/signals/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/signals/Makefile.sample
+#6 14.92  /usr/bin/install -c -m 644 ./gu/signals/ball.raw /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/signals/ball.raw
+#6 14.92  /usr/bin/install -c -m 644 ./gu/signals/signals.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/signals/signals.c
+#6 14.93  /usr/bin/install -c -m 644 ./gu/skinning/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/skinning/Makefile.sample
+#6 14.94  /usr/bin/install -c -m 644 ./gu/skinning/skinning.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/skinning/skinning.c
+#6 14.95  /usr/bin/install -c -m 644 ./gu/speed/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/speed/Makefile.sample
+#6 14.95  /usr/bin/install -c -m 644 ./gu/speed/speed.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/speed/speed.c
+#6 14.96  /usr/bin/install -c -m 644 ./gu/spharm/Image1.raw /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/spharm/Image1.raw
+#6 14.96  /usr/bin/install -c -m 644 ./gu/spharm/Image2.raw /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/spharm/Image2.raw
+#6 14.96  /usr/bin/install -c -m 644 ./gu/spharm/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/spharm/Makefile.sample
+#6 14.96  /usr/bin/install -c -m 644 ./gu/spharm/cube.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/spharm/cube.c
+#6 14.96  /usr/bin/install -c -m 644 ./gu/spharm/disablefpu.S /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/spharm/disablefpu.S
+#6 14.97  /usr/bin/install -c -m 644 ./gu/spharm/logo.raw /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/spharm/logo.raw
+#6 14.97  /usr/bin/install -c -m 644 ./gu/spharm/mt19937.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/spharm/mt19937.c
+#6 14.97  /usr/bin/install -c -m 644 ./gu/spharm/mt19937.h /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/spharm/mt19937.h
+#6 14.97  /usr/bin/install -c -m 644 ./gu/spharm/readme /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/spharm/readme
+#6 14.97  /usr/bin/install -c -m 644 ./gu/spharm/spharm.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/spharm/spharm.c
+#6 14.98  /usr/bin/install -c -m 644 ./gu/splinesurface/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/splinesurface/Makefile.sample
+#6 14.98  /usr/bin/install -c -m 644 ./gu/splinesurface/splinesurface.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/splinesurface/splinesurface.c
+#6 14.99  /usr/bin/install -c -m 644 ./gu/sprite/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/sprite/Makefile.sample
+#6 14.99  /usr/bin/install -c -m 644 ./gu/sprite/ball.raw /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/sprite/ball.raw
+#6 14.99  /usr/bin/install -c -m 644 ./gu/sprite/sprite.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/sprite/sprite.c
+#6 15.00  /usr/bin/install -c -m 644 ./gu/text/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/text/Makefile.sample
+#6 15.01  /usr/bin/install -c -m 644 ./gu/text/font.raw /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/text/font.raw
+#6 15.01  /usr/bin/install -c -m 644 ./gu/text/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/text/main.c
+#6 15.02  /usr/bin/install -c -m 644 ./gu/timing/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/timing/Makefile.sample
+#6 15.02  /usr/bin/install -c -m 644 ./gu/timing/timing.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/timing/timing.c
+#6 15.03  /usr/bin/install -c -m 644 ./gu/vertex/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/vertex/Makefile.sample
+#6 15.03  /usr/bin/install -c -m 644 ./gu/vertex/vertex.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/vertex/vertex.c
+#6 15.04  /usr/bin/install -c -m 644 ./gu/zbufferfog/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/zbufferfog/Makefile.sample
+#6 15.04  /usr/bin/install -c -m 644 ./gu/zbufferfog/zbufferfog.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/zbufferfog/zbufferfog.c
+#6 15.05  /usr/bin/install -c -m 644 ./ir/sircs/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/ir/sircs/Makefile.sample
+#6 15.05  /usr/bin/install -c -m 644 ./ir/sircs/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/ir/sircs/main.c
+#6 15.06  /usr/bin/install -c -m 644 ./ir/irda/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/ir/irda/Makefile.sample
+#6 15.06  /usr/bin/install -c -m 644 ./ir/irda/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/ir/irda/main.c
+#6 15.07  /usr/bin/install -c -m 644 ./kernel/kdumper/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/kdumper/Makefile.sample
+#6 15.07  /usr/bin/install -c -m 644 ./kernel/kdumper/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/kdumper/main.c
+#6 15.08  /usr/bin/install -c -m 644 ./kernel/loadmodule/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/loadmodule/Makefile.sample
+#6 15.09  /usr/bin/install -c -m 644 ./kernel/loadmodule/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/loadmodule/main.c
+#6 15.10  /usr/bin/install -c -m 644 ./kernel/threadstatus/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/threadstatus/Makefile.sample
+#6 15.10  /usr/bin/install -c -m 644 ./kernel/threadstatus/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/threadstatus/main.c
+#6 15.11  /usr/bin/install -c -m 644 ./kernel/cwd/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/cwd/Makefile.sample
+#6 15.11  /usr/bin/install -c -m 644 ./kernel/cwd/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/cwd/main.c
+#6 15.12  /usr/bin/install -c -m 644 ./kernel/fileio/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/fileio/Makefile.sample
+#6 15.12  /usr/bin/install -c -m 644 ./kernel/fileio/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/fileio/main.c
+#6 15.13  /usr/bin/install -c -m 644 ./kernel/idstorage/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/idstorage/Makefile.sample
+#6 15.13  /usr/bin/install -c -m 644 ./kernel/idstorage/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/idstorage/main.c
+#6 15.14  /usr/bin/install -c -m 644 ./kernel/messagebox/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/messagebox/Makefile.sample
+#6 15.14  /usr/bin/install -c -m 644 ./kernel/messagebox/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/messagebox/main.c
+#6 15.15  /usr/bin/install -c -m 644 ./kernel/registry/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/registry/Makefile.sample
+#6 15.15  /usr/bin/install -c -m 644 ./kernel/registry/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/registry/main.c
+#6 15.16  /usr/bin/install -c -m 644 ./kernel/regenum/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/regenum/Makefile.sample
+#6 15.16  /usr/bin/install -c -m 644 ./kernel/regenum/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/regenum/main.c
+#6 15.17  /usr/bin/install -c -m 644 ./kernel/systimer/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/systimer/Makefile.sample
+#6 15.17  /usr/bin/install -c -m 644 ./kernel/systimer/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/systimer/main.c
+#6 15.18  /usr/bin/install -c -m 644 ./kernel/sysevent/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/sysevent/Makefile.sample
+#6 15.18  /usr/bin/install -c -m 644 ./kernel/sysevent/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/sysevent/main.c
+#6 15.19  /usr/bin/install -c -m 644 ./mp3/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/mp3/Makefile.sample
+#6 15.19  /usr/bin/install -c -m 644 ./mp3/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/mp3/main.c
+#6 15.20  /usr/bin/install -c -m 644 ./ms/callback/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/ms/callback/Makefile.sample
+#6 15.20  /usr/bin/install -c -m 644 ./ms/callback/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/ms/callback/main.c
+#6 15.21  /usr/bin/install -c -m 644 ./nand/dumpipl/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/nand/dumpipl/Makefile.sample
+#6 15.22  /usr/bin/install -c -m 644 ./nand/dumpipl/README /tmp/legacy/usr/local/pspdev/psp/sdk/samples/nand/dumpipl/README
+#6 15.22  /usr/bin/install -c -m 644 ./nand/dumpipl/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/nand/dumpipl/main.c
+#6 15.23  /usr/bin/install -c -m 644 ./net/simple/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/simple/Makefile.sample
+#6 15.23  /usr/bin/install -c -m 644 ./net/simple/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/simple/main.c
+#6 15.24  /usr/bin/install -c -m 644 ./net/simple_prx/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/simple_prx/Makefile.sample
+#6 15.24  /usr/bin/install -c -m 644 ./net/simple_prx/exports.exp /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/simple_prx/exports.exp
+#6 15.24  /usr/bin/install -c -m 644 ./net/simple_prx/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/simple_prx/main.c
+#6 15.25  /usr/bin/install -c -m 644 ./net/resolver/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/resolver/Makefile.sample
+#6 15.25  /usr/bin/install -c -m 644 ./net/resolver/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/resolver/main.c
+#6 15.26  /usr/bin/install -c -m 644 ./net/wlanscan/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/wlanscan/Makefile.sample
+#6 15.26  /usr/bin/install -c -m 644 ./net/wlanscan/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/wlanscan/main.c
+#6 15.27  /usr/bin/install -c -m 644 ./net/wlanscan_elf/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/wlanscan_elf/Makefile.sample
+#6 15.28  /usr/bin/install -c -m 644 ./net/wlanscan_elf/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/wlanscan_elf/main.c
+#6 15.28  /usr/bin/install -c -m 644 ./power/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/power/Makefile.sample
+#6 15.29  /usr/bin/install -c -m 644 ./power/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/power/main.c
+#6 15.30  /usr/bin/install -c -m 644 ./prx/prx_loader/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/prx/prx_loader/Makefile.sample
+#6 15.30  /usr/bin/install -c -m 644 ./prx/prx_loader/MyLib.S /tmp/legacy/usr/local/pspdev/psp/sdk/samples/prx/prx_loader/MyLib.S
+#6 15.30  /usr/bin/install -c -m 644 ./prx/prx_loader/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/prx/prx_loader/main.c
+#6 15.31  /usr/bin/install -c -m 644 ./prx/testprx/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/prx/testprx/Makefile.sample
+#6 15.31  /usr/bin/install -c -m 644 ./prx/testprx/exports.exp /tmp/legacy/usr/local/pspdev/psp/sdk/samples/prx/testprx/exports.exp
+#6 15.31  /usr/bin/install -c -m 644 ./prx/testprx/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/prx/testprx/main.c
+#6 15.32  /usr/bin/install -c -m 644 ./savedata/utility/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/utility/Makefile.sample
+#6 15.33  /usr/bin/install -c -m 644 ./savedata/utility/data.h /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/utility/data.h
+#6 15.33  /usr/bin/install -c -m 644 ./savedata/utility/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/utility/main.c
+#6 15.34  /usr/bin/install -c -m 644 ./savedata/decrypt/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/decrypt/Makefile.sample
+#6 15.34  /usr/bin/install -c -m 644 ./savedata/decrypt/README.txt /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/decrypt/README.txt
+#6 15.34  /usr/bin/install -c -m 644 ./savedata/decrypt/decrypt.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/decrypt/decrypt.c
+#6 15.34  /usr/bin/install -c -m 644 ./savedata/decrypt/decrypt.h /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/decrypt/decrypt.h
+#6 15.34  /usr/bin/install -c -m 644 ./savedata/decrypt/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/decrypt/main.c
+#6 15.35  /usr/bin/install -c -m 644 ./savedata/encrypt/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/encrypt/Makefile.sample
+#6 15.36  /usr/bin/install -c -m 644 ./savedata/encrypt/README.txt /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/encrypt/README.txt
+#6 15.36  /usr/bin/install -c -m 644 ./savedata/encrypt/encrypt.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/encrypt/encrypt.c
+#6 15.36  /usr/bin/install -c -m 644 ./savedata/encrypt/encrypt.h /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/encrypt/encrypt.h
+#6 15.36  /usr/bin/install -c -m 644 ./savedata/encrypt/hash.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/encrypt/hash.c
+#6 15.36  /usr/bin/install -c -m 644 ./savedata/encrypt/hash.h /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/encrypt/hash.h
+#6 15.36  /usr/bin/install -c -m 644 ./savedata/encrypt/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/encrypt/main.c
+#6 15.37  /usr/bin/install -c -m 644 ./savedata/encrypt/psf.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/encrypt/psf.c
+#6 15.37  /usr/bin/install -c -m 644 ./savedata/encrypt/psf.h /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/encrypt/psf.h
+#6 15.38  /usr/bin/install -c -m 644 ./template/elf_template/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/elf_template/Makefile.sample
+#6 15.38  /usr/bin/install -c -m 644 ./template/elf_template/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/elf_template/main.c
+#6 15.39  /usr/bin/install -c -m 644 ./template/prx_template/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/prx_template/Makefile.sample
+#6 15.39  /usr/bin/install -c -m 644 ./template/prx_template/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/prx_template/main.c
+#6 15.40  /usr/bin/install -c -m 644 ./template/lib_template/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/lib_template/Makefile.sample
+#6 15.40  /usr/bin/install -c -m 644 ./template/lib_template/template.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/lib_template/template.c
+#6 15.40  /usr/bin/install -c -m 644 ./template/lib_template/template.h /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/lib_template/template.h
+#6 15.41  /usr/bin/install -c -m 644 ./template/kprx_template/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/kprx_template/Makefile.sample
+#6 15.41  /usr/bin/install -c -m 644 ./template/kprx_template/exports.exp /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/kprx_template/exports.exp
+#6 15.42  /usr/bin/install -c -m 644 ./template/kprx_template/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/kprx_template/main.c
+#6 15.43  /usr/bin/install -c -m 644 ./usb/storage/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/usb/storage/Makefile.sample
+#6 15.43  /usr/bin/install -c -m 644 ./usb/storage/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/usb/storage/main.c
+#6 15.44  /usr/bin/install -c -m 644 ./utility/gamesharing/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/gamesharing/Makefile.sample
+#6 15.44  /usr/bin/install -c -m 644 ./utility/gamesharing/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/gamesharing/main.c
+#6 15.45  /usr/bin/install -c -m 644 ./utility/htmlviewer/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/htmlviewer/Makefile.sample
+#6 15.45  /usr/bin/install -c -m 644 ./utility/htmlviewer/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/htmlviewer/main.c
+#6 15.46  /usr/bin/install -c -m 644 ./utility/netconf/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/netconf/Makefile.sample
+#6 15.46  /usr/bin/install -c -m 644 ./utility/netconf/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/netconf/main.c
+#6 15.47  /usr/bin/install -c -m 644 ./utility/netdialog/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/netdialog/Makefile.sample
+#6 15.47  /usr/bin/install -c -m 644 ./utility/netdialog/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/netdialog/main.c
+#6 15.48  /usr/bin/install -c -m 644 ./utility/msgdialog/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/msgdialog/Makefile.sample
+#6 15.48  /usr/bin/install -c -m 644 ./utility/msgdialog/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/msgdialog/main.c
+#6 15.49  /usr/bin/install -c -m 644 ./utility/systemparam/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/systemparam/Makefile.sample
+#6 15.49  /usr/bin/install -c -m 644 ./utility/systemparam/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/systemparam/main.c
+#6 15.50  /usr/bin/install -c -m 644 ./utility/osk/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/osk/Makefile.sample
+#6 15.50  /usr/bin/install -c -m 644 ./utility/osk/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/osk/main.c
+#6 15.51  /usr/bin/install -c -m 644 ./me/basic/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/me/basic/Makefile.sample
+#6 15.52  /usr/bin/install -c -m 644 ./me/basic/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/me/basic/main.c
+#6 15.52  /usr/bin/install -c -m 644 ./me/basic/me.S /tmp/legacy/usr/local/pspdev/psp/sdk/samples/me/basic/me.S
+#6 15.53  /usr/bin/install -c -m 644 ./wlan/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/wlan/Makefile.sample
+#6 15.53  /usr/bin/install -c -m 644 ./wlan/main.c /tmp/legacy/usr/local/pspdev/psp/sdk/samples/wlan/main.c
+#6 15.54  /usr/bin/install -c -m 644 ./exceptions/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/exceptions/Makefile.sample
+#6 15.54  /usr/bin/install -c -m 644 ./exceptions/main.cpp /tmp/legacy/usr/local/pspdev/psp/sdk/samples/exceptions/main.cpp
+#6 15.55  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/osk/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/osk/Makefile
+#6 15.55  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/systemparam/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/systemparam/Makefile
+#6 15.55  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/netdialog/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/netdialog/Makefile
+#6 15.55  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/netconf/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/netconf/Makefile
+#6 15.55  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/gamesharing/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/gamesharing/Makefile
+#6 15.55  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/msgdialog/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/msgdialog/Makefile
+#6 15.56  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/htmlviewer/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/utility/htmlviewer/Makefile
+#6 15.56  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/wlan/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/wlan/Makefile
+#6 15.56  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/power/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/power/Makefile
+#6 15.56  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/ms/callback/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/ms/callback/Makefile
+#6 15.56  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/wlanscan/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/wlanscan/Makefile
+#6 15.57  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/simple_prx/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/simple_prx/Makefile
+#6 15.57  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/resolver/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/resolver/Makefile
+#6 15.57  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/wlanscan_elf/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/wlanscan_elf/Makefile
+#6 15.57  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/simple/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/net/simple/Makefile
+#6 15.57  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/controller/basic/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/controller/basic/Makefile
+#6 15.57  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/exceptions/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/exceptions/Makefile
+#6 15.58  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/ir/irda/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/ir/irda/Makefile
+#6 15.58  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/ir/sircs/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/ir/sircs/Makefile
+#6 15.58  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/utility/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/utility/Makefile
+#6 15.58  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/decrypt/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/decrypt/Makefile
+#6 15.58  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/encrypt/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/savedata/encrypt/Makefile
+#6 15.59  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/lib_template/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/lib_template/Makefile
+#6 15.59  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/prx_template/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/prx_template/Makefile
+#6 15.59  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/elf_template/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/elf_template/Makefile
+#6 15.59  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/kprx_template/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/template/kprx_template/Makefile
+#6 15.59  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/prx/testprx/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/prx/testprx/Makefile
+#6 15.60  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/prx/prx_loader/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/prx/prx_loader/Makefile
+#6 15.60  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/mp3/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/mp3/Makefile
+#6 15.60  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/threadstatus/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/threadstatus/Makefile
+#6 15.60  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/fileio/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/fileio/Makefile
+#6 15.60  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/regenum/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/regenum/Makefile
+#6 15.61  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/sysevent/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/sysevent/Makefile
+#6 15.61  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/idstorage/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/idstorage/Makefile
+#6 15.61  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/registry/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/registry/Makefile
+#6 15.61  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/messagebox/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/messagebox/Makefile
+#6 15.61  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/cwd/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/cwd/Makefile
+#6 15.61  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/kdumper/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/kdumper/Makefile
+#6 15.62  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/systimer/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/systimer/Makefile
+#6 15.62  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/loadmodule/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/kernel/loadmodule/Makefile
+#6 15.62  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/audio/polyphonic/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/audio/polyphonic/Makefile
+#6 15.62  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/audio/wavegen/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/audio/wavegen/Makefile
+#6 15.62  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/debugkb/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/debugkb/Makefile
+#6 15.63  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/kprintf/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/kprintf/Makefile
+#6 15.63  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/gdb/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/gdb/Makefile
+#6 15.63  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/prxdecrypt/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/prxdecrypt/Makefile
+#6 15.63  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/sio/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/sio/Makefile
+#6 15.63  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/exception/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/exception/Makefile
+#6 15.63  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/profiler/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/debug/profiler/Makefile
+#6 15.64  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/me/basic/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/me/basic/Makefile
+#6 15.64  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/usb/storage/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/usb/storage/Makefile
+#6 15.64  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/nand/dumpipl/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/nand/dumpipl/Makefile
+#6 15.64  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/copy/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/copy/Makefile
+#6 15.64  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/integerdrawing/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/integerdrawing/Makefile
+#6 15.64  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/vertex/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/vertex/Makefile
+#6 15.65  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/envmap/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/envmap/Makefile
+#6 15.65  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/logic/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/logic/Makefile
+#6 15.65  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/morphskin/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/morphskin/Makefile
+#6 15.65  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/lights/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/lights/Makefile
+#6 15.65  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/spharm/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/spharm/Makefile
+#6 15.65  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/lines/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/lines/Makefile
+#6 15.66  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/skinning/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/skinning/Makefile
+#6 15.66  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/beginobject/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/beginobject/Makefile
+#6 15.66  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/speed/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/speed/Makefile
+#6 15.66  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/splinesurface/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/splinesurface/Makefile
+#6 15.66  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/shadowprojection/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/shadowprojection/Makefile
+#6 15.67  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/zbufferfog/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/zbufferfog/Makefile
+#6 15.67  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/morph/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/morph/Makefile
+#6 15.67  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/rendertarget/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/rendertarget/Makefile
+#6 15.67  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/blend/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/blend/Makefile
+#6 15.67  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/timing/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/timing/Makefile
+#6 15.67  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/cube/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/cube/Makefile
+#6 15.68  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/ortho/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/ortho/Makefile
+#6 15.68  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/celshading/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/celshading/Makefile
+#6 15.68  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/blit/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/blit/Makefile
+#6 15.68  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/sprite/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/sprite/Makefile
+#6 15.68  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/reflection/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/reflection/Makefile
+#6 15.68  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/signals/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/signals/Makefile
+#6 15.69  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/text/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/text/Makefile
+#6 15.69  mv /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/clut/Makefile.sample /tmp/legacy/usr/local/pspdev/psp/sdk/samples/gu/clut/Makefile
+#6 15.69 make[2]: Leaving directory '/tmp/pspsdk/src/samples'
+#6 15.69 make[1]: Leaving directory '/tmp/pspsdk/src/samples'
+#6 15.69 make[1]: Entering directory '/tmp/pspsdk/src'
+#6 15.69 make[1]: Nothing to be done for 'install-data-am'.
+#6 15.69 make[1]: Leaving directory '/tmp/pspsdk/src'
+#6 15.69 make: Leaving directory '/tmp/pspsdk/src'
+#6 DONE 15.8s
+
+#7 exporting to image
+#7 exporting layers 0.1s done
+#7 exporting manifest sha256:e3c81246f9714e826655f795fd00478c7da863bdc858eb29f523bb921554224b 0.0s done
+#7 exporting config sha256:fce7f292706d1668e463f9e1653ce0eb5187c1028101dd365e95308a222564ca 0.0s done
+#7 exporting attestation manifest sha256:c41eca06de2a3fb38f0eb3aacb78f30a3b6248bd9c8b2320f08bd87e6b189fcf 0.0s done
+#7 exporting manifest list sha256:e23e00241b98c14314dd2005dcea4ad8eda3dd77b0c5d2e25908363e3be276c7 0.0s done
+#7 naming to docker.io/library/pro-x-toolchain:phase1 done
+#7 unpacking to docker.io/library/pro-x-toolchain:phase1
+#7 unpacking to docker.io/library/pro-x-toolchain:phase1 0.0s done
+#7 DONE 0.3s

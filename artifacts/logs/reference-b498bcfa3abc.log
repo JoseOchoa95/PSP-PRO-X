@@ -1,0 +1,351 @@
+make[1]: Entering directory '/tmp/pro-x.KcaHhM/SystemControl/libs'
+make -C libpspsystemctrl_kernel
+make[2]: Entering directory '/tmp/pro-x.KcaHhM/SystemControl/libs/libpspsystemctrl_kernel'
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0000 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0000.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0001 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0001.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0002 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0002.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0003 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0003.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0004 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0004.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0005 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0005.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0006 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0006.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0007 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0007.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0008 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0008.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0009 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0009.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0010 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0010.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0011 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0011.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0012 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0012.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0013 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0013.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0014 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0014.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0015 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0015.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0016 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0016.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0017 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0017.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0018 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0018.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0019 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0019.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0020 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0020.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0021 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0021.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0022 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0022.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0023 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0023.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0024 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0024.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0025 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0025.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0026 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0026.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0027 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0027.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0028 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0028.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0029 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0029.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0030 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0030.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0031 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0031.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0032 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0032.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0033 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0033.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0034 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0034.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0035 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0035.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0036 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0036.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0037 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0037.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0038 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0038.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0039 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0039.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0040 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0040.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0041 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0041.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0042 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0042.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0043 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0043.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0044 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0044.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0045 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0045.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0046 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0046.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0047 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0047.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0048 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0048.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0049 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0049.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0050 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0050.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0051 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0051.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0052 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0052.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0053 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0053.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0054 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0054.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0055 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0055.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0056 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0056.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0057 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0057.o
+psp-ar q libpspsystemctrl_kernel.a SystemCtrlForKernel_0000.o SystemCtrlForKernel_0001.o SystemCtrlForKernel_0002.o SystemCtrlForKernel_0003.o SystemCtrlForKernel_0004.o SystemCtrlForKernel_0005.o SystemCtrlForKernel_0006.o SystemCtrlForKernel_0007.o SystemCtrlForKernel_0008.o SystemCtrlForKernel_0009.o SystemCtrlForKernel_0010.o SystemCtrlForKernel_0011.o SystemCtrlForKernel_0012.o SystemCtrlForKernel_0013.o SystemCtrlForKernel_0014.o SystemCtrlForKernel_0015.o SystemCtrlForKernel_0016.o SystemCtrlForKernel_0017.o SystemCtrlForKernel_0018.o SystemCtrlForKernel_0019.o SystemCtrlForKernel_0020.o SystemCtrlForKernel_0021.o SystemCtrlForKernel_0022.o SystemCtrlForKernel_0023.o SystemCtrlForKernel_0024.o SystemCtrlForKernel_0025.o SystemCtrlForKernel_0026.o SystemCtrlForKernel_0027.o SystemCtrlForKernel_0028.o SystemCtrlForKernel_0029.o SystemCtrlForKernel_0030.o SystemCtrlForKernel_0031.o SystemCtrlForKernel_0032.o SystemCtrlForKernel_0033.o SystemCtrlForKernel_0034.o SystemCtrlForKernel_0035.o SystemCtrlForKernel_0036.o SystemCtrlForKernel_0037.o SystemCtrlForKernel_0038.o SystemCtrlForKernel_0039.o SystemCtrlForKernel_0040.o SystemCtrlForKernel_0041.o SystemCtrlForKernel_0042.o SystemCtrlForKernel_0043.o SystemCtrlForKernel_0044.o SystemCtrlForKernel_0045.o SystemCtrlForKernel_0046.o SystemCtrlForKernel_0047.o SystemCtrlForKernel_0048.o SystemCtrlForKernel_0049.o SystemCtrlForKernel_0050.o SystemCtrlForKernel_0051.o SystemCtrlForKernel_0052.o SystemCtrlForKernel_0053.o SystemCtrlForKernel_0054.o SystemCtrlForKernel_0055.o SystemCtrlForKernel_0056.o  SystemCtrlForKernel_0057.o
+psp-ar: creating libpspsystemctrl_kernel.a
+psp-ranlib libpspsystemctrl_kernel.a
+make[2]: Leaving directory '/tmp/pro-x.KcaHhM/SystemControl/libs/libpspsystemctrl_kernel'
+make -C libpspsystemctrl_user
+make[2]: Entering directory '/tmp/pro-x.KcaHhM/SystemControl/libs/libpspsystemctrl_user'
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0000 SystemCtrlForUser.S -c -o SystemCtrlForUser_0000.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0001 SystemCtrlForUser.S -c -o SystemCtrlForUser_0001.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0002 SystemCtrlForUser.S -c -o SystemCtrlForUser_0002.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0003 SystemCtrlForUser.S -c -o SystemCtrlForUser_0003.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0004 SystemCtrlForUser.S -c -o SystemCtrlForUser_0004.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0005 SystemCtrlForUser.S -c -o SystemCtrlForUser_0005.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0006 SystemCtrlForUser.S -c -o SystemCtrlForUser_0006.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0007 SystemCtrlForUser.S -c -o SystemCtrlForUser_0007.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0008 SystemCtrlForUser.S -c -o SystemCtrlForUser_0008.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0009 SystemCtrlForUser.S -c -o SystemCtrlForUser_0009.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0010 SystemCtrlForUser.S -c -o SystemCtrlForUser_0010.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0011 SystemCtrlForUser.S -c -o SystemCtrlForUser_0011.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0012 SystemCtrlForUser.S -c -o SystemCtrlForUser_0012.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0013 SystemCtrlForUser.S -c -o SystemCtrlForUser_0013.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0014 SystemCtrlForUser.S -c -o SystemCtrlForUser_0014.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0015 SystemCtrlForUser.S -c -o SystemCtrlForUser_0015.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0016 SystemCtrlForUser.S -c -o SystemCtrlForUser_0016.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0017 SystemCtrlForUser.S -c -o SystemCtrlForUser_0017.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0018 SystemCtrlForUser.S -c -o SystemCtrlForUser_0018.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0019 SystemCtrlForUser.S -c -o SystemCtrlForUser_0019.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0020 SystemCtrlForUser.S -c -o SystemCtrlForUser_0020.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0021 SystemCtrlForUser.S -c -o SystemCtrlForUser_0021.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0022 SystemCtrlForUser.S -c -o SystemCtrlForUser_0022.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0023 SystemCtrlForUser.S -c -o SystemCtrlForUser_0023.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0024 SystemCtrlForUser.S -c -o SystemCtrlForUser_0024.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0025 SystemCtrlForUser.S -c -o SystemCtrlForUser_0025.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0026 SystemCtrlForUser.S -c -o SystemCtrlForUser_0026.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0027 SystemCtrlForUser.S -c -o SystemCtrlForUser_0027.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0028 SystemCtrlForUser.S -c -o SystemCtrlForUser_0028.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0029 SystemCtrlForUser.S -c -o SystemCtrlForUser_0029.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0030 SystemCtrlForUser.S -c -o SystemCtrlForUser_0030.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0031 SystemCtrlForUser.S -c -o SystemCtrlForUser_0031.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0032 SystemCtrlForUser.S -c -o SystemCtrlForUser_0032.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0033 SystemCtrlForUser.S -c -o SystemCtrlForUser_0033.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0034 SystemCtrlForUser.S -c -o SystemCtrlForUser_0034.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0035 SystemCtrlForUser.S -c -o SystemCtrlForUser_0035.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0036 SystemCtrlForUser.S -c -o SystemCtrlForUser_0036.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0037 SystemCtrlForUser.S -c -o SystemCtrlForUser_0037.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0038 SystemCtrlForUser.S -c -o SystemCtrlForUser_0038.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0039 SystemCtrlForUser.S -c -o SystemCtrlForUser_0039.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0040 SystemCtrlForUser.S -c -o SystemCtrlForUser_0040.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0041 SystemCtrlForUser.S -c -o SystemCtrlForUser_0041.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0042 SystemCtrlForUser.S -c -o SystemCtrlForUser_0042.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0043 SystemCtrlForUser.S -c -o SystemCtrlForUser_0043.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0044 SystemCtrlForUser.S -c -o SystemCtrlForUser_0044.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0045 SystemCtrlForUser.S -c -o SystemCtrlForUser_0045.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0046 SystemCtrlForUser.S -c -o SystemCtrlForUser_0046.o
+psp-ar q libpspsystemctrl_user.a SystemCtrlForUser_0000.o SystemCtrlForUser_0001.o SystemCtrlForUser_0002.o SystemCtrlForUser_0003.o SystemCtrlForUser_0004.o SystemCtrlForUser_0005.o SystemCtrlForUser_0006.o SystemCtrlForUser_0007.o SystemCtrlForUser_0008.o SystemCtrlForUser_0009.o SystemCtrlForUser_0010.o SystemCtrlForUser_0011.o SystemCtrlForUser_0012.o SystemCtrlForUser_0013.o SystemCtrlForUser_0014.o SystemCtrlForUser_0015.o SystemCtrlForUser_0016.o SystemCtrlForUser_0017.o SystemCtrlForUser_0018.o SystemCtrlForUser_0019.o SystemCtrlForUser_0020.o SystemCtrlForUser_0021.o SystemCtrlForUser_0022.o SystemCtrlForUser_0023.o SystemCtrlForUser_0024.o SystemCtrlForUser_0025.o SystemCtrlForUser_0026.o SystemCtrlForUser_0027.o SystemCtrlForUser_0028.o SystemCtrlForUser_0029.o SystemCtrlForUser_0030.o SystemCtrlForUser_0031.o SystemCtrlForUser_0032.o SystemCtrlForUser_0033.o SystemCtrlForUser_0034.o SystemCtrlForUser_0035.o SystemCtrlForUser_0036.o SystemCtrlForUser_0037.o SystemCtrlForUser_0038.o SystemCtrlForUser_0039.o SystemCtrlForUser_0040.o SystemCtrlForUser_0041.o SystemCtrlForUser_0042.o SystemCtrlForUser_0043.o SystemCtrlForUser_0044.o SystemCtrlForUser_0045.o SystemCtrlForUser_0046.o 
+psp-ar: creating libpspsystemctrl_user.a
+psp-ranlib libpspsystemctrl_user.a
+make[2]: Leaving directory '/tmp/pro-x.KcaHhM/SystemControl/libs/libpspsystemctrl_user'
+make -C libpspkubridge
+make[2]: Entering directory '/tmp/pro-x.KcaHhM/SystemControl/libs/libpspkubridge'
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0000 KUBridge.S -c -o KUBridge_0000.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0001 KUBridge.S -c -o KUBridge_0001.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0002 KUBridge.S -c -o KUBridge_0002.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0003 KUBridge.S -c -o KUBridge_0003.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0004 KUBridge.S -c -o KUBridge_0004.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0005 KUBridge.S -c -o KUBridge_0005.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0006 KUBridge.S -c -o KUBridge_0006.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0007 KUBridge.S -c -o KUBridge_0007.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0008 KUBridge.S -c -o KUBridge_0008.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0009 KUBridge.S -c -o KUBridge_0009.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0010 KUBridge.S -c -o KUBridge_0010.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0011 KUBridge.S -c -o KUBridge_0011.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0012 KUBridge.S -c -o KUBridge_0012.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0013 KUBridge.S -c -o KUBridge_0013.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0014 KUBridge.S -c -o KUBridge_0014.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0015 KUBridge.S -c -o KUBridge_0015.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0016 KUBridge.S -c -o KUBridge_0016.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0017 KUBridge.S -c -o KUBridge_0017.o
+psp-ar q libpspkubridge.a KUBridge_0000.o KUBridge_0001.o KUBridge_0002.o KUBridge_0003.o KUBridge_0004.o KUBridge_0005.o KUBridge_0006.o KUBridge_0007.o KUBridge_0008.o KUBridge_0009.o KUBridge_0010.o KUBridge_0011.o KUBridge_0012.o KUBridge_0013.o KUBridge_0014.o KUBridge_0015.o KUBridge_0016.o KUBridge_0017.o 
+psp-ar: creating libpspkubridge.a
+psp-ranlib libpspkubridge.a
+make[2]: Leaving directory '/tmp/pro-x.KcaHhM/SystemControl/libs/libpspkubridge'
+make[1]: Leaving directory '/tmp/pro-x.KcaHhM/SystemControl/libs'
+make: Entering directory '/tmp/pro-x.KcaHhM/CrossFW'
+psp-gcc -I/usr/local/pspdev/psp/sdk/include/libc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o cross_fw.o cross_fw.c
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/SysMemForKernel.o ../Imports/SysMemForKernel.S
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/LoadCoreForKernel.o ../Imports/LoadCoreForKernel.S
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/ModuleMgrForKernel.o ../Imports/ModuleMgrForKernel.S
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/InterruptManagerForKernel.o ../Imports/InterruptManagerForKernel.S
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/sceResmgr_driver.o ../Imports/sceResmgr_driver.S
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/InitForKernel.o ../Imports/InitForKernel.S
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/LoadExecForKernel.o ../Imports/LoadExecForKernel.S
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/sceCtrl_driver.o ../Imports/sceCtrl_driver.S
+psp-ar cru cross_fw.a cross_fw.o ../Imports/SysMemForKernel.o ../Imports/LoadCoreForKernel.o ../Imports/SysMemForKernel.o ../Imports/ModuleMgrForKernel.o ../Imports/InterruptManagerForKernel.o ../Imports/sceResmgr_driver.o ../Imports/InitForKernel.o ../Imports/LoadExecForKernel.o ../Imports/sceCtrl_driver.o
+psp-ranlib cross_fw.a
+make: Leaving directory '/tmp/pro-x.KcaHhM/CrossFW'
+make: Entering directory '/tmp/pro-x.KcaHhM/Rebootex_bin'
+psp-gcc -I /usr/local/pspdev/psp/sdk/include -I ../Common -W -Wall -Os -G0 -fno-pic -fno-toplevel-reorder -mno-abicalls -w -S  -DCONFIG_661=1 main.c -o main.s
+psp-as main.s -o main.o
+psp-ld -T linkfile.l main.o -o main.elf
+psp-strip -s main.elf
+psp-objcopy -O binary main.elf rebootex.bin
+bin2c rebootex.bin rebootex.h rebootex
+make: Leaving directory '/tmp/pro-x.KcaHhM/Rebootex_bin'
+make: Entering directory '/tmp/pro-x.KcaHhM/Rebootex'
+psp-gcc -I/usr/local/pspdev/psp/sdk/include/libc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../Common -I ../include -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o main.o main.c
+main.c: In function 'patch_sceLoadExec':
+main.c:75:13: warning: variable 'text_addr' set but not used [-Wunused-but-set-variable]
+   75 |         u32 text_addr;
+      |             ^~~~~~~~~
+psp-gcc -I/usr/local/pspdev/psp/sdk/include/libc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../Common -I ../include -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o ../PXE/Launcher/launcher_patch_offset.o ../PXE/Launcher/launcher_patch_offset.c
+psp-gcc -I/usr/local/pspdev/psp/sdk/include/libc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../Common -I ../include -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o ../Common/utils.o ../Common/utils.c
+psp-gcc -I/usr/local/pspdev/psp/sdk/include/libc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../Common -I ../include -DCONFIG_661=1 -D_PSP_FW_VERSION=661  -L. -L/usr/local/pspdev/psp/sdk/lib -specs=/usr/local/pspdev/psp/sdk/lib/prxspecs -Wl,-q,-T/usr/local/pspdev/psp/sdk/lib/linkfile.prx -mno-crt0 -nostartfiles -L ../libs  main.o ../PXE/Launcher/launcher_patch_offset.o ../Common/utils.o /usr/local/pspdev/psp/sdk/lib/prxexports.o -lpspkubridge ../CrossFW/cross_fw.a -lpspdebug -lpspdisplay_driver -lpspctrl_driver -lpspsdk  -lpspkernel -o Rebootex.elf
+psp-fixup-imports Rebootex.elf
+psp-prxgen Rebootex.elf Rebootex.prx
+make: Leaving directory '/tmp/pro-x.KcaHhM/Rebootex'
+make: Entering directory '/tmp/pro-x.KcaHhM/Recovery'
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o main.o main.c
+main.c: In function 'get_fontlist':
+main.c:208:25: warning: implicit declaration of function 'stricmp'; did you mean 'strncmp'? [-Wimplicit-function-declaration]
+  208 |                 if(0 == stricmp(p, ".bin") || 0 == stricmp(p, ".pf")) {
+      |                         ^~~~~~~
+      |                         strncmp
+main.c: In function 'main_thread':
+main.c:222:13: warning: variable 'psp_model' set but not used [-Wunused-but-set-variable]
+  222 |         u32 psp_model;
+      |             ^~~~~~~~~
+main.c: In function 'get_fontlist.constprop.isra':
+main.c:209:49: warning: 'sprintf' may write a terminating nul past the end of the destination [-Wformat-overflow=]
+  209 |                         sprintf(fullpath, "%s/%s", path, dir.d_name);
+      |                                                 ^
+main.c:209:25: note: 'sprintf' output 2 or more bytes (assuming 257) into a destination of size 256
+  209 |                         sprintf(fullpath, "%s/%s", path, dir.d_name);
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o vpl.o vpl.c
+vpl.c: In function 'vpl_free':
+vpl.c:79:13: warning: variable 'ret' set but not used [-Wunused-but-set-variable]
+   79 |         int ret;
+      |             ^~~
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o menu.o menu.c
+menu.c: In function 'display_game':
+menu.c:802:17: warning: 'sprintf' argument 3 overlaps destination object 'buf' [-Wrestrict]
+  802 |                 sprintf(buf, "%-40s %d/%d", buf, cpu, bus);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+menu.c:790:56: note: destination object referenced by 'restrict'-qualified argument 1 was declared here
+  790 | static int display_game(struct MenuEntry* entry, char *buf, int size)
+      |                                                  ~~~~~~^~~
+menu.c:800:17: warning: 'sprintf' argument 3 overlaps destination object 'buf' [-Wrestrict]
+  800 |                 sprintf(buf, "%-40s %s/%s", buf, g_messages[DEFAULT], g_messages[DEFAULT]);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+menu.c:790:56: note: destination object referenced by 'restrict'-qualified argument 1 was declared here
+  790 | static int display_game(struct MenuEntry* entry, char *buf, int size)
+      |                                                  ~~~~~~^~~
+menu.c: In function 'display_xmb':
+menu.c:784:17: warning: 'sprintf' argument 3 overlaps destination object 'buf' [-Wrestrict]
+  784 |                 sprintf(buf, "%-40s %d/%d", buf, cpu, bus);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+menu.c:772:55: note: destination object referenced by 'restrict'-qualified argument 1 was declared here
+  772 | static int display_xmb(struct MenuEntry* entry, char *buf, int size)
+      |                                                 ~~~~~~^~~
+menu.c:782:17: warning: 'sprintf' argument 3 overlaps destination object 'buf' [-Wrestrict]
+  782 |                 sprintf(buf, "%-40s %s/%s", buf, g_messages[DEFAULT], g_messages[DEFAULT]);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+menu.c:772:55: note: destination object referenced by 'restrict'-qualified argument 1 was declared here
+  772 | static int display_xmb(struct MenuEntry* entry, char *buf, int size)
+      |                                                 ~~~~~~^~~
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o gui.o gui.c
+gui.c: In function 'menu_draw':
+gui.c:191:37: warning: '%d' directive writing between 1 and 9 bytes into a region of size between 8 and 17 [-Wformat-overflow=]
+  191 |                 sprintf(buf, "%s %d/%d", g_messages[PAGE], (cur_page_start/MAX_MENU_NUMBER_PER_PAGE)+1, total_page);
+      |                                     ^~
+gui.c:191:30: note: directive argument in the range [2, 102261126]
+  191 |                 sprintf(buf, "%s %d/%d", g_messages[PAGE], (cur_page_start/MAX_MENU_NUMBER_PER_PAGE)+1, total_page);
+      |                              ^~~~~~~~~~
+gui.c:191:17: note: 'sprintf' output 5 or more bytes (assuming 22) into a destination of size 20
+  191 |                 sprintf(buf, "%s %d/%d", g_messages[PAGE], (cur_page_start/MAX_MENU_NUMBER_PER_PAGE)+1, total_page);
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o name.o name.c
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o registery.o registery.c
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o plugins.o plugins.c
+plugins.c: In function 'display_callback':
+plugins.c:314:9: warning: 'sprintf' argument 3 overlaps destination object 'buf' [-Wrestrict]
+  314 |         sprintf(buf, "%-48s %-11s", buf, get_bool_name(plugin->enabled));
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+plugins.c:298:60: note: destination object referenced by 'restrict'-qualified argument 1 was declared here
+  298 | static int display_callback(struct MenuEntry* entry, char *buf, int size)
+      |                                                      ~~~~~~^~~
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o usb.o usb.c
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o font.o font.c
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o scr_printf.o scr_printf.c
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o font_list.o font_list.c
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o trans.o trans.c
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o trans_en.o trans_en.c
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1   -c -o imports.o imports.S
+psp-gcc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../include -I ../Common -DCONFIG_661=1 -D_PSP_FW_VERSION=661  -L. -L../libs -L. -L/usr/local/pspdev/psp/sdk/lib -Wl,-q,-T/usr/local/pspdev/psp/sdk/lib/linkfile.prx -mno-crt0 -nostartfiles   main.o vpl.o menu.o gui.o name.o registery.o plugins.o usb.o font.o scr_printf.o font_list.o trans.o trans_en.o ../Common/utils.o imports.o -lpspsystemctrl_user -lpspkubridge -lpsppower -lpspreg -lpspusb -lpspusbstor -lpspusbdevice -lpspdebug -lpspdisplay -lpspge -lpspctrl -lpspsdk -lc -lpsputility -lpspuser -lpspkernel -o recovery.elf
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: main.o: in function `get_fontlist.constprop.0.isra.0':
+main.c:(.text+0xb0): undefined reference to `stricmp'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: main.c:(.text+0xec): undefined reference to `stricmp'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-findfp.o): in function `__fp_lock':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:283:(.text+0xc4): undefined reference to `__retarget_lock_acquire_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-findfp.o): in function `__fp_unlock':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:293:(.text+0x10c): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-findfp.o): in function `std':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:93:(.text+0x1c8): undefined reference to `__retarget_lock_init_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:93:(.text+0x22c): undefined reference to `__retarget_lock_init_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:93:(.text+0x2ac): undefined reference to `__retarget_lock_init_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-findfp.o): in function `__sfp_lock_acquire':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:269:(.text+0x2bc): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:269:(.text+0x2c8): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:269:(.text+0x2d0): undefined reference to `__retarget_lock_acquire_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-findfp.o): in function `__sfp':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:201:(.text+0x32c): undefined reference to `__retarget_lock_init_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-findfp.o): in function `__sfp_lock_release':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:275:(.text+0x334): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:275:(.text+0x338): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:275:(.text+0x408): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:275:(.text+0x40c): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-findfp.o): in function `__sfp_lock_acquire':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:269:(.text+0x434): undefined reference to `__retarget_lock_acquire_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:269:(.text+0x438): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-findfp.o): in function `__sfp_lock_release':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:275:(.text+0x468): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:275:(.text+0x470): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-findfp.o): in function `__sfp_lock_acquire':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:269:(.text+0x424): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-findfp.o): in function `__sfp_lock_release':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:275:(.text+0x488): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:275:(.text+0x490): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-findfp.o): in function `__sfp_lock_acquire':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:269:(.text+0x49c): undefined reference to `__retarget_lock_acquire_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:269:(.text+0x498): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:269:(.text+0x4a0): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-findfp.o): in function `__sfp_lock_release':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:275:(.text+0x4a8): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:275:(.text+0x4a4): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:275:(.text+0x4ac): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-findfp.o): in function `__sfp_lock_acquire':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:269:(.text+0x4bc): undefined reference to `__retarget_lock_acquire_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:269:(.text+0x4b0): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:269:(.text+0x4c0): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-findfp.o): in function `__sfp_lock_release':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:275:(.text+0x508): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:275:(.text+0x50c): undefined reference to `__lock___sfp_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/findfp.c:275:(.text+0x510): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-closer.o): in function `_close_r':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/reent/closer.c:47:(.text+0x1c): undefined reference to `_close'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-lseekr.o): in function `_lseek_r':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/reent/lseekr.c:49:(.text+0x28): undefined reference to `_lseek'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-readr.o): in function `_read_r':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/reent/readr.c:49:(.text+0x28): undefined reference to `_read'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-writer.o): in function `_write_r':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/reent/writer.c:49:(.text+0x28): undefined reference to `_write'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-mlock.o): in function `__malloc_lock':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdlib/mlock.c:44:(.text+0x4): undefined reference to `__retarget_lock_acquire_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdlib/mlock.c:44:(.text+0x0): undefined reference to `__lock___malloc_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdlib/mlock.c:44:(.text+0x8): undefined reference to `__lock___malloc_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-mlock.o): in function `__malloc_unlock':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdlib/mlock.c:53:(.text+0x10): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdlib/mlock.c:53:(.text+0xc): undefined reference to `__lock___malloc_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdlib/mlock.c:53:(.text+0x14): undefined reference to `__lock___malloc_recursive_mutex'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-fclose.o): in function `_fclose_r':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/fclose.c:109:(.text+0xd8): undefined reference to `__retarget_lock_close_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/fclose.c:76:(.text+0x13c): undefined reference to `__retarget_lock_acquire_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/fclose.c:81:(.text+0x160): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/fclose.c:107:(.text+0x170): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-fflush.o): in function `_fflush_r':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/fflush.c:277:(.text+0x2d8): undefined reference to `__retarget_lock_acquire_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/fflush.c:279:(.text+0x310): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/fflush.c:277:(.text+0x3f0): undefined reference to `__retarget_lock_acquire_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/fflush.c:279:(.text+0x404): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-sbrkr.o): in function `_sbrk_r':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/reent/sbrkr.c:51:(.text+0x1c): undefined reference to `_sbrk'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-vfiprintf.o): in function `_vfiprintf_r':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/vfprintf.c:600:(.text+0xe40): undefined reference to `__retarget_lock_acquire_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/vfprintf.c:1536:(.text+0x1464): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/vfprintf.c:617:(.text+0x1678): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/vfprintf.c:609:(.text+0x16ec): undefined reference to `__retarget_lock_release_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-vfiprintf.o): in function `__sbprintf':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/vfprintf.c:226:(.text+0x17a8): undefined reference to `__retarget_lock_init_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdio/vfprintf.c:237:(.text+0x17fc): undefined reference to `__retarget_lock_close_recursive'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-abort.o): in function `abort':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/stdlib/abort.c:59:(.text+0x10): undefined reference to `_exit'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-fstatr.o): in function `_fstat_r':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/reent/fstatr.c:55:(.text+0x24): undefined reference to `_fstat'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-signalr.o): in function `_kill_r':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/reent/signalr.c:53:(.text+0x24): undefined reference to `_kill'
+/usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/bin/ld: /usr/local/pspdev/lib/gcc/psp/15.2.0/../../../../psp/lib/libc.a(libc_a-signalr.o): in function `_getpid_r':
+/src/build/newlib/build-psp/psp/newlib/../../../newlib/libc/reent/signalr.c:83:(.text+0x68): undefined reference to `_getpid'
+collect2: error: ld returned 1 exit status
+make: *** [/usr/local/pspdev/psp/sdk/lib/build_prx.mak:77: recovery.elf] Error 1
+make: Leaving directory '/tmp/pro-x.KcaHhM/Recovery'

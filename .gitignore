@@ -1,0 +1,6 @@
+.phase1/
+artifacts/work/
+workflow/
+context/
+__pycache__/
+*.pyc

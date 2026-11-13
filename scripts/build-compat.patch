@@ -1,0 +1,319 @@
+--- a/Installer/create_module_include.py
++++ b/Installer/create_module_include.py
+@@ -1,29 +1,29 @@
+-#!/usr/bin/python
+-
+-import os
+-
+-def main():
+-	lists = [
+-			"ISODrivers/Galaxy/galaxy.prx",
+-			"ISODrivers/March33/march33.prx",
+-			"ISODrivers/March33/march33_620.prx",
+-			"ISODrivers/March33/march33_660.prx",
+-			"ISODrivers/Inferno/inferno.prx",
+-			"Popcorn/popcorn.prx",
+-			"Satelite/satelite.prx",
+-			"Stargate/stargate.prx",
+-			"SystemControl/systemctrl.prx",
+-			"usbdevice/usbdevice.prx",
+-			"Vshctrl/vshctrl.prx",
+-			"Recovery/recovery.prx",
+-	]
+-
+-	for fn in lists:
+-		path = "../" + fn
+-		name=os.path.split(fn)[-1]
+-		name=os.path.splitext(name)[0]
+-		ret = os.system("bin2c %s %s.h %s"%(path, name, name))
+-		assert(ret == 0)
+-
+-if __name__ == "__main__":
+-	main()
++#!/usr/bin/python3
++
++import os
++
++def main():
++	lists = [
++			"ISODrivers/Galaxy/galaxy.prx",
++			"ISODrivers/March33/march33.prx",
++			"ISODrivers/March33/march33_620.prx",
++			"ISODrivers/March33/march33_660.prx",
++			"ISODrivers/Inferno/inferno.prx",
++			"Popcorn/popcorn.prx",
++			"Satelite/satelite.prx",
++			"Stargate/stargate.prx",
++			"SystemControl/systemctrl.prx",
++			"usbdevice/usbdevice.prx",
++			"Vshctrl/vshctrl.prx",
++			"Recovery/recovery.prx",
++	]
++
++	for fn in lists:
++		path = "../" + fn
++		name=os.path.split(fn)[-1]
++		name=os.path.splitext(name)[0]
++		ret = os.system("bin2c %s %s.h %s"%(path, name, name))
++		assert(ret == 0)
++
++if __name__ == "__main__":
++	main()
+--- a/PXE/Launcher/create_module_include.py
++++ b/PXE/Launcher/create_module_include.py
+@@ -1,44 +1,44 @@
+-#!/usr/bin/python
+-
+-class FakeTime:
+-    def time(self):
+-        return 1225856967.109
+-
+-import os, gzip, StringIO
+-
+-gzip.time = FakeTime()
+-
+-def create_gzip(input, output):
+-	f_in=open(input, 'rb')
+-	temp=StringIO.StringIO()
+-	f=gzip.GzipFile(fileobj=temp, mode='wb')
+-	f.writelines(f_in)
+-	f.close()
+-	f_in.close()
+-	fout=open(output, 'wb')
+-	temp.seek(0)
+-	fout.writelines(temp)
+-	fout.close()
+-	temp.close()
+-
+-def cleanup():
+-	del_list = [
+-		"installer.prx.gz",
+-		"Rebootex.prx.gz",
+-	]
+-
+-	for file in del_list:
+-		try:
+-			os.remove(file)
+-		except OSError:
+-			pass
+-
+-def main():
+-	create_gzip("../../Installer/installer.prx", "installer.prx.gz")
+-	create_gzip("../../Rebootex/Rebootex.prx", "Rebootex.prx.gz")
+-	os.system("bin2c installer.prx.gz installer.h installer")
+-	os.system("bin2c Rebootex.prx.gz Rebootex_prx.h Rebootex_prx")
+-	cleanup()
+-
+-if __name__ == "__main__":
+-	main()
++#!/usr/bin/python3
++
++class FakeTime:
++    def time(self):
++        return 1225856967.109
++
++import os, gzip, io
++
++# Fixed gzip timestamp, matching upstream's Python 2 output header.
++
++def create_gzip(input, output):
++	f_in=open(input, 'rb')
++	temp=io.BytesIO()
++	f=gzip.GzipFile(fileobj=temp, mode='wb', filename='', mtime=1225856967)
++	f.writelines(f_in)
++	f.close()
++	f_in.close()
++	fout=open(output, 'wb')
++	temp.seek(0)
++	fout.writelines(temp)
++	fout.close()
++	temp.close()
++
++def cleanup():
++	del_list = [
++		"installer.prx.gz",
++		"Rebootex.prx.gz",
++	]
++
++	for file in del_list:
++		try:
++			os.remove(file)
++		except OSError:
++			pass
++
++def main():
++	create_gzip("../../Installer/installer.prx", "installer.prx.gz")
++	create_gzip("../../Rebootex/Rebootex.prx", "Rebootex.prx.gz")
++	os.system("bin2c installer.prx.gz installer.h installer")
++	os.system("bin2c Rebootex.prx.gz Rebootex_prx.h Rebootex_prx")
++	cleanup()
++
++if __name__ == "__main__":
++	main()
+--- a/contrib/pspgz.py
++++ b/contrib/pspgz.py
+@@ -1,82 +1,82 @@
+-#!/usr/bin/python
+-
+-class FakeTime:
+-    def time(self):
+-        return 1225856967.109
+-
+-import sys, os, struct, gzip, hashlib, StringIO
+-
+-gzip.time = FakeTime()
+-
+-def binary_replace(data, newdata, offset):
+-	return data[0:offset] + newdata + data[offset+len(newdata):]
+-
+-def prx_compress(output, hdr, input, mod_name="", mod_attr=0xFFFFFFFF):
+-	a=open(hdr, "rb")
+-	fileheader = a.read();
+-	a.close()
+-
+-	a=open(input, "rb")
+-	elf = a.read(4);
+-	a.close()
+-
+-	if (elf != '\x7fELF'.encode()):
+-		print ("not a ELF/PRX file!")
+-		return -1
+-
+-	uncompsize = os.stat(input).st_size
+-
+-	f_in=open(input, 'rb')
+-	temp=StringIO.StringIO()
+-	f=gzip.GzipFile(fileobj=temp, mode='wb')
+-	f.writelines(f_in)
+-	f.close()
+-	f_in.close()
+-	prx=temp.getvalue()
+-	temp.close()
+-
+-	digest=hashlib.md5(prx).digest()
+-	filesize = len(fileheader) + len(prx)
+-
+-	if mod_name != "":
+-		if len(mod_name) < 28:
+-			mod_name += "\x00" * (28-len(mod_name))
+-		else:
+-			mod_name = mod_name[0:28]
+-		fileheader = binary_replace(fileheader, mod_name.encode(), 0xA)
+-
+-	if mod_attr != 0xFFFFFFFF:
+-		fileheader = binary_replace(fileheader, struct.pack('H', mod_attr), 0x4)
+-
+-	fileheader = binary_replace(fileheader, struct.pack('L', uncompsize), 0x28)
+-	fileheader = binary_replace(fileheader, struct.pack('L', filesize), 0x2c)
+-	fileheader = binary_replace(fileheader, struct.pack('L', len(prx)), 0xb0)
+-	fileheader = binary_replace(fileheader, digest, 0x140)
+-
+-	a=open(output, "wb")
+-	assert(len(fileheader) == 0x150)
+-	a.write(fileheader)
+-	a.write(prx)
+-	a.close()
+-
+-	try:
+-		os.remove("tmp.gz")
+-	except OSError:
+-		pass
+-
+-	return 0
+-
+-def main():
+-	if len(sys.argv) < 4:
+-		print ("Usage: %s outfile prxhdr infile [modname] [modattr]\n"%(sys.argv[0]))
+-		exit(-1)
+-
+-	if len(sys.argv) < 5:
+-		prx_compress(sys.argv[1], sys.argv[2], sys.argv[3])
+-	elif len(sys.argv) < 6:
+-		prx_compress(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+-	else:
+-		prx_compress(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], int(sys.argv[5], 16))
+-
+-if __name__ == "__main__":
+-	main()
++#!/usr/bin/python3
++
++class FakeTime:
++    def time(self):
++        return 1225856967.109
++
++import sys, os, struct, gzip, hashlib, io
++
++# Explicit mtime works on Python 3 without replacing gzip's time module.
++
++def binary_replace(data, newdata, offset):
++	return data[0:offset] + newdata + data[offset+len(newdata):]
++
++def prx_compress(output, hdr, input, mod_name="", mod_attr=0xFFFFFFFF):
++	a=open(hdr, "rb")
++	fileheader = a.read();
++	a.close()
++
++	a=open(input, "rb")
++	elf = a.read(4);
++	a.close()
++
++	if (elf != '\x7fELF'.encode()):
++		print ("not a ELF/PRX file!")
++		return -1
++
++	uncompsize = os.stat(input).st_size
++
++	f_in=open(input, 'rb')
++	temp=io.BytesIO()
++	f=gzip.GzipFile(fileobj=temp, mode='wb', filename='', mtime=1225856967)
++	f.writelines(f_in)
++	f.close()
++	f_in.close()
++	prx=temp.getvalue()
++	temp.close()
++
++	digest=hashlib.md5(prx).digest()
++	filesize = len(fileheader) + len(prx)
++
++	if mod_name != "":
++		if len(mod_name) < 28:
++			mod_name += "\x00" * (28-len(mod_name))
++		else:
++			mod_name = mod_name[0:28]
++		fileheader = binary_replace(fileheader, mod_name.encode(), 0xA)
++
++	if mod_attr != 0xFFFFFFFF:
++		fileheader = binary_replace(fileheader, struct.pack('H', mod_attr), 0x4)
++
++	fileheader = binary_replace(fileheader, struct.pack('<I', uncompsize), 0x28)
++	fileheader = binary_replace(fileheader, struct.pack('<I', filesize), 0x2c)
++	fileheader = binary_replace(fileheader, struct.pack('<I', len(prx)), 0xb0)
++	fileheader = binary_replace(fileheader, digest, 0x140)
++
++	a=open(output, "wb")
++	assert(len(fileheader) == 0x150)
++	a.write(fileheader)
++	a.write(prx)
++	a.close()
++
++	try:
++		os.remove("tmp.gz")
++	except OSError:
++		pass
++
++	return 0
++
++def main():
++	if len(sys.argv) < 4:
++		print ("Usage: %s outfile prxhdr infile [modname] [modattr]\n"%(sys.argv[0]))
++		exit(-1)
++
++	if len(sys.argv) < 5:
++		prx_compress(sys.argv[1], sys.argv[2], sys.argv[3])
++	elif len(sys.argv) < 6:
++		prx_compress(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
++	else:
++		prx_compress(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], int(sys.argv[5], 16))
++
++if __name__ == "__main__":
++	main()

@@ -1,0 +1,85 @@
+{
+  "source_scope": "PASS",
+  "branding_files": [
+    "FastRecovery/Makefile",
+    "Installer/main.c",
+    "PXE/Launcher/Makefile",
+    "Recovery/trans_en.c",
+    "Satelite/trans_en.c",
+    "Translated/recovery_br.txt",
+    "Translated/recovery_de.txt",
+    "Translated/recovery_en.txt",
+    "Translated/recovery_es.txt",
+    "Translated/recovery_fr.txt",
+    "Translated/recovery_it.txt",
+    "Translated/recovery_ru.txt",
+    "Translated/satelite_br.txt",
+    "Translated/satelite_de.txt",
+    "Translated/satelite_en.txt",
+    "Translated/satelite_es.txt",
+    "Translated/satelite_fr.txt",
+    "Translated/satelite_it.txt",
+    "Translated/satelite_ru.txt",
+    "Vshctrl/vshctrl_patch_offset.c"
+  ],
+  "contracts": "PASS: all firmware files outside the explicit visible text changes match reference byte for byte",
+  "reference": {
+    "pbp": {
+      "PROUPDATE": {
+        "title": "661 PRO-C Updater",
+        "category": "MG",
+        "module": "main",
+        "sha256": "d5985af39608ee5e528fb37efe169c9bb6d64a75f0dfaeef0988c74f5c70c837"
+      },
+      "FastRecovery": {
+        "title": "661 PRO-C Fast Recovery",
+        "category": "MG",
+        "module": "astonishia_story_2",
+        "sha256": "b1a82f2007b9ae5376da44d506b7f5691c64e541995237130a372208ad1127dd"
+      }
+    },
+    "embedded_modules": {
+      "ISODrivers/Galaxy/galaxy.prx": "96c9a0897bd392542ad148077510f85114f95b0e7b72fb05bc9abb85e84fab6e",
+      "ISODrivers/March33/march33_660.prx": "dbe7d55c00ece06bbd69af91e8e4526e359fa0be773f0b4c68c5239a0edbc966",
+      "ISODrivers/Inferno/inferno.prx": "c86fb70b99effc19e9e5629b50a7133418320cd07ab34474c2c02871e00fd9be",
+      "Popcorn/popcorn.prx": "00b84722d6075cde1e26a6bc2900a4256da8b1cacc593868716fcee09e1d0f84",
+      "Satelite/satelite.prx": "1cea6b527c8d70285e7be4a1f47228ca0145fafd5749c180f0bd608d21d64843",
+      "Stargate/stargate.prx": "1265b834bc34a3f2cd140437d34085bcb6fabb784117c7c7a55cddf36a33f7a6",
+      "SystemControl/systemctrl.prx": "7ad1abd7e1df26318b3f988fc333c82c197dc3ad8dfaa9ad85d43398f8ab18ad",
+      "usbdevice/usbdevice.prx": "783624bde57f7f47e79bc0596499b947e140f2d338771a77a6422b2fc7db8b62",
+      "Vshctrl/vshctrl.prx": "9f317d55ff9d0f8843c5291fe21f84ae2c5cabc95e9e07aa69bf6955dadb3eb0",
+      "Recovery/recovery.prx": "63844068fb5abb247e44b22dca087461094acb4b98a2fbc514e0ebbed7147bcd"
+    }
+  },
+  "pro-x": {
+    "pbp": {
+      "PROUPDATE": {
+        "title": "661 PRO-X Installer",
+        "category": "MG",
+        "module": "main",
+        "sha256": "b58b860437d1ccd9c5f64c47ead1329d4355bffdc049a97a18aac3bbcb2a8e14"
+      },
+      "FastRecovery": {
+        "title": "661 PRO-X Fast Recovery",
+        "category": "MG",
+        "module": "astonishia_story_2",
+        "sha256": "9e2fc87e3d275388c051b1179c9f1978c39956b363c7e2ac47e80546e9e3e56d"
+      }
+    },
+    "embedded_modules": {
+      "ISODrivers/Galaxy/galaxy.prx": "96c9a0897bd392542ad148077510f85114f95b0e7b72fb05bc9abb85e84fab6e",
+      "ISODrivers/March33/march33_660.prx": "dbe7d55c00ece06bbd69af91e8e4526e359fa0be773f0b4c68c5239a0edbc966",
+      "ISODrivers/Inferno/inferno.prx": "c86fb70b99effc19e9e5629b50a7133418320cd07ab34474c2c02871e00fd9be",
+      "Popcorn/popcorn.prx": "00b84722d6075cde1e26a6bc2900a4256da8b1cacc593868716fcee09e1d0f84",
+      "Satelite/satelite.prx": "a759057eb11062ff9ebc1bcac3f6848c9bf30db17c764f95dbb6fb2ad627ca80",
+      "Stargate/stargate.prx": "1265b834bc34a3f2cd140437d34085bcb6fabb784117c7c7a55cddf36a33f7a6",
+      "SystemControl/systemctrl.prx": "7ad1abd7e1df26318b3f988fc333c82c197dc3ad8dfaa9ad85d43398f8ab18ad",
+      "usbdevice/usbdevice.prx": "783624bde57f7f47e79bc0596499b947e140f2d338771a77a6422b2fc7db8b62",
+      "Vshctrl/vshctrl.prx": "8301d7e80521fcbbb98da6312abaf92d46755b2e0a338333bf54495961bdcc5c",
+      "Recovery/recovery.prx": "babd32adcd2f946692e9b9f874b9c451d895b34827281ef0ab5b1664062f24d6"
+    }
+  },
+  "utf16_display_bytes_including_nul": 22,
+  "hardware": "NOT RUN",
+  "infinity": "NOT RUN: static contract preservation only"
+}

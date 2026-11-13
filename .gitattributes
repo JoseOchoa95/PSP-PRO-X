@@ -1,0 +1,12 @@
+* text=auto
+*.sh text eol=lf
+*.py text eol=lf
+Makefile text eol=lf
+*.txt -text
+*.pf -text
+*.prx -text
+*.a -text
+*.bin -text
+*.PNG -text
+firmware/** -text
+scripts/*.patch -text

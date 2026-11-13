@@ -1,0 +1,191 @@
+make[1]: Entering directory '/tmp/pro-x.ewIyu9/SystemControl/libs'
+make -C libpspsystemctrl_kernel
+make[2]: warning: jobserver unavailable: using -j1.  Add '+' to parent make rule.
+make[2]: Entering directory '/tmp/pro-x.ewIyu9/SystemControl/libs'
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0000 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0000.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0001 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0001.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0002 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0002.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0003 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0003.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0004 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0004.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0005 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0005.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0006 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0006.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0007 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0007.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0008 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0008.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0009 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0009.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0010 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0010.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0011 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0011.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0012 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0012.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0013 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0013.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0014 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0014.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0015 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0015.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0016 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0016.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0017 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0017.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0018 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0018.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0019 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0019.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0020 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0020.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0021 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0021.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0022 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0022.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0023 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0023.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0024 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0024.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0025 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0025.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0026 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0026.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0027 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0027.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0028 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0028.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0029 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0029.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0030 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0030.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0031 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0031.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0032 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0032.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0033 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0033.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0034 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0034.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0035 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0035.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0036 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0036.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0037 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0037.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0038 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0038.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0039 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0039.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0040 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0040.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0041 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0041.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0042 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0042.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0043 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0043.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0044 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0044.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0045 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0045.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0046 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0046.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0047 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0047.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0048 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0048.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0049 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0049.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0050 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0050.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0051 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0051.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0052 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0052.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0053 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0053.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0054 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0054.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0055 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0055.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0056 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0056.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForKernel_0057 SystemCtrlForKernel.S -c -o SystemCtrlForKernel_0057.o
+psp-ar q libpspsystemctrl_kernel.a SystemCtrlForKernel_0000.o SystemCtrlForKernel_0001.o SystemCtrlForKernel_0002.o SystemCtrlForKernel_0003.o SystemCtrlForKernel_0004.o SystemCtrlForKernel_0005.o SystemCtrlForKernel_0006.o SystemCtrlForKernel_0007.o SystemCtrlForKernel_0008.o SystemCtrlForKernel_0009.o SystemCtrlForKernel_0010.o SystemCtrlForKernel_0011.o SystemCtrlForKernel_0012.o SystemCtrlForKernel_0013.o SystemCtrlForKernel_0014.o SystemCtrlForKernel_0015.o SystemCtrlForKernel_0016.o SystemCtrlForKernel_0017.o SystemCtrlForKernel_0018.o SystemCtrlForKernel_0019.o SystemCtrlForKernel_0020.o SystemCtrlForKernel_0021.o SystemCtrlForKernel_0022.o SystemCtrlForKernel_0023.o SystemCtrlForKernel_0024.o SystemCtrlForKernel_0025.o SystemCtrlForKernel_0026.o SystemCtrlForKernel_0027.o SystemCtrlForKernel_0028.o SystemCtrlForKernel_0029.o SystemCtrlForKernel_0030.o SystemCtrlForKernel_0031.o SystemCtrlForKernel_0032.o SystemCtrlForKernel_0033.o SystemCtrlForKernel_0034.o SystemCtrlForKernel_0035.o SystemCtrlForKernel_0036.o SystemCtrlForKernel_0037.o SystemCtrlForKernel_0038.o SystemCtrlForKernel_0039.o SystemCtrlForKernel_0040.o SystemCtrlForKernel_0041.o SystemCtrlForKernel_0042.o SystemCtrlForKernel_0043.o SystemCtrlForKernel_0044.o SystemCtrlForKernel_0045.o SystemCtrlForKernel_0046.o SystemCtrlForKernel_0047.o SystemCtrlForKernel_0048.o SystemCtrlForKernel_0049.o SystemCtrlForKernel_0050.o SystemCtrlForKernel_0051.o SystemCtrlForKernel_0052.o SystemCtrlForKernel_0053.o SystemCtrlForKernel_0054.o SystemCtrlForKernel_0055.o SystemCtrlForKernel_0056.o  SystemCtrlForKernel_0057.o
+psp-ar: creating libpspsystemctrl_kernel.a
+psp-ranlib libpspsystemctrl_kernel.a
+make[2]: Leaving directory '/tmp/pro-x.ewIyu9/SystemControl/libs/libpspsystemctrl_kernel'
+make -C libpspsystemctrl_user
+make[2]: warning: jobserver unavailable: using -j1.  Add '+' to parent make rule.
+make[2]: Entering directory '/tmp/pro-x.ewIyu9/SystemControl/libs'
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0000 SystemCtrlForUser.S -c -o SystemCtrlForUser_0000.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0001 SystemCtrlForUser.S -c -o SystemCtrlForUser_0001.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0002 SystemCtrlForUser.S -c -o SystemCtrlForUser_0002.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0003 SystemCtrlForUser.S -c -o SystemCtrlForUser_0003.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0004 SystemCtrlForUser.S -c -o SystemCtrlForUser_0004.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0005 SystemCtrlForUser.S -c -o SystemCtrlForUser_0005.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0006 SystemCtrlForUser.S -c -o SystemCtrlForUser_0006.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0007 SystemCtrlForUser.S -c -o SystemCtrlForUser_0007.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0008 SystemCtrlForUser.S -c -o SystemCtrlForUser_0008.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0009 SystemCtrlForUser.S -c -o SystemCtrlForUser_0009.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0010 SystemCtrlForUser.S -c -o SystemCtrlForUser_0010.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0011 SystemCtrlForUser.S -c -o SystemCtrlForUser_0011.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0012 SystemCtrlForUser.S -c -o SystemCtrlForUser_0012.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0013 SystemCtrlForUser.S -c -o SystemCtrlForUser_0013.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0014 SystemCtrlForUser.S -c -o SystemCtrlForUser_0014.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0015 SystemCtrlForUser.S -c -o SystemCtrlForUser_0015.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0016 SystemCtrlForUser.S -c -o SystemCtrlForUser_0016.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0017 SystemCtrlForUser.S -c -o SystemCtrlForUser_0017.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0018 SystemCtrlForUser.S -c -o SystemCtrlForUser_0018.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0019 SystemCtrlForUser.S -c -o SystemCtrlForUser_0019.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0020 SystemCtrlForUser.S -c -o SystemCtrlForUser_0020.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0021 SystemCtrlForUser.S -c -o SystemCtrlForUser_0021.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0022 SystemCtrlForUser.S -c -o SystemCtrlForUser_0022.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0023 SystemCtrlForUser.S -c -o SystemCtrlForUser_0023.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0024 SystemCtrlForUser.S -c -o SystemCtrlForUser_0024.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0025 SystemCtrlForUser.S -c -o SystemCtrlForUser_0025.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0026 SystemCtrlForUser.S -c -o SystemCtrlForUser_0026.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0027 SystemCtrlForUser.S -c -o SystemCtrlForUser_0027.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0028 SystemCtrlForUser.S -c -o SystemCtrlForUser_0028.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0029 SystemCtrlForUser.S -c -o SystemCtrlForUser_0029.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0030 SystemCtrlForUser.S -c -o SystemCtrlForUser_0030.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0031 SystemCtrlForUser.S -c -o SystemCtrlForUser_0031.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0032 SystemCtrlForUser.S -c -o SystemCtrlForUser_0032.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0033 SystemCtrlForUser.S -c -o SystemCtrlForUser_0033.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0034 SystemCtrlForUser.S -c -o SystemCtrlForUser_0034.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0035 SystemCtrlForUser.S -c -o SystemCtrlForUser_0035.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0036 SystemCtrlForUser.S -c -o SystemCtrlForUser_0036.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0037 SystemCtrlForUser.S -c -o SystemCtrlForUser_0037.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0038 SystemCtrlForUser.S -c -o SystemCtrlForUser_0038.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0039 SystemCtrlForUser.S -c -o SystemCtrlForUser_0039.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0040 SystemCtrlForUser.S -c -o SystemCtrlForUser_0040.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0041 SystemCtrlForUser.S -c -o SystemCtrlForUser_0041.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0042 SystemCtrlForUser.S -c -o SystemCtrlForUser_0042.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0043 SystemCtrlForUser.S -c -o SystemCtrlForUser_0043.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0044 SystemCtrlForUser.S -c -o SystemCtrlForUser_0044.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0045 SystemCtrlForUser.S -c -o SystemCtrlForUser_0045.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_SystemCtrlForUser_0046 SystemCtrlForUser.S -c -o SystemCtrlForUser_0046.o
+psp-ar q libpspsystemctrl_user.a SystemCtrlForUser_0000.o SystemCtrlForUser_0001.o SystemCtrlForUser_0002.o SystemCtrlForUser_0003.o SystemCtrlForUser_0004.o SystemCtrlForUser_0005.o SystemCtrlForUser_0006.o SystemCtrlForUser_0007.o SystemCtrlForUser_0008.o SystemCtrlForUser_0009.o SystemCtrlForUser_0010.o SystemCtrlForUser_0011.o SystemCtrlForUser_0012.o SystemCtrlForUser_0013.o SystemCtrlForUser_0014.o SystemCtrlForUser_0015.o SystemCtrlForUser_0016.o SystemCtrlForUser_0017.o SystemCtrlForUser_0018.o SystemCtrlForUser_0019.o SystemCtrlForUser_0020.o SystemCtrlForUser_0021.o SystemCtrlForUser_0022.o SystemCtrlForUser_0023.o SystemCtrlForUser_0024.o SystemCtrlForUser_0025.o SystemCtrlForUser_0026.o SystemCtrlForUser_0027.o SystemCtrlForUser_0028.o SystemCtrlForUser_0029.o SystemCtrlForUser_0030.o SystemCtrlForUser_0031.o SystemCtrlForUser_0032.o SystemCtrlForUser_0033.o SystemCtrlForUser_0034.o SystemCtrlForUser_0035.o SystemCtrlForUser_0036.o SystemCtrlForUser_0037.o SystemCtrlForUser_0038.o SystemCtrlForUser_0039.o SystemCtrlForUser_0040.o SystemCtrlForUser_0041.o SystemCtrlForUser_0042.o SystemCtrlForUser_0043.o SystemCtrlForUser_0044.o SystemCtrlForUser_0045.o SystemCtrlForUser_0046.o 
+psp-ar: creating libpspsystemctrl_user.a
+psp-ranlib libpspsystemctrl_user.a
+make[2]: Leaving directory '/tmp/pro-x.ewIyu9/SystemControl/libs/libpspsystemctrl_user'
+make -C libpspkubridge
+make[2]: warning: jobserver unavailable: using -j1.  Add '+' to parent make rule.
+make[2]: Entering directory '/tmp/pro-x.ewIyu9/SystemControl/libs'
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0000 KUBridge.S -c -o KUBridge_0000.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0001 KUBridge.S -c -o KUBridge_0001.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0002 KUBridge.S -c -o KUBridge_0002.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0003 KUBridge.S -c -o KUBridge_0003.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0004 KUBridge.S -c -o KUBridge_0004.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0005 KUBridge.S -c -o KUBridge_0005.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0006 KUBridge.S -c -o KUBridge_0006.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0007 KUBridge.S -c -o KUBridge_0007.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0008 KUBridge.S -c -o KUBridge_0008.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0009 KUBridge.S -c -o KUBridge_0009.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0010 KUBridge.S -c -o KUBridge_0010.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0011 KUBridge.S -c -o KUBridge_0011.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0012 KUBridge.S -c -o KUBridge_0012.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0013 KUBridge.S -c -o KUBridge_0013.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0014 KUBridge.S -c -o KUBridge_0014.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0015 KUBridge.S -c -o KUBridge_0015.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0016 KUBridge.S -c -o KUBridge_0016.o
+psp-gcc -Os -G0 -Wall -fno-builtin-printf -I/usr/local/pspdev/psp/sdk/include -DF_KUBridge_0017 KUBridge.S -c -o KUBridge_0017.o
+psp-ar q libpspkubridge.a KUBridge_0000.o KUBridge_0001.o KUBridge_0002.o KUBridge_0003.o KUBridge_0004.o KUBridge_0005.o KUBridge_0006.o KUBridge_0007.o KUBridge_0008.o KUBridge_0009.o KUBridge_0010.o KUBridge_0011.o KUBridge_0012.o KUBridge_0013.o KUBridge_0014.o KUBridge_0015.o KUBridge_0016.o KUBridge_0017.o 
+psp-ar: creating libpspkubridge.a
+psp-ranlib libpspkubridge.a
+make[2]: Leaving directory '/tmp/pro-x.ewIyu9/SystemControl/libs/libpspkubridge'
+make[1]: Leaving directory '/tmp/pro-x.ewIyu9/SystemControl/libs'
+make: Entering directory '/tmp/pro-x.ewIyu9/CrossFW'
+psp-gcc -I/usr/local/pspdev/psp/sdk/include/libc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o cross_fw.o cross_fw.c
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/SysMemForKernel.o ../Imports/SysMemForKernel.S
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/LoadCoreForKernel.o ../Imports/LoadCoreForKernel.S
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/ModuleMgrForKernel.o ../Imports/ModuleMgrForKernel.S
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/InterruptManagerForKernel.o ../Imports/InterruptManagerForKernel.S
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/sceResmgr_driver.o ../Imports/sceResmgr_driver.S
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/InitForKernel.o ../Imports/InitForKernel.S
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/LoadExecForKernel.o ../Imports/LoadExecForKernel.S
+psp-gcc -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1 -I../Common/ -I../include/ -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -fno-pic -DCONFIG_661=1   -c -o ../Imports/sceCtrl_driver.o ../Imports/sceCtrl_driver.S
+psp-ar cru cross_fw.a cross_fw.o ../Imports/SysMemForKernel.o ../Imports/LoadCoreForKernel.o ../Imports/SysMemForKernel.o ../Imports/ModuleMgrForKernel.o ../Imports/InterruptManagerForKernel.o ../Imports/sceResmgr_driver.o ../Imports/InitForKernel.o ../Imports/LoadExecForKernel.o ../Imports/sceCtrl_driver.o
+psp-ranlib cross_fw.a
+make: Leaving directory '/tmp/pro-x.ewIyu9/CrossFW'
+make: Entering directory '/tmp/pro-x.ewIyu9/Rebootex_bin'
+psp-gcc -I /usr/local/pspdev/psp/sdk/include -I ../Common -W -Wall -Os -G0 -fno-pic -fno-toplevel-reorder -mno-abicalls -w -S  -DCONFIG_661=1 main.c -o main.s
+psp-as main.s -o main.o
+psp-ld -T linkfile.l main.o -o main.elf
+psp-strip -s main.elf
+psp-objcopy -O binary main.elf rebootex.bin
+bin2c rebootex.bin rebootex.h rebootex
+make: Leaving directory '/tmp/pro-x.ewIyu9/Rebootex_bin'
+make: Entering directory '/tmp/pro-x.ewIyu9/Rebootex'
+psp-gcc -I/usr/local/pspdev/psp/sdk/include/libc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../Common -I ../include -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o main.o main.c
+main.c: In function 'patch_sceLoadExec':
+main.c:74:2: warning: converting a packed 'SceModule' {aka 'struct SceModule'} pointer (alignment 1) to a 'SceModule2' {aka 'struct SceModule2'} pointer (alignment 4) may result in an unaligned pointer value [-Waddress-of-packed-member]
+   74 |  SceModule2 * loadexec = (SceModule2*)sctrlKernelFindModuleByName("sceLoadExec");
+      |  ^~~~~~~~~~
+In file included from /usr/local/pspdev/psp/sdk/include/pspkernel.h:19,
+                 from main.c:18:
+/usr/local/pspdev/psp/sdk/include/psploadcore.h:30:16: note: defined here
+   30 | typedef struct SceModule {
+      |                ^~~~~~~~~
+In file included from main.c:24:
+../include/systemctrl.h:205:16: note: defined here
+  205 | typedef struct SceModule2 {
+      |                ^~~~~~~~~~
+main.c:75:6: warning: variable 'text_addr' set but not used [-Wunused-but-set-variable]
+   75 |  u32 text_addr;
+      |      ^~~~~~~~~
+psp-gcc -I/usr/local/pspdev/psp/sdk/include/libc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../Common -I ../include -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o ../PXE/Launcher/launcher_patch_offset.o ../PXE/Launcher/launcher_patch_offset.c
+psp-gcc -I/usr/local/pspdev/psp/sdk/include/libc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../Common -I ../include -DCONFIG_661=1 -D_PSP_FW_VERSION=661   -c -o ../Common/utils.o ../Common/utils.c
+psp-gcc -I/usr/local/pspdev/psp/sdk/include/libc -I. -I/usr/local/pspdev/psp/sdk/include -Os -G0 -Wall -I ../Common -I ../include -DCONFIG_661=1 -D_PSP_FW_VERSION=661  -L. -L/usr/local/pspdev/psp/sdk/lib -specs=/usr/local/pspdev/psp/sdk/lib/prxspecs -Wl,-q,-T/usr/local/pspdev/psp/sdk/lib/linkfile.prx -mno-crt0 -nostartfiles -L ../libs  main.o ../PXE/Launcher/launcher_patch_offset.o ../Common/utils.o /usr/local/pspdev/psp/sdk/lib/prxexports.o -lpspkubridge ../CrossFW/cross_fw.a -lpspdebug -lpspdisplay_driver -lpspctrl_driver -lpspsdk  -lpspkernel -o Rebootex.elf
+psp-gcc: error: unrecognized command line option '-mno-crt0'; did you mean '-mno-crc'?
+make: *** [/usr/local/pspdev/psp/sdk/lib/build.mak:175: Rebootex.elf] Error 1
+make: Leaving directory '/tmp/pro-x.ewIyu9/Rebootex'
