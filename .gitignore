@@ -1,15 +1,38 @@
+# Local build inputs, reference checkouts and development scratch space
 .phase1/
+.phase2/
+
+# Generated packages, intermediate output and local release staging
 /artifacts/
+/builds/
+/build/
 /release/
 /releases/
 dist/
+
+# Compiler output; inherited PRX, BIN and libraries are required source inputs
 *.o
 *.elf
 *.map
+*.d
 *.log
 EBOOT.PBP
 PARAM.SFO
+
+# Local planning and implementation records (keep the existing policy)
 workflow/
 context/
+
+# Host runtime/test caches
 __pycache__/
 *.pyc
+*.pyo
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Raw PSP diagnostic reports, if copied out of the ignored artifact directories
+/report.txt
+/report-*.txt
+**/WPA2DIAG/report.txt

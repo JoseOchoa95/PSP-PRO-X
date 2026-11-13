@@ -5,6 +5,7 @@ import json
 import re
 import struct
 from build import ROOT, inventory, digest, sha
+from product import VERSION, WPA2_VARIANT
 
 REPLACEMENTS = {
     'Installer/main.c': [(b'#define VERSION_STR "PRO-C"', b'#define VERSION_STR "PRO-X"'),
@@ -16,6 +17,13 @@ REPLACEMENTS = {
     'Recovery/trans_en.c': [(b'"PRO Recovery Menu"', b'"PRO-X Recovery Menu"')],
 }
 
+PHASE2_MODIFIED = {'Recovery/Makefile', 'Recovery/menu.c', 'SystemControl/Makefile',
+                   'SystemControl/syspatch.c'}
+PHASE2_ADDED = {'Common/prox_network.c', 'Common/prox_network.h',
+                'Common/wpa2_patch.c', 'Common/wpa2_patch.h',
+                'SystemControl/wpa2.c', 'SystemControl/wpa2.h', 'SystemControl/wpa2_variant_661.h',
+                'tools/wpa2diag/Makefile', 'tools/wpa2diag/main.c'}
+
 
 def require(condition, message):
     if not condition:
@@ -24,10 +32,18 @@ def require(condition, message):
 
 def verify_source(reference):
     actual = inventory(ROOT / 'firmware')
-    require(actual.keys() == reference['source_files'].keys(), 'Unexpected/missing firmware files')
+    phase2 = json.loads((ROOT / 'docs/phase-2-source.json').read_text())
+    require(set(phase2['modified']) == PHASE2_MODIFIED and set(phase2['added']) == PHASE2_ADDED,
+            'Phase 2 changed its authorized file scope')
+    require(set(actual) == set(reference['source_files']) | set(phase2['added']), 'Unexpected/missing firmware files')
     changes = []
     for name, value in actual.items():
         data = (ROOT / 'firmware' / name).read_bytes()
+        if name in phase2['added'] or name in phase2['modified']:
+            expected = phase2['added'].get(name, phase2['modified'].get(name))
+            require(value == expected, 'Phase 2 reviewed snapshot changed: ' + name)
+            changes.append(name)
+            continue
         if name in REPLACEMENTS:
             for old, new in REPLACEMENTS[name]:
                 require(data.count(new) == 1, 'Branding missing/duplicated: ' + name)
@@ -46,7 +62,7 @@ def verify_source(reference):
     return sorted(changes)
 
 
-def pbp_info(data):
+def pbp_info(data, allow_plain=False):
     require(len(data) >= 40 and data[:4] == b'\0PBP', 'Invalid PBP magic/header')
     version, *offsets = struct.unpack_from('<9I', data, 4)
     require(version == 0x10000, 'Unexpected PBP version')
@@ -62,10 +78,14 @@ def pbp_info(data):
         value = sfo[values + offset:values + offset + length]
         entries[name] = value.rstrip(b'\0').decode() if fmt == 0x204 else value.hex()
     payload = data[offsets[6]:offsets[7]]
-    require(payload[:4] == b'~PSP', 'PBP has no encrypted PSP payload')
-    require(struct.unpack_from('<I', payload, 0x2c)[0] == len(payload), 'PSP payload size mismatch')
+    if payload[:4] == b'~PSP':
+        require(struct.unpack_from('<I', payload, 0x2c)[0] == len(payload), 'PSP payload size mismatch')
+        module = payload[10:38].split(b'\0', 1)[0].decode()
+    else:
+        require(allow_plain and payload[:4] == b'\x7fELF', 'PBP has no encrypted PSP payload')
+        module = 'ELF diagnostic (CFW required)'
     return {'title': entries['TITLE'], 'category': entries['CATEGORY'],
-            'module': payload[10:38].split(b'\0', 1)[0].decode(), 'sha256': sha(data)}
+            'module': module, 'sha256': sha(data)}
 
 
 def header_bytes(path):
@@ -116,12 +136,20 @@ def verify_build(metadata):
     if metadata['mode'] == 'pro-x':
         for file, message in [('Vshctrl/vshctrl.prx', b'6.61 PRO-X'), ('Recovery/recovery.prx', b'PRO-X Recovery Menu'), ('Satelite/satelite.prx', b'PRO-X VSH MENU'), ('Installer/installer.prx', b'PRO-X - based on PRO-C by Team PRO')]:
             require(message in elf_data(tree / file), 'Visible text absent from generated module: ' + file)
+        for name in ['wpa2.o', '../Common/wpa2_patch.o', '../Common/prox_network.o']:
+            require((tree / 'SystemControl' / name).is_file(), 'Phase 2 object missing: ' + name)
+        require(b'prox_wpa2_module' in (tree / 'SystemControl/systemctrl.elf').read_bytes(), 'WPA2 dispatcher not linked')
+        require(inventory(output / 'diagnostics') == metadata['diagnostics'], 'Diagnostic changed since build')
+        require(bool(metadata['diagnostics']), 'Diagnostic not built')
+        diagnostic = pbp_info((output / 'diagnostics/PSP/GAME/WPA2DIAG/EBOOT.PBP').read_bytes(), allow_plain=True)
+        require(diagnostic['title'] == 'PRO-X WPA2 identification (read only)', 'Wrong diagnostic title')
     return {'pbp': info, 'embedded_modules': embedded}
 
 
 def main():
     reference = json.loads((ROOT / 'artifacts/reference-build.json').read_text())
     branded = json.loads((ROOT / 'artifacts/pro-x-build.json').read_text())
+    require(branded.get('product_version') == VERSION, 'Compiled product version mismatch')
     require(reference['toolchain_image'] == branded['toolchain_image'], 'Different toolchains')
     for build in [reference, branded]:
         require(build['compile_script_sha256'] == sha((ROOT / 'scripts/compile.sh').read_bytes()), 'Build script changed')
@@ -129,7 +157,10 @@ def main():
     changes = verify_source(reference)
     require(inventory(ROOT / 'firmware') == branded['source_files'], 'Sources changed since PRO-X compilation')
     results = {'source_scope': 'PASS', 'branding_files': changes,
-               'contracts': 'PASS: all firmware files outside the explicit visible text changes match reference byte for byte',
+               'contracts': 'PASS: outside reviewed phase 2 files and visible branding, firmware matches reference byte for byte; public config/exports/NIDs/HEN/boot paths unchanged',
+               'phase2': {'status': 'prepared-for-hardware-test', 'verified_variants': 1,
+                          'variant_id': WPA2_VARIANT, 'preference_default': 'enabled',
+                          'hardware': 'NOT RUN'},
                'reference': verify_build(reference), 'pro-x': verify_build(branded),
                'utf16_display_bytes_including_nul': 22, 'hardware': 'NOT RUN',
                'infinity': 'NOT RUN: static contract preservation only'}

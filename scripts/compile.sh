@@ -33,6 +33,14 @@ done
 cp PXE/RebootexPXE/rebootex.h PXE/Launcher/rebootex.h
 make -C PXE/Launcher CONFIG_661=1
 make -C FastRecovery CONFIG_661=1
+# Separate opt-in identification tool, never part of the installer payload.
+if [ -d tools/wpa2diag ]; then
+    # Common/wpa2_patch.o previously used kernel SystemControl flags.
+    rm -f Common/wpa2_patch.o
+    make -C tools/wpa2diag CONFIG_661=1
+    mkdir -p "$output_dir/diagnostics/PSP/GAME/WPA2DIAG"
+    cp tools/wpa2diag/EBOOT.PBP "$output_dir/diagnostics/PSP/GAME/WPA2DIAG/"
+fi
 mkdir -p "$output_dir/PSP/GAME/PROUPDATE" "$output_dir/PSP/GAME/FastRecovery"
 cp PXE/Launcher/EBOOT.PBP "$output_dir/PSP/GAME/PROUPDATE/"
 cp FastRecovery/EBOOT.PBP "$output_dir/PSP/GAME/FastRecovery/"

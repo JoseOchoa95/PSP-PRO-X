@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tarfile
 import uuid
+from product import VERSION
 
 ROOT = Path(__file__).resolve().parents[1]
 UPSTREAM = 'd9435ff4af6ba60466b46019393f6bbd1fc72ac0'
@@ -80,6 +81,8 @@ def main():
         raise SystemExit(result.returncode)
     metadata = {
         'mode': args.mode, 'upstream_revision': UPSTREAM,
+        'product_version': VERSION if args.mode == 'pro-x' else None,
+        'build_id': identifier,
         'repository_head': repository_head(),
         'source_files': inputs, 'source_tree_sha256': digest(inputs),
         'compile_script_sha256': sha((ROOT / 'scripts/compile.sh').read_bytes()),
@@ -87,6 +90,7 @@ def main():
         'toolchain_image': image, 'command': command,
         'output': output.relative_to(ROOT).as_posix(), 'log': log.relative_to(ROOT).as_posix(),
         'artifacts': inventory(output / 'PSP'), 'modules': inventory(output / 'modules'),
+        'diagnostics': inventory(output / 'diagnostics'),
         'hardware_validated': False,
     }
     (output / 'build.json').write_text(json.dumps(metadata, indent=2) + '\n', encoding='utf-8')

@@ -37,6 +37,33 @@
 #include "font_list.h"
 #include "prodebug.h"
 #include "trans.h"
+#include "prox_network.h"
+
+static int network_enabled = 1;
+
+static int display_wpa2(struct MenuEntry *entry, char *buf, int size)
+{
+	snprintf(buf,size,"%-48s %-11s","WPA2 Support (restart required)",
+	         get_bool_name(network_enabled));
+	return 0;
+}
+
+static int change_wpa2(struct MenuEntry *entry, int direction)
+{
+	int next = !network_enabled;
+	if (prox_network_save(next) < 0) {
+		set_bottom_info("WPA2: save failed; previous setting retained",0xFF);
+		return -1;
+	}
+	network_enabled = next;
+	set_bottom_info("WPA2 preference saved; restart device to apply",0xFF);
+	return 0;
+}
+
+static int enter_wpa2(struct MenuEntry *entry)
+{
+	return change_wpa2(entry,1);
+}
 
 extern int scePowerRequestColdReset(int unk);
 extern int scePowerRequestStandby(void);
@@ -405,6 +432,7 @@ static int display_hibernation_deletion(struct MenuEntry* entry, char *buf, int 
 }
 
 static struct MenuEntry g_configuration_menu_entries[] = {
+	{ -1, 0, 0, &display_wpa2, &change_wpa2, &enter_wpa2, NULL },
 	{ -1, 0, 0, &display_iso_mode, &change_option, &change_option_by_enter, &g_iso_mode_option },
 	{ -1, 0, 0, &display_language, &change_option, &change_option_by_enter, &g_language_charge_option },
 	{ -1, 0, 0, &display_fake_region, &change_option, &change_option_by_enter, &g_fake_region_option },
@@ -1069,8 +1097,13 @@ void main_menu(void)
 {
 	struct Menu *menu = &g_top_menu;
 	int idx;
+	enum ProxNetworkStatus network_status;
 
 	select_language();
+	/* Private setting; keep SEConfig and all legacy translation indices intact. */
+	network_status = prox_network_read(&network_enabled);
+	if (network_status == PROX_NETWORK_INVALID || network_status == PROX_NETWORK_IO_ERROR)
+		set_bottom_info("WPA2: invalid/unreadable preference; default enabled",0xFF);
 
 	// setup font list size and cur select
 	g_recovery_font_option.limit_end = (s16)fontlist_count(&g_font_list) + 1;

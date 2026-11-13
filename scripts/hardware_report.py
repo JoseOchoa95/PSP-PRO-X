@@ -1,0 +1,21 @@
+"""Public, bounded owner report for v0.2.0; no private network identifiers."""
+REPORT = {
+    'date': '2026-11-13',
+    'source': 'project-owner statement in the development chat',
+    'model': 'PSP-2010',
+    'software_reported': '6.61 PRO-X',
+    'delivered_build_id': 'pro-x-ba6b5f9f45f2',
+    'binary_hash_checked_by_reporter': False,
+    'network_reported': {'band': '2.4 GHz', 'radio_mode': 'b/g/n mixed',
+                         'security': 'WPA2 only', 'router_model': None,
+                         'cipher_verified_separately': False},
+    'connection_with_pro_x': 'PASS: new profile and connection test, user reported',
+    'connection_without_pro_x': 'EXPECTED FAILURE: after full shutdown without starting PRO-X, user reported',
+    'transfer_5_minutes': 'NOT RUN / not reported',
+    'recovery_toggle_restart': 'NOT RUN / not reported',
+    'reconnection_suspend': 'NOT RUN / not reported separately',
+    'diagnostic_v2_exit': 'NOT RUN / not reported',
+    'infinity': 'NOT RUN / not reported',
+    'independent_ap_capture': 'NOT PROVIDED',
+    'scope': 'limited user-reported connection success; not completion of the hardware matrix',
+}

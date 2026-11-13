@@ -4,14 +4,17 @@ import json
 import zipfile
 import subprocess
 import sys
-from build import ROOT, inventory, digest, sha
+from build import ROOT, inventory, digest, sha, repository_head
 from verify import require
+from product import VERSION, WPA2_VARIANT, WPA2_REPORT_SHA256
+from hardware_report import REPORT as HARDWARE_REPORT
 
-NAME = 'pro-x-0.1.0-alpha.1-661'
+NAME = 'pro-x-' + VERSION + '-661'
+OUTPUT_DIR = ROOT / 'builds'
 SOURCE_DIRS = {'Common', 'CrossFW', 'FastRecovery', 'Imports', 'Installer',
                'ISODrivers', 'Popcorn', 'PXE', 'Rebootex', 'Rebootex_bin',
                'Recovery', 'Satelite', 'Stargate', 'SystemControl', 'Translated',
-               'Vshctrl', 'include', 'libs', 'usbdevice'}
+               'Vshctrl', 'include', 'libs', 'usbdevice', 'tools'}
 
 
 def archive(path, files):
@@ -25,7 +28,10 @@ def archive(path, files):
 
 def main():
     subprocess.run([sys.executable, str(ROOT / 'scripts/verify.py')], check=True, cwd=ROOT)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     build = json.loads((ROOT / 'artifacts/pro-x-build.json').read_text())
+    require(build.get('product_version') == VERSION, 'Product version differs from compiled build')
+    source_commit = repository_head()
     reference = json.loads((ROOT / 'artifacts/reference-build.json').read_text())
     verification = json.loads((ROOT / 'artifacts/verification.json').read_text())
     sources = {}
@@ -40,7 +46,8 @@ def main():
     for name in ['README.md', 'LICENSE', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', '.gitattributes', '.gitignore']:
         sources[name] = (ROOT / name).read_bytes()
     source_note = (
-        'PRO-X 0.1.0-alpha.1 / 6.61: experimental; hardware NOT RUN.\n\n'
+        f'PRO-X {VERSION} / 6.61: experimental; limited owner-reported WPA2 connection success.\n'
+        'WPA2 enabled for one identified module variant; extended hardware tests pending.\n\n'
         'This archive contains the exact inputs needed to build Installer and Fast Recovery,\n'
         'including inherited libraries/March33, scripts, notices and documentation.\n'
         'Unrelated IPL tools and dumping utilities are omitted. No Sony firmware or Infinity is included.\n'
@@ -54,10 +61,10 @@ def main():
     source_hashes = {name: sha(data) for name, data in sorted(sources.items())}
     sources['source-snapshot.json'] = (json.dumps({
         'upstream_revision': build['upstream_revision'], 'firmware_tree_sha256': build['source_tree_sha256'],
-        'repository_head': build['repository_head'],
+        'repository_head': source_commit, 'build_repository_head': build['repository_head'],
         'files': source_hashes, 'complete_build_inputs': True, 'complete_upstream_tree': False,
     }, indent=2) + '\n').encode()
-    source_zip = ROOT / 'artifacts' / (NAME + '-source.zip')
+    source_zip = OUTPUT_DIR / (NAME + '-source.zip')
     archive(source_zip, sources)
 
     files = {}
@@ -65,13 +72,17 @@ def main():
     for directory in ['PROUPDATE', 'FastRecovery']:
         name = 'PSP/GAME/' + directory + '/EBOOT.PBP'
         files[name] = (output / name).read_bytes()
+        executable = OUTPUT_DIR / name
+        executable.parent.mkdir(parents=True, exist_ok=True)
+        executable.write_bytes(files[name])
     for name in inventory(ROOT / 'firmware/Translated'):
         files['seplugins/' + name] = (ROOT / 'firmware/Translated' / name).read_bytes()
     for name in inventory(ROOT / 'firmware/contrib/fonts'):
         files['seplugins/fonts/' + name] = (ROOT / 'firmware/contrib/fonts' / name).read_bytes()
     for name in ['LICENSE', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md']:
         files[name] = (ROOT / name).read_bytes()
-    for name in ['build.md', 'upstream.md', 'install-and-validation.md', 'phase-1-results.md']:
+    for name in ['build.md', 'upstream.md', 'install-and-validation.md', 'phase-1-results.md',
+                 'wpa2-support.md', 'wpa2-validation.md', 'wpa2-upstream.json', 'phase-2-source.json']:
         files['docs/' + name] = (ROOT / 'docs' / name).read_bytes()
     for name in inventory(ROOT / 'docs/licenses'):
         files['licenses/' + name] = (ROOT / 'docs/licenses' / name).read_bytes()
@@ -79,10 +90,16 @@ def main():
     files['SOURCE.md'] = source_note + ('\nCompanion: ' + source_zip.name + '\nSHA-256: ' + sha(source_zip.read_bytes()) + '\n').encode()
     files['toolchain.txt'] = (ROOT / 'docs/build-toolchain.txt').read_bytes()
     manifest = {
-        'product': 'PRO-X', 'version': '0.1.0-alpha.1', 'firmware_target': '6.61',
-        'status': 'implementation-prepared-for-testing', 'hardware': 'NOT RUN', 'infinity': 'NOT RUN',
+        'product': 'PRO-X', 'version': VERSION, 'firmware_target': '6.61',
+        'status': 'experimental-user-tested', 'hardware': 'USER_REPORTED_PARTIAL_PASS', 'infinity': 'NOT RUN',
+        'hardware_report': HARDWARE_REPORT,
+        'build_id': build['build_id'],
+        'wpa2': {'preference_enabled_by_default': True, 'verified_variants': 1,
+                 'variant_id': WPA2_VARIANT, 'identification_report_sha256': WPA2_REPORT_SHA256,
+                 'patch_active': True, 'status': 'CONNECTION_PASS_REPORTED'},
         'upstream_url': 'https://github.com/MrColdbird/procfw',
-        'upstream_revision': build['upstream_revision'], 'repository_head': build['repository_head'],
+        'upstream_revision': build['upstream_revision'], 'repository_head': source_commit,
+        'build_repository_head': build['repository_head'],
         'source_tree_sha256': build['source_tree_sha256'], 'source_files': build['source_files'],
         'compile_script_sha256': build['compile_script_sha256'],
         'dockerfile_sha256': build['dockerfile_sha256'], 'toolchain_image': build['toolchain_image'],
@@ -98,11 +115,21 @@ def main():
     }
     files['manifest.json'] = (json.dumps(manifest, indent=2) + '\n').encode()
     files['SHA256SUMS'] = ''.join(sha(data) + '  ' + name + '\n' for name, data in sorted(files.items())).encode()
-    binary_zip = ROOT / 'artifacts' / (NAME + '.zip')
+    binary_zip = OUTPUT_DIR / (NAME + '.zip')
     archive(binary_zip, files)
     external = ''.join(sha(path.read_bytes()) + '  ' + path.name + '\n' for path in [binary_zip, source_zip])
-    (ROOT / 'artifacts' / (NAME + '.sha256')).write_text(external, encoding='ascii')
-    (ROOT / 'artifacts/manifest.json').write_bytes(files['manifest.json'])
+    (OUTPUT_DIR / (NAME + '.sha256')).write_text(external, encoding='ascii')
+    (OUTPUT_DIR / (NAME + '-manifest.json')).write_bytes(files['manifest.json'])
+    # This opt-in tool is separate from the normal two-program installation ZIP.
+    diagnostics = {name: (output / 'diagnostics' / name).read_bytes() for name in build['diagnostics']}
+    diagnostics['docs/wpa2-support.md'] = (ROOT / 'docs/wpa2-support.md').read_bytes()
+    diagnostics['LICENSE'] = (ROOT / 'LICENSE').read_bytes()
+    diagnostics['THIRD_PARTY_NOTICES.md'] = (ROOT / 'THIRD_PARTY_NOTICES.md').read_bytes()
+    diagnostics['source-reference.json'] = (json.dumps(manifest['source_archive'],indent=2)+'\n').encode()
+    diagnostics['SHA256SUMS'] = ''.join(sha(data)+'  '+name+'\n' for name,data in sorted(diagnostics.items())).encode()
+    diagnostic_zip = OUTPUT_DIR / (NAME + '-diagnostic.zip')
+    archive(diagnostic_zip,diagnostics)
+    diagnostic_zip.with_suffix('.sha256').write_text(sha(diagnostic_zip.read_bytes())+'  '+diagnostic_zip.name+'\n',encoding='ascii')
     print(external, end='')
 
 

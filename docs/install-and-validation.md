@@ -1,5 +1,17 @@
 # Instalación experimental y validación física
 
+**Fase 2, v0.2.0 experimental:** conexión reportada en PSP-2010. La preferencia WPA2 está
+habilitada por defecto para una variante 6.61 identificada con el reporte de una
+PSP-2010. El usuario reporta conexión a una red WPA2-only con PRO-X y fallo sin
+activarlo. Transferencia prolongada y demás pruebas de la matriz siguen pendientes.
+Se conservan las rutas y pasos de instalación PRO descritos aquí, con los EBOOT
+del mismo paquete nuevo. El cambio de versión sigue la política de AGENTS.md;
+no equivale a una release estable o a validación física de WPA2.
+Registrar los hashes de esa revisión y desactivar manualmente plugins WPA2 externos
+antes de ensayar el diagnóstico separado. Véanse [soporte WPA2](wpa2-support.md)
+y [matriz de Fase 2](wpa2-validation.md). No trasladar el PASS parcial de la versión
+anterior a estos binarios. Los párrafos siguientes documentan la Fase 1.
+
 Versión declarada: **PRO-X 0.1.0-beta.1**, objetivo **6.61**. Estado:
 **validación física parcial reportada por el usuario**; no es una versión estable.
 Instalación, Recovery y suspensión se reportaron funcionando. Infinity, juegos

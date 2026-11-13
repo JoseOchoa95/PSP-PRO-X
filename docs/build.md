@@ -1,5 +1,45 @@
 # Compilar y comprobar la Fase 1
 
+## Continuación: Fase 2
+
+El empaquetador actual genera **v0.2.0**, objetivo **6.61**, estado
+**prepared-for-hardware-test**. Los resultados alpha de las secciones
+siguientes son históricos. Los mismos comandos de build usan el toolchain
+fijado; además ejecutar:
+
+```text
+docker run --rm --network none --mount type=bind,source=<ruta-absoluta-del-repo>,target=/work pro-x-toolchain:phase1 sh /work/scripts/test-native.sh
+python -m unittest discover -s tests -v
+python scripts/verify.py
+python scripts/package.py
+python scripts/verify-package.py builds/pro-x-0.2.0-661.zip
+```
+
+`build.py pro-x` también construye `tools/wpa2diag` en un destino separado
+`diagnostics/PSP/GAME/WPA2DIAG`; no se incorpora al instalador ni a Fast Recovery.
+`package.py` produce otro ZIP diagnóstico independiente y su SHA-256. El ZIP
+fuente incluye todos los insumos de ambos EBOOT y del diagnóstico.
+Los ZIP finales, sus hashes y el manifiesto con nombre de versión se escriben
+en `builds/`, ignorada por Git. `artifacts/` conserva logs, archivos intermedios
+y metadatos internos. Las referencias a paquetes alpha en el registro histórico
+son históricas; esos archivos se encuentran ahora en `builds/`, sin modificar
+sus bytes. Las copias duplicadas de ZIP/hashes/manifiestos finales se eliminaron
+de `artifacts/`; el empaquetador ya no las genera allí.
+Las comprobaciones de Fase 2 conservan todos los archivos ajenos a marca y a la
+lista explícita revisada `phase-2-source.json`. El verificador también comprueba
+los objetos WPA2, su enlace y el SystemControl incorporado al instalador.
+Los tests C se ejecutan con el compilador de host dentro del contenedor, sobre
+las mismas fuentes del validador/configuración, con fixtures sintéticas y mock
+de I/O; no ejecutan instrucciones MIPS ni un handshake de red.
+
+El árbol completo y los hashes de binarios están en los metadatos generados.
+Guías específicas: [soporte](wpa2-support.md), [validación](wpa2-validation.md).
+El parche admite una firma 6.61 derivada del reporte autorizado de una PSP-2010
+y sigue rechazando toda otra variante. La versión de producto se centraliza en
+`scripts/product.py`; build, manifiesto y verificador deben coincidir.
+
+## Registro histórico de Fase 1
+
 Objetivo exclusivo del paquete documentado: **6.61**, producto **0.1.0-alpha.1**.
 La versión declarada posteriormente por el responsable es **0.1.0-beta.1**, con
 [validación física parcial reportada](hardware-report-0.1.0-beta.1.md).

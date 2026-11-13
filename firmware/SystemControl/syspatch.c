@@ -31,6 +31,7 @@
 #include "nid_resolver.h"
 #include "libertas.h"
 #include "systemctrl_patch_offset.h"
+#include "wpa2.h"
 
 static STMOD_HANDLER previous;
 
@@ -114,6 +115,15 @@ static int syspatch_module_chain(SceModule2 *mod)
 	int apitype;
 
 	apitype = sceKernelInitApitype();
+
+	/* Reuse PRO storage-ready boot points for VSH/GAME. Cache once, even
+	 * when this handler is reached after the system-booted fast exit. An early
+	 * apctl instance is skipped, never patched later while it may be running. */
+	if (!strcmp(mod->modname, "sceDisplay_Service") ||
+	    !strcmp(mod->modname, "sceMediaSync"))
+		prox_wpa2_init_config();
+	if (!strcmp(mod->modname, "sceNetApctl_Library"))
+		prox_wpa2_module(mod);
 	
 #ifdef DEBUG
 	printk("Starting %s Apitype: 0x%X\n", mod->modname, apitype);
