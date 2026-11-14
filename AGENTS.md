@@ -130,6 +130,9 @@ If a required test fails, fix the issue within scope and rerun the relevant chec
 
 ### Required assets for stable Internet-update releases
 
+Follow the PR acceptance and release-publication gate below before making any
+release public, including a beta, prerelease or console-test release.
+
 Before publishing any new stable PRO-X firmware release, attach both OTA assets
 to that same GitHub release, in addition to the manual binary ZIP, companion
 source ZIP, build manifests and SHA-256 files required above:
@@ -274,6 +277,22 @@ After explicit approval, create the commit, push the branch, and open the PR wit
 If material changes are needed after approval, rerun the affected checks and obtain renewed authorization for the revised change set before committing or publishing it.
 
 Do not merge the PR, create a release tag, or publish a release unless separately instructed.
+
+### PR acceptance before release publication
+
+Submit the changes through the explicitly authorized PR first. Do not publish
+a GitHub release, promote it to Latest, or expose its assets to the stable
+updater until the owner has accepted the corresponding PR and GitHub confirms
+that it is merged into the intended base branch. An open or approved-but-unmerged
+PR does not satisfy this gate. Apply it to normal releases, prereleases and
+releases intended for console testing.
+
+PR authorization or acceptance alone does not authorize a release: retain the
+separate explicit release authorization and required validation gates. Check
+the actual PR merge state and the release's source/build identity immediately
+before publication. Keep compiled test packages local in `builds/` while the PR
+is pending; an authorized staged draft must remain unpublished and excluded
+from the updater. Do not merge a PR on the owner's behalf unless instructed.
 
 ## Final handoff and continuity
 

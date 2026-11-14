@@ -4,6 +4,9 @@
 
 ### v0.3.1 — version and release-packaging chore
 
+- Require owner acceptance and merge of the corresponding PR before publishing
+  any release or exposing its assets to automatic updates; separate release
+  authorization and validation requirements still apply.
 - Advance the product build to v0.3.1 across Installer, Fast Recovery, updater,
   System Information (`6.61 PRO-X 0.3.1`) and matching package metadata.
 - Prepare the same-release update manifest and dedicated OTA ZIP for a normal

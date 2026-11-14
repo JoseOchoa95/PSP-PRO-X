@@ -8,12 +8,14 @@ PRO-X aims to continue the PRO lineage through regular updates, bug fixes, and n
 
 ## Project status
 
-**v0.3.1 — version and release-packaging chore; PSP OTA installation pending.**
+**v0.3.1 — release candidate awaiting PR acceptance; PSP OTA installation pending.**
 This build advances the product identity and System Information label to 0.3.1
 and supplies matching stable OTA assets for the owner's first console-update
 test. It does not change the updater/network logic from the tested 0.3.0 build.
-Its installation/restart on PSP has not yet been validated. See GitHub Releases
-for publication availability, exact packages and the remaining limitations.
+Its installation/restart on PSP has not yet been validated. Publication is held
+until the owner accepts the corresponding PR and it is merged; local test
+packages remain in `builds/`. See GitHub Releases for published versions and
+their remaining limitations.
 
 The updater routes the XMB Internet system-update entry to a PRO-X client
 that selects compatible newer stable releases, verifies an explicit update
