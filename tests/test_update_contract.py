@@ -77,6 +77,11 @@ class ContractTests(unittest.TestCase):
         flow[flow.index(str(ROOT/'tests/native/test_update_contract.c'))] = str(ROOT/'tests/native/test_update_flow.c')
         flow.insert(flow.index('-L'+str(tls/'library')), str(ROOT/'firmware/Updater/update.c'))
         flow.insert(1,'-I'+str(ROOT/'firmware/Common'))
+        # These orchestrator fixtures model the already-delivered 0.3.0 client,
+        # independently of the product version currently being built.
+        baseline=WORK/'source-fixture'; baseline.mkdir(exist_ok=True)
+        (baseline/'prox_product.h').write_text('#define PROX_PRODUCT_VERSION "0.3.0"\n')
+        flow.insert(1,'-I'+str(baseline))
         flow[-1] = str(WORK/'flow-test')
         subprocess.run(flow, check=True, capture_output=True)
         include=WORK/'target-fixture'; include.mkdir(exist_ok=True)

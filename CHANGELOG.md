@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### v0.3.1 — version and release-packaging chore
+
+- Advance the product build to v0.3.1 across Installer, Fast Recovery, updater,
+  System Information (`6.61 PRO-X 0.3.1`) and matching package metadata.
+- Prepare the same-release update manifest and dedicated OTA ZIP for a normal
+  release, allowing an existing 0.3.0 client to discover the newer version.
+- Require those OTA assets and an up-to-date PSP System Information label in
+  agent release instructions; verify actual generated packages with an
+  actual-version native installer preflight/storage fixture, without flash.
+- Keep the updater/network behavior and PRO/Infinity compatibility contracts
+  unchanged. New-version console installation, restart and follow-up query
+  remain pending; the earlier 14 successful catalog checks belong to 0.3.0.
+
+- Require the exact update manifest and dedicated OTA ZIP on every new stable
+  firmware release, with same-build compatibility/hash checks before publication.
+  Manual-test prereleases remain excluded from stable automatic updates.
+
 ### v0.3.0-beta.1 — experimental prerelease
 
 This prerelease distribution preserves the tested v0.3.0 firmware build

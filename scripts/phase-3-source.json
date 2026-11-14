@@ -15,8 +15,8 @@
   },
   "added": {
     "Common/prox_ota_args.h": "3c1fc012238e044eed63834682d66a729a429dcbc535f8221f33f42ad03d538a",
-    "Common/prox_product.h": "46099a77bc6e20912c6d04893785c2f4e1172f846f986ff0eadb84c34573269b",
-    "Common/prox_product.mk": "2a379adf84cfdcb3bf90a83624fb0ae7763f5f92151c6193205e36c030203814",
+    "Common/prox_product.h": "6d7c384199794e9f64fb889ce20694a7a2298d529fb1b20cb98de5a0fe5a5ee7",
+    "Common/prox_product.mk": "58e867afd8e33ab702c670ff8c1d345f5fef9b1b25ac7adae2495681634c53ec",
     "SystemControl/prox_update.c": "06a395a7a2d96a180c176da2c3f7a0590279313b45d73d62243df09e00f44310",
     "Updater/Makefile": "4b0a40faa5a43b07b95ec49a603127e87e0c5d9b0b5842c951bb38f7e848f277",
     "Updater/bridge.S": "fbf9292e34d29fc8f276c926b2257232c44d868725f76984a0b80615b9e7ac88",
