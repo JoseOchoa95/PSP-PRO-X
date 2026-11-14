@@ -23,10 +23,22 @@ def main():
         for name, digest in sums.items():
             require(sha(archive.read(name)) == digest, 'SHA256SUMS mismatch: ' + name)
         psp_names = {n for n in names if n.startswith('PSP/')}
-        require(psp_names == {'PSP/GAME/PROUPDATE/EBOOT.PBP', 'PSP/GAME/FastRecovery/EBOOT.PBP'}, 'Unexpected PSP program')
+        phase3 = manifest.get('phase3')
+        expected_psp = {'PSP/GAME/PROUPDATE/EBOOT.PBP', 'PSP/GAME/FastRecovery/EBOOT.PBP'}
+        if phase3:
+            expected_psp |= {'PSP/GAME/PROXUPDATE/EBOOT.PBP', 'PSP/GAME/PROXUPDATE/cacert.pem'}
+        require(psp_names == expected_psp, 'Unexpected PSP program')
         require(not any(PurePosixPath(n).suffix.lower() in {'.prx', '.bin', '.a'} for n in names), 'Unexpected loose firmware/tool binary')
         for folder, title in [('PROUPDATE', '661 PRO-X Installer'), ('FastRecovery', '661 PRO-X Fast Recovery')]:
+            if phase3:
+                title = '661 PRO-X v'+manifest['version']+(' Installer' if folder == 'PROUPDATE' else ' Fast Recovery')
             require(pbp_info(archive.read('PSP/GAME/' + folder + '/EBOOT.PBP'))['title'] == title, 'Wrong title')
+        if phase3:
+            title = pbp_info(archive.read('PSP/GAME/PROXUPDATE/EBOOT.PBP'), allow_plain=True)['title']
+            require(title == 'PRO-X v'+manifest['version']+' System Update', 'Wrong client title')
+            require(manifest['hardware'] == 'NOT RUN' and manifest['status'] == 'phase3-update-test-candidate' and
+                    phase3['online_installation_implemented'] is True and phase3['physical_validation'] == 'NOT RUN for this candidate',
+                    'Misleading updater candidate status')
         require(manifest['firmware_target'] == '6.61' and manifest['hardware'] in
                 {'NOT RUN', 'USER_REPORTED_PARTIAL_PASS'}, 'Invalid release status')
         source = path.parent / manifest['source_archive']['file']
@@ -41,8 +53,46 @@ def main():
     external = dict((name, digest) for digest, name in (line.split('  ', 1) for line in path.with_suffix('.sha256').read_text().splitlines()))
     for file in [path, source]:
         require(sha(file.read_bytes()) == external[file.name], 'External ZIP hash mismatch')
+    if phase3:
+        compact_path = path.with_name(path.stem+'-build.json')
+        compact = json.loads(compact_path.read_text())
+        require(compact['build_id'] == manifest['build_id'] and compact['hardware'] == 'NOT RUN',
+                'Compact manifest identity/status mismatch')
+        update_path=path.with_name(path.stem+'-update.zip')
+        update_json=path.parent/'pro-x-update.json'
+        require(compact['packages'] == {p.name: sha(p.read_bytes()) for p in [path, source, update_path, update_json]},
+                'Compact package hashes differ')
+        from update_contract import FILES
+        contract=json.loads(update_json.read_bytes())
+        require(contract['version'] == manifest['version'] and contract['build_id'] == manifest['build_id'] and
+                contract['schema_version'] == 1 and contract['supported_models'] == [1] and
+                contract['minimum_updater_version'] == '0.3.0', 'Update contract identity/compatibility differs')
+        require(contract['package_asset'] == {'name': update_path.name, 'size': update_path.stat().st_size,
+                                              'sha256': sha(update_path.read_bytes())}, 'Update ZIP differs from contract')
+        with zipfile.ZipFile(update_path) as ota:
+            require(len(ota.namelist()) == len(FILES) and set(ota.namelist()) == set(FILES), 'Unexpected/duplicate update file')
+            by_name={f['path']: f for f in contract['files']}
+            require(len(contract['files']) == len(FILES) and set(by_name) == set(FILES), 'Update manifest inventory')
+            for i,name in enumerate(FILES):
+                data=ota.read(name)
+                require(ota.getinfo(name).compress_type == zipfile.ZIP_STORED and
+                        by_name[name] == {'path': name, 'size': len(data), 'sha256': sha(data)}, 'Update entry hash/size/format')
+                with zipfile.ZipFile(path) as manual:
+                    require(data == manual.read(('PSP/GAME/' if i < 4 else '')+name), 'Update/manual payload mismatch')
+        for name, value in external.items():
+            require(sha((path.parent/name).read_bytes()) == value, 'Delivered file hash mismatch: '+name)
+        for name, info in compact['executables'].items():
+            data = (path.parent/name).read_bytes()
+            require(sha(data) == info['sha256'] and len(data) == info['size'], 'Delivered EBOOT differs: '+name)
     if manifest.get('wpa2'):
-        if manifest['status'] == 'blocked-module-identification':
+        if phase3:
+            from product import VERSION, WPA2_VARIANT, WPA2_REPORT_SHA256
+            require(manifest['version'] == VERSION, 'Milestone product version differs from compiled ticket')
+            require(manifest['wpa2'] == {'preference_enabled_by_default': True, 'verified_variants': 1,
+                    'variant_id': WPA2_VARIANT, 'identification_report_sha256': WPA2_REPORT_SHA256,
+                    'patch_active': True, 'status': 'INHERITED_PARTIAL_REPORT_NEW_BUILD_NOT_RUN'},
+                    'Misleading milestone WPA2 validation')
+        elif manifest['status'] == 'blocked-module-identification':
             require(manifest['wpa2'] == {'preference_enabled_by_default': True, 'verified_variants': 0,
                                        'patch_active': False, 'status': 'BLOCKED'}, 'Misleading WPA2 status')
         else:

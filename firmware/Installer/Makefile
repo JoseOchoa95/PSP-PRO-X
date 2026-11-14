@@ -1,5 +1,6 @@
 TARGET = installer
-OBJS = main.o
+OBJS = main.o ../Updater/ota_installer.o ../Updater/json.o ../Updater/contract.o \
+       ../Updater/policy.o ../Updater/stage.o ../Updater/storage_power.o
 EXTRA_CLEAN= galaxy.h march33.h march33_620.h popcorn.h satelite.h stargate.h systemctrl.h usbdevice.h vshctrl.h
 
 BUILD_PRX=1
@@ -12,8 +13,8 @@ pre-build:
 	./create_module_include.py
 	touch main.c
 
-INCDIR = ../include ../Common
-CFLAGS = -Os -G0 -Wall
+INCDIR = ../include ../Common ../Updater ../Updater/vendor/mbedtls/include
+CFLAGS = -Os -G0 -Wall -DMBEDTLS_CONFIG_FILE=\"prox_mbedtls_config.h\"
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
 ASFLAGS = $(CFLAGS)
 
@@ -42,9 +43,9 @@ CFLAGS += -DCONFIG_661=1
 PSP_FW_VERSION = 661
 endif
 
-LIBDIR = ../libs
+LIBDIR = ../libs ../Updater/vendor/mbedtls/library
 LDFLAGS =
-LIBS =  -lpspkubridge -lpsppower
+LIBS = -lmbedcrypto -lz -lpspkubridge -lpsppower
 
 PSPSDK=$(shell psp-config --pspsdk-path)
 include $(PSPSDK)/lib/build.mak

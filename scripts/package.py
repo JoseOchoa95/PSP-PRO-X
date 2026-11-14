@@ -4,17 +4,19 @@ import json
 import zipfile
 import subprocess
 import sys
+import tarfile
 from build import ROOT, inventory, digest, sha, repository_head
 from verify import require
 from product import VERSION, WPA2_VARIANT, WPA2_REPORT_SHA256
 from hardware_report import REPORT as HARDWARE_REPORT
+from update_contract import generate as generate_update
 
 NAME = 'pro-x-' + VERSION + '-661'
 OUTPUT_DIR = ROOT / 'builds'
 SOURCE_DIRS = {'Common', 'CrossFW', 'FastRecovery', 'Imports', 'Installer',
                'ISODrivers', 'Popcorn', 'PXE', 'Rebootex', 'Rebootex_bin',
                'Recovery', 'Satelite', 'Stargate', 'SystemControl', 'Translated',
-               'Vshctrl', 'include', 'libs', 'usbdevice', 'tools'}
+               'Vshctrl', 'include', 'libs', 'usbdevice', 'tools', 'Updater'}
 
 
 def archive(path, files):
@@ -46,8 +48,10 @@ def main():
     for name in ['README.md', 'LICENSE', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', '.gitattributes', '.gitignore']:
         sources[name] = (ROOT / name).read_bytes()
     source_note = (
-        f'PRO-X {VERSION} / 6.61: experimental; limited owner-reported WPA2 connection success.\n'
-        'WPA2 enabled for one identified module variant; extended hardware tests pending.\n\n'
+        f'PRO-X v{VERSION} / 6.61: GitHub updater test candidate; hardware NOT RUN for this build.\n'
+        'The earlier transport prototype passed owner-supplied HTTPS/asset tests.\n'
+        'The new release/staging/installer flow still needs physical validation.\n'
+        'WPA2 inherits the previous limited report; this build has not been hardware tested.\n\n'
         'This archive contains the exact inputs needed to build Installer and Fast Recovery,\n'
         'including inherited libraries/March33, scripts, notices and documentation.\n'
         'Unrelated IPL tools and dumping utilities are omitted. No Sony firmware or Infinity is included.\n'
@@ -69,12 +73,21 @@ def main():
 
     files = {}
     output = ROOT / build['output']
-    for directory in ['PROUPDATE', 'FastRecovery']:
+    for directory in ['PROUPDATE', 'FastRecovery', 'PROXUPDATE']:
         name = 'PSP/GAME/' + directory + '/EBOOT.PBP'
         files[name] = (output / name).read_bytes()
         executable = OUTPUT_DIR / name
         executable.parent.mkdir(parents=True, exist_ok=True)
         executable.write_bytes(files[name])
+    name = 'PSP/GAME/PROXUPDATE/cacert.pem'
+    files[name] = (output / name).read_bytes()
+    (OUTPUT_DIR / name).write_bytes(files[name])
+    files['UPDATE-TEST.md'] = (ROOT / 'scripts/resources/UPDATE-TEST.md').read_bytes()
+    with tarfile.open(ROOT / 'firmware/Updater/vendor/mbedtls-3.6.7.tar.bz2') as tls_source:
+        for entry in tls_source:
+            parts = Path(entry.name).parts[1:]
+            if entry.isfile() and parts and ('LICENSE' in parts[0] or 'COPYING' in parts[0]):
+                files['licenses/mbedtls/'+'/'.join(parts)] = tls_source.extractfile(entry).read()
     for name in inventory(ROOT / 'firmware/Translated'):
         files['seplugins/' + name] = (ROOT / 'firmware/Translated' / name).read_bytes()
     for name in inventory(ROOT / 'firmware/contrib/fonts'):
@@ -89,14 +102,21 @@ def main():
     files['credit.txt'] = (ROOT / 'firmware/credit.txt').read_bytes()
     files['SOURCE.md'] = source_note + ('\nCompanion: ' + source_zip.name + '\nSHA-256: ' + sha(source_zip.read_bytes()) + '\n').encode()
     files['toolchain.txt'] = (ROOT / 'docs/build-toolchain.txt').read_bytes()
+    update_zip, update_json = generate_update(OUTPUT_DIR, VERSION, build['build_id'], files)
     manifest = {
         'product': 'PRO-X', 'version': VERSION, 'firmware_target': '6.61',
-        'status': 'experimental-user-tested', 'hardware': 'USER_REPORTED_PARTIAL_PASS', 'infinity': 'NOT RUN',
-        'hardware_report': HARDWARE_REPORT,
+        'status': 'phase3-update-test-candidate', 'hardware': 'NOT RUN', 'infinity': 'NOT RUN',
+        'baseline_hardware_report': HARDWARE_REPORT,
+        'phase3': {'milestone': 'stable selection, verified staging and installer candidate',
+                   'online_installation_implemented': True, 'physical_validation': 'NOT RUN for this candidate',
+                   'transport_baseline': {'build_id': 'pro-x-c41ee2ff7b5e', 'status': 'USER_SUPPLIED_REPORTS_PASS',
+                                          'reports': ['report-006', 'report-007', 'report-008']},
+                   'update_assets': {p.name: sha(p.read_bytes()) for p in (update_zip,update_json)},
+                   'dependencies': json.loads((ROOT / 'scripts/updater-dependencies.json').read_text())},
         'build_id': build['build_id'],
         'wpa2': {'preference_enabled_by_default': True, 'verified_variants': 1,
                  'variant_id': WPA2_VARIANT, 'identification_report_sha256': WPA2_REPORT_SHA256,
-                 'patch_active': True, 'status': 'CONNECTION_PASS_REPORTED'},
+                 'patch_active': True, 'status': 'INHERITED_PARTIAL_REPORT_NEW_BUILD_NOT_RUN'},
         'upstream_url': 'https://github.com/MrColdbird/procfw',
         'upstream_revision': build['upstream_revision'], 'repository_head': source_commit,
         'build_repository_head': build['repository_head'],
@@ -117,9 +137,26 @@ def main():
     files['SHA256SUMS'] = ''.join(sha(data) + '  ' + name + '\n' for name, data in sorted(files.items())).encode()
     binary_zip = OUTPUT_DIR / (NAME + '.zip')
     archive(binary_zip, files)
-    external = ''.join(sha(path.read_bytes()) + '  ' + path.name + '\n' for path in [binary_zip, source_zip])
+    manifest_path = OUTPUT_DIR / (NAME + '-manifest.json')
+    manifest_path.write_bytes(files['manifest.json'])
+    compact_path = OUTPUT_DIR / (NAME + '-build.json')
+    compact = {
+        'product': 'PRO-X', 'version': VERSION, 'firmware_target': '6.61',
+        'build_id': build['build_id'], 'status': 'phase3-update-test-candidate', 'hardware': 'NOT RUN',
+        'repository_head': build['repository_head'], 'source_tree_sha256': build['source_tree_sha256'],
+        'source_identity': 'working tree identified by hashes; HEAD alone is not this build',
+        'toolchain_image': build['toolchain_image'],
+        'compile_script_sha256': build['compile_script_sha256'],
+        'updater_compile_script_sha256': sha((ROOT / 'scripts/compile-updater.sh').read_bytes()),
+        'packages': {p.name: sha(p.read_bytes()) for p in [binary_zip, source_zip, update_zip, update_json]},
+        'detailed_manifest_sha256': sha(files['manifest.json']),
+        'executables': {n: {'size': len(d), 'sha256': sha(d)} for n, d in files.items() if n.endswith('/EBOOT.PBP')},
+    }
+    compact_path.write_text(json.dumps(compact, indent=2)+'\n', encoding='utf-8')
+    external = ''.join(sha(path.read_bytes()) + '  ' + path.name + '\n'
+                       for path in [binary_zip, source_zip, update_zip, update_json, manifest_path, compact_path])
+    external += ''.join(sha(data)+'  '+name+'\n' for name, data in sorted(files.items()) if name.startswith('PSP/'))
     (OUTPUT_DIR / (NAME + '.sha256')).write_text(external, encoding='ascii')
-    (OUTPUT_DIR / (NAME + '-manifest.json')).write_bytes(files['manifest.json'])
     # This opt-in tool is separate from the normal two-program installation ZIP.
     diagnostics = {name: (output / 'diagnostics' / name).read_bytes() for name in build['diagnostics']}
     diagnostics['docs/wpa2-support.md'] = (ROOT / 'docs/wpa2-support.md').read_bytes()

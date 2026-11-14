@@ -57,6 +57,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=['reference', 'pro-x'])
     args = parser.parse_args()
+    if args.mode == 'pro-x':
+        run(__import__('sys').executable, 'scripts/generate-product.py', '--check')
     identifier = args.mode + '-' + uuid.uuid4().hex[:12]
     source = ROOT / '.phase1/inputs' / identifier
     source.mkdir(parents=True)

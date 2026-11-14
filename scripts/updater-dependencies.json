@@ -1,0 +1,37 @@
+{
+  "mbedtls": {
+    "version": "3.6.7 LTS",
+    "source": "https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-3.6.7/mbedtls-3.6.7.tar.bz2",
+    "sha256": "a7e8bcbec0e6f761b4af24f25677626b35f762f68eef79c08677a363212d11f6",
+    "path": "firmware/Updater/vendor/mbedtls-3.6.7.tar.bz2",
+    "license": "Apache-2.0; original notices/license/source inside the unmodified archive"
+  },
+  "ca_bundle": {
+    "source": "https://curl.se/ca/cacert.pem",
+    "sha256": "427c064216761a1e72a8b30f0d954d08cb6e4435a82091fb865afd20c8497285",
+    "path": "firmware/Updater/cacert.pem",
+    "license": "MPL-2.0; Mozilla CA extract with original header retained"
+  },
+  "dispatch_nids": {
+    "source": "https://github.com/pspdev/psplibdoc/blob/main/PSPLibDoc/kd/libupdown.csv",
+    "library": "sceLibUpdateDL",
+    "sceUpdateDownloadInit": "0xFC1AB540",
+    "sceUpdateDownloadInitEx": "0xF6690A9A",
+    "sceUpdateDownloadConnectServer": "0xFD675E8D"
+  },
+  "system_version_hook": {
+    "source": "https://github.com/PSP-Arkfive/ARK-5/blob/c045ddde334580dd92d2d2529df38646b451ab33/VSHControl/src/vshpatch.c",
+    "revision": "c045ddde334580dd92d2d2529df38646b451ab33",
+    "source_sha256": "b34888aba099a0ecd6dc875879f523402601132fed52d21c55de97d7ecc1133a",
+    "anchor_word": "0x34c600c9",
+    "nop_relative_offset": 8,
+    "patch_relative_offset": 20,
+    "license": "GPL-3.0-or-later; inherited PRO/ARK hook reference"
+  },
+  "transport_probe": {
+    "purpose": "HTTPS/redirect transport test only; never selected or installed as a firmware update",
+    "source": "https://github.com/JoseOchoa95/PSP-PRO-X/releases/download/v0.2.0/pro-x-0.2.0-661-diagnostic.zip",
+    "size": 76479,
+    "sha256": "737471ad8081f804c5f9d9c9d10463201fd0c11234edc5519c4adb9e77da1f64"
+  }
+}
