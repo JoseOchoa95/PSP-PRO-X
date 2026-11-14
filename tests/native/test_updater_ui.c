@@ -82,7 +82,7 @@ int sceIoGetstat(const char *p,SceIoStat *s) { (void)p; (void)s; return -1; }
 int sctrlKernelExitVSH(void *p) { (void)p; return 0; }
 int sceKernelExitGame(void) { return 0; }
 int proxUpdateGetState(int s)
-{ static const int state[]={1,0,3,0,0x06060110,1}; return main_mode && s >= 0 && s < 6 ? state[s] : 0; }
+{ static const int state[]={1,PROX_PRODUCT_MAJOR,PROX_PRODUCT_MINOR,PROX_PRODUCT_PATCH,0x06060110,1}; return main_mode && s >= 0 && s < 6 ? state[s] : 0; }
 int prox_https(const char *u,const char *c,size_t n,ProxSink s,void *a,ProxResponse *r)
 { (void)u; (void)c; (void)n; (void)s; (void)a; (void)r; return -1; }
 int prox_prepare_update(const char *d,const char *c,const unsigned int v[3],unsigned int m,ProxJob *j)

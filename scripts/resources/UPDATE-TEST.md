@@ -1,20 +1,42 @@
-# PRO-X v0.3.0 — GitHub system-update test candidate
+# PRO-X v0.3.1 — version and OTA release-packaging test
+
+This chore changes product identity and release instructions, retaining the
+updater/network logic from the earlier 0.3.0 candidate. The new build's actual
+PSP OTA installation/restart and `6.61 PRO-X 0.3.1` label remain unvalidated.
+
+## Update from the owner's existing 0.3.0 installation
+
+Keep the existing 0.3.0 client and active CFW for this test. Do not copy a 0.3.1
+client over it before updating: mixed client/running versions are rejected.
+When the normal v0.3.1 release and both OTA assets are available, open Settings
+-> System Update -> Update via Internet. Expect an offer for 0.3.1, X to download/
+verify, then X to open the verified Installer. With charger connected and battery
+at least 50 percent, press a fresh X in the Installer and X again after completion
+to start CFW. Do not use uninstall or forced-reset controls.
+
+After restart, check System Information for `6.61 PRO-X 0.3.1` and the PRO-X VSH
+menu. Open Internet Update again to observe the committed version and check the
+catalog. Preserve new report-NNN.txt, install.txt and installed.observed (or
+installed.pending if observation fails); keep any stage/backups on error. Record
+the exact screen/code instead of treating a failed check as already updated.
+This is the requested first end-to-end console test, not a previously passed one.
+
+## Earlier evidence and manual bootstrap
 
 The earlier `pro-x-c41ee2ff7b5e` transport prototype passed three owner-supplied
-PSP API/redirected-asset tests (reports 006/007/008). The current af71 candidate
+PSP API/redirected-asset tests (reports 006/007/008). The earlier af71 candidate
 completes all fourteen catalog/profile-reuse checks in reports 024–037 on attempt
 one. Positive OTA installation and fresh-session retry recovery remain unvalidated.
-The beta distribution is for manual testing. Its prerelease classification keeps
-it outside stable automatic discovery; see the release notes for matching assets.
+The published 0.3.0 beta remains outside stable discovery. A new normal release
+must contain matching pro-x-update.json and pro-x-<version>-661-update.zip assets.
 
 The owner has since confirmed normal X installation/start of
 `pro-x-226d4f7fe3ac`. Its report 009 completes the real catalog check; reports
 010/011 stop in DNS before TLS. For that already-installed console, this
-fresh-session retry iteration changes only the client. Leave it for XMB, replace
-`PROXUPDATE/EBOOT.PBP` plus the matching `cacert.pem`, preserve reports and test
-the Internet entry twice. Installer/Fast Recovery/CFW bytes are unchanged; no
-manual reinstall is needed for this iteration. The initial bootstrap below
-still applies when the required firmware/bridge is not already active.
+earlier fresh-session iteration changed only the client. That client-only copying
+procedure does not apply to 0.3.1: this new version updates the matching CFW and
+executables through the verified OTA or full manual installer path. The manual
+bootstrap below applies when the required firmware/bridge is not already active.
 
 The owner-reported legacy System Update route after storage reinsertion remains
 unresolved. If the expected PRO-X client does not open, cancel the legacy updater.
@@ -28,7 +50,7 @@ translations and existing preferences. Keep the previous recovery package.
 
 Open the Installer from Games. Use its normal X installation/start path, then
 press X again at `Completed. Press X to start CFW.`. Do not use Triangle or L.
-Check `6.61 PRO-X 0.3.0` in System Information and the PRO-X VSH menu. Existing
+Check `6.61 PRO-X 0.3.1` in System Information and the PRO-X VSH menu. Existing
 PRO/Infinity startup contracts are retained; this does not establish a new
 Infinity hardware result. No Sony firmware, Infinity or IPL tool is included.
 
@@ -73,9 +95,10 @@ recovery and automatic profile reuse are NOT RUN on PSP in this delivery.
 The screen and one private report show all attempts without asking for a profile
 again during retry. No saved settings are changed.
 
-The current v0.2.0 stable release is older than the running v0.3.0 and must not
-be offered. Expect `No newer compatible stable update found in the checked
-release catalog` when the current catalog contains no eligible newer contract.
+Older releases such as v0.2.0 must not be offered over 0.3.0/0.3.1. A compatible
+normal v0.3.1 with both OTA assets should be offered to the existing 0.3.0 client.
+After the update, expect `No newer compatible stable update found in the checked
+release catalog` only when there is no eligible version above the running 0.3.1.
 An API, DNS, certificate or rate-limit error is a failed check, not confirmation
 that the firmware is current. No continuous retry or Sony/legacy PRO fallback.
 

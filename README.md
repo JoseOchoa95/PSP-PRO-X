@@ -8,12 +8,16 @@ PRO-X aims to continue the PRO lineage through regular updates, bug fixes, and n
 
 ## Project status
 
-**v0.3.0-beta.1 — experimental prerelease candidate; partial PSP validation.**
-This distribution preserves the tested `v0.3.0` firmware and package filenames;
-the beta suffix identifies the GitHub prerelease, not different executable bytes.
-See GitHub Releases for publication availability and matching assets.
+**v0.3.1 — release candidate awaiting PR acceptance; PSP OTA installation pending.**
+This build advances the product identity and System Information label to 0.3.1
+and supplies matching stable OTA assets for the owner's first console-update
+test. It does not change the updater/network logic from the tested 0.3.0 build.
+Its installation/restart on PSP has not yet been validated. Publication is held
+until the owner accepts the corresponding PR and it is merged; local test
+packages remain in `builds/`. See GitHub Releases for published versions and
+their remaining limitations.
 
-The local build routes the XMB Internet system-update entry to a PRO-X client
+The updater routes the XMB Internet system-update entry to a PRO-X client
 that selects compatible newer stable releases, verifies an explicit update
 contract and package, stages allowed files and launches the existing installer.
 Drafts, prereleases, downgrades and legacy/Sony fallback destinations are rejected.
@@ -24,16 +28,18 @@ Three owner-supplied reports from the earlier transport prototype confirm real
 PSP API HTTPS and redirected asset downloads with the expected size and SHA-256.
 The owner confirms normal manual installation/start and the corrected System
 Information label. Earlier full-client reports include successful catalog checks
-and intermittent DNS stalls before TLS. The current candidate completes all
+and intermittent DNS stalls before TLS. The earlier 0.3.0 candidate completed all
 fourteen newly supplied PSP catalog checks on the first attempt, reusing the
 last valid network profile and completing checked network teardown. It recreates
-the user-mode network session on retries, but none of these runs exercised that
+the user-mode network session on retries, but none of those runs exercised that
 recovery path. The DNS root cause remains unresolved and no general reliability
 guarantee is inferred. Retries retain mandatory HTTPS validation. A newer compatible stable
 installation, second update and remaining regression tests are pending. No
 universal model/router or Infinity result is inferred.
-Stable OTA assets are generated locally; GitHub prereleases remain excluded
-from the updater's stable channel.
+An existing 0.3.0 client can discover an eligible 0.3.1 release without copying
+the new files first. GitHub prereleases, including v0.3.0-beta.1, remain excluded
+from the stable channel. After a successful update, System Information should
+show `6.61 PRO-X 0.3.1`; that observation remains a required PSP test.
 
 **v0.2.0 — experimental, limited owner-reported connection testing.**
 The owner has classified v0.2.0 as a full Latest release on GitHub; this does

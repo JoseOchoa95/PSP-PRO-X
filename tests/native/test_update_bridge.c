@@ -4,6 +4,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include "update_bridge_shim.h"
+#include "prox_product.h"
 
 unsigned int psp_fw_version, psp_model;
 static int generic_calls, random_calls, fail_on_call, current_k1 = 0x10000000;
@@ -27,6 +28,9 @@ int main(void)
     int i;
     psp_fw_version = 0x06060110; psp_model = 1;
     assert(proxUpdateGetState(0) == 1);
+    assert(proxUpdateGetState(1) == PROX_PRODUCT_MAJOR);
+    assert(proxUpdateGetState(2) == PROX_PRODUCT_MINOR);
+    assert(proxUpdateGetState(3) == PROX_PRODUCT_PATCH);
     assert(proxUpdateGetState(4) == (int)psp_fw_version);
     assert(proxUpdateGetState(5) == (int)psp_model);
     /* Read live initialized state, never hardcode one model/firmware value. */

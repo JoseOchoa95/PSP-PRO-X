@@ -16,7 +16,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'tests'))
-from test_update_contract import ContractTests
+from test_update_contract import ContractTests, NAMES
 
 def digest(data):
     return hashlib.sha256(data).hexdigest()
@@ -24,12 +24,24 @@ def digest(data):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--catalog',type=Path)
+    parser.add_argument('--running-version',default='0.2.0',help='Older source version for the isolated native fixture')
     args=parser.parse_args()
     ContractTests.setUpClass()
     work=ROOT/'artifacts/phase3/contract-native'
     raw=(ROOT/'builds/pro-x-update.json').read_bytes()
     contract=json.loads(raw)
     build=json.loads((ROOT/'builds'/('pro-x-'+contract['version']+'-661-build.json')).read_bytes())
+    # Unlike the synthetic 0.4.0 installer fixtures, compile this consumer with
+    # the actual generated product header and verify the real delivered files.
+    tls=ROOT/'artifacts/phase3/https-native/mbedtls'
+    installer=work/'produced-installer-test'
+    command=['cc','-std=c99','-Wall','-Wextra','-Werror','-DPROX_OTA_NATIVE','-DPROX_OTA_FAULT_TEST',
+             '-DMBEDTLS_CONFIG_FILE="prox_mbedtls_config.h"','-I'+str(ROOT/'firmware/Common'),
+             '-I'+str(ROOT/'tests/native'),'-I'+str(ROOT/'firmware/Updater'),'-I'+str(tls/'include'),
+             str(ROOT/'tests/native/test_ota_installer.c')]
+    command += [str(ROOT/'firmware/Updater'/n) for n in ('json.c','contract.c','policy.c','stage.c','ota_installer.c')]
+    command += ['-L'+str(tls/'library'),'-lmbedcrypto','-lz','-o',str(installer)]
+    subprocess.run(command,check=True,capture_output=True)
     base='https://github.com/JoseOchoa95/PSP-PRO-X/releases/download/'+contract['tag']+'/'
     release={'draft':False,'prerelease':False,'tag_name':contract['tag'],
              'name':'ISOLATED GENERATED-ASSET VALIDATION; NOT A PUBLISHED RELEASE',
@@ -39,7 +51,7 @@ def main():
                         'browser_download_url':base+contract['package_asset']['name']}]}
     with tempfile.TemporaryDirectory(dir=work) as directory:
         d=Path(directory); (d/'stage').mkdir(); (d/'release.json').write_text(json.dumps(release))
-        env={**os.environ,'PROX_FIXTURE_RUNNING_VERSION':'0.2.0'}
+        env={**os.environ,'PROX_FIXTURE_RUNNING_VERSION':args.running_version}
         result=subprocess.run([str(work/'contract-test'),'stage',str(d/'release.json'),
                                str(ROOT/'builds/pro-x-update.json'),str(ROOT/'builds'/contract['package_asset']['name']),
                                str(d/'stage')],env=env,capture_output=True,text=True,timeout=30)
@@ -52,8 +64,32 @@ def main():
                 raise RuntimeError('Extracted file mismatch: '+f['path'])
         if len([p for p in (d/'stage').rglob('*') if p.is_file()]) != 8:
             raise RuntimeError('Unexpected generated update inventory')
-    summary={'status':'PASS','build_id':build['build_id'],
+        game=d/'ms0:/PSP/GAME'; stage=game/'PROXUPDATE'/('.stage-'+contract['build_id']+'-00000001')
+        stage.mkdir(parents=True)
+        expected={}
+        for i,name in enumerate(NAMES):
+            data=(d/'stage'/name).read_bytes()
+            staged=stage/name; staged.parent.mkdir(parents=True,exist_ok=True); staged.write_bytes(data)
+            target=game/name if i < 4 else game/'PROXUPDATE'/name
+            target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(b'old fixture file')
+            expected[target]=data
+        markers={d/'ms0:/seplugins/vsh.txt':b'preserve fixture plugin list',
+                 game/'PROXUPDATE/report-previous.txt':b'preserve fixture report'}
+        for path,data in markers.items(): path.parent.mkdir(parents=True,exist_ok=True); path.write_bytes(data)
+        (stage/'pro-x-update.json').write_bytes(raw)
+        path='ms0:/PSP/GAME/PROXUPDATE/'+stage.name+'/PROUPDATE/installer.prx'
+        installed=subprocess.run([str(installer),path,digest(raw),args.running_version,'ok','commit'],
+                                 cwd=d,capture_output=True,text=True,timeout=30)
+        (ROOT/'artifacts/phase3/produced-installer-native.log').write_text(installed.stdout+installed.stderr)
+        if installed.returncode or 'NO FLASH INSTALLATION CAPABILITY' not in installed.stdout:
+            raise RuntimeError('Actual-version installer preflight/storage fixture failed: '+installed.stdout+installed.stderr)
+        assert all(path.read_bytes()==data for path,data in expected.items())
+        assert all(path.read_bytes()==data for path,data in markers.items())
+        assert not list(game.rglob('*.prox-new')) and not list(game.rglob('*.prox-old'))
+        assert (game/'PROXUPDATE/installed.pending').read_text()==('PROX-OTA-1\n'+contract['version']+'\n'+contract['build_id']+'\ncommitted\n')
+    summary={'status':'PASS','build_id':build['build_id'],'fixture_running_version':args.running_version,
              'produced_assets':'Production native parser verified and staged all eight generated payload files, including real PBP/SFO/executable headers',
+             'produced_installer':'PASS: actual product header, real eight payloads, preflight/storage commit and preserved plugin/report markers in an isolated fixture; NO FLASH INSTALLATION',
              'fixture_limit':'Locally constructed release/older source parameter; no PSP loader or flash capability; not an official stable update'}
     if args.catalog:
         catalog=args.catalog.resolve()

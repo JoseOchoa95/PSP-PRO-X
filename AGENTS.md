@@ -128,6 +128,44 @@ If a required test fails, fix the issue within scope and rerun the relevant chec
 - Do not rewrite Git history or delete release assets as part of routine cleanup. Already committed artifacts remain in historical commits unless a separate history-rewrite task is explicitly authorized.
 - Verify that intended output paths are ignored, required build inputs remain available to Git, package checks still pass and `git diff --check` is clean. Documentation/ignore/cache-only cleanup does not require a firmware rebuild or a new product version.
 
+### Required assets for stable Internet-update releases
+
+Follow the PR acceptance and release-publication gate below before making any
+release public, including a beta, prerelease or console-test release.
+
+Before publishing any new stable PRO-X firmware release, attach both OTA assets
+to that same GitHub release, in addition to the manual binary ZIP, companion
+source ZIP, build manifests and SHA-256 files required above:
+
+- **`pro-x-update.json`**: the updater's compact update manifest; a general build
+  manifest is not a substitute.
+- **`pro-x-<version>-661-update.zip`**: the dedicated update package for that
+  exact product version and target firmware. The manual, source, diagnostic or
+  GitHub-generated source ZIP is not a substitute.
+
+Generate both from the matching compiled build with the repository packager.
+Before publication, verify their version/tag, build identity, target firmware,
+supported models and minimum updater version, plus the package/file inventory,
+sizes and SHA-256 hashes. Run the available package and native OTA-consumer
+checks and ensure Installer, Fast Recovery, updater and CA bytes match the
+corresponding manual package. Stage and verify the complete asset set before
+publishing; do not publish a stable release missing either OTA asset or with a
+manifest that describes another build/package. Verify uploaded sizes and
+digests against the local files before considering publication complete.
+
+Internet-update eligibility also requires **`draft == false`**,
+**`prerelease == false`**, a stable **`vMAJOR.MINOR.PATCH`** product tag, a version
+numerically newer than the running product, and a compatible validated contract.
+A tag without the word beta does not override GitHub's draft/prerelease flags.
+The manifest and update ZIP must come from the same eligible release.
+
+Manual-test betas/prereleases may be published without stable OTA assets when
+explicitly authorized, but must remain marked as prereleases and excluded from
+the stable updater. Do not relabel a prerelease or relax client validation to
+make a test pass. These requirements do not authorize editing existing releases,
+publishing new ones, changing the version policy, or bypassing the existing
+test/commit/push/PR/publication authorization gates.
+
 ## Required compiled build before commit and PR
 
 For every firmware feature or fix, produce the compiled files needed for the user to test the change on their PSP before requesting authorization to commit or open a PR.
@@ -174,6 +212,14 @@ Assign one product version per feature ticket when generating its first build. R
 Do not consume another feature version for a failed compilation or for merely rerunning packaging. A new ticket with a new delivered build receives the next MINOR version.
 
 Keep the product version consistent across build/package metadata, package filenames, manifests, applicable installer/Fast Recovery product labels, and the version reported to the user. Use conventional package filenames such as `pro-x-0.2.0-661.zip`; retain the `v` prefix in the human-facing version identifier.
+
+This includes **Settings -> System Settings -> System Information -> System
+Software** on the PSP. Its PRO-X suffix must show the actual product build
+version, for example `6.61 PRO-X <version>`, using the same generated version
+source as the installer, Fast Recovery, updater and package metadata. Do not
+leave the previous PRO-X version in that display or change Sony's numeric
+firmware/HEN compatibility values. Check the compiled label and destination
+capacity locally, and record the expected/observed label in PSP test results.
 
 This product numbering must not alter Sony firmware version 6.61, PRO HEN compatibility values, configuration magic, ABI, or the contracts required by Infinity. Do not lengthen a patched display string without verifying its destination capacity. Record the new product version in supported build metadata rather than changing compatibility fields.
 
@@ -231,6 +277,22 @@ After explicit approval, create the commit, push the branch, and open the PR wit
 If material changes are needed after approval, rerun the affected checks and obtain renewed authorization for the revised change set before committing or publishing it.
 
 Do not merge the PR, create a release tag, or publish a release unless separately instructed.
+
+### PR acceptance before release publication
+
+Submit the changes through the explicitly authorized PR first. Do not publish
+a GitHub release, promote it to Latest, or expose its assets to the stable
+updater until the owner has accepted the corresponding PR and GitHub confirms
+that it is merged into the intended base branch. An open or approved-but-unmerged
+PR does not satisfy this gate. Apply it to normal releases, prereleases and
+releases intended for console testing.
+
+PR authorization or acceptance alone does not authorize a release: retain the
+separate explicit release authorization and required validation gates. Check
+the actual PR merge state and the release's source/build identity immediately
+before publication. Keep compiled test packages local in `builds/` while the PR
+is pending; an authorized staged draft must remain unpublished and excluded
+from the updater. Do not merge a PR on the owner's behalf unless instructed.
 
 ## Final handoff and continuity
 
