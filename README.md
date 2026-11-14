@@ -8,13 +8,51 @@ PRO-X aims to continue the PRO lineage through regular updates, bug fixes, and n
 
 ## Project status
 
+**v0.3.0-beta.1 — experimental prerelease candidate; partial PSP validation.**
+This distribution preserves the tested `v0.3.0` firmware and package filenames;
+the beta suffix identifies the GitHub prerelease, not different executable bytes.
+See GitHub Releases for publication availability and matching assets.
+
+The local build routes the XMB Internet system-update entry to a PRO-X client
+that selects compatible newer stable releases, verifies an explicit update
+contract and package, stages allowed files and launches the existing installer.
+Drafts, prereleases, downgrades and legacy/Sony fallback destinations are rejected.
+The first installation uses the manual package; future eligible releases need
+the generated update manifest and OTA ZIP from that same release.
+
+Three owner-supplied reports from the earlier transport prototype confirm real
+PSP API HTTPS and redirected asset downloads with the expected size and SHA-256.
+The owner confirms normal manual installation/start and the corrected System
+Information label. Earlier full-client reports include successful catalog checks
+and intermittent DNS stalls before TLS. The current candidate completes all
+fourteen newly supplied PSP catalog checks on the first attempt, reusing the
+last valid network profile and completing checked network teardown. It recreates
+the user-mode network session on retries, but none of these runs exercised that
+recovery path. The DNS root cause remains unresolved and no general reliability
+guarantee is inferred. Retries retain mandatory HTTPS validation. A newer compatible stable
+installation, second update and remaining regression tests are pending. No
+universal model/router or Infinity result is inferred.
+Stable OTA assets are generated locally; GitHub prereleases remain excluded
+from the updater's stable channel.
+
 **v0.2.0 — experimental, limited owner-reported connection testing.**
+The owner has classified v0.2.0 as a full Latest release on GitHub; this does
+not extend the hardware validation described below.
 WPA2 is enabled by default for one identified 6.61 Wi-Fi module variant. The
 firmware checks original contents, layout and relocated calls before applying
 the integrated patch; other variants remain unchanged. Identification comes
 from an owner-provided PSP-2010 diagnostic report. The owner reports creating a
 new profile and connecting on a WPA2-only, 2.4 GHz b/g/n network with PRO-X;
 the same connection failed after full shutdown without starting PRO-X.
+Repeated owner-supplied reports from the same diagnostic build demonstrate
+intermittent data connectivity after IP readiness: one run completes gateway,
+DNS and historical Sony HTTP probes through both raw sockets and Sony's HTTP
+library, while others time out even when contacting the local gateway and return
+DNS error `80410410`. The owner also reports an XMB Internet-test failure.
+The owner later supplied a successful XMB result with UPnP enabled and NAT type 2.
+The cause of the intermittent behavior remains unresolved; a focused source
+review found no confirmed PRO-X defect explaining it. PSP/router compatibility
+remains a working hypothesis, with a second-access-point comparison unavailable.
 Extended transfer tests, Recovery toggling, suspend/reconnect, Infinity and
 additional routers/models have not been reported as tested.
 See [WPA2 support](docs/wpa2-support.md) and [validation](docs/wpa2-validation.md).
@@ -39,9 +77,10 @@ The repository contains a PRO-C-based experimental build for PSP firmware **6.61
 | --- | --- | --- |
 | **0.1.0 — Initial foundation** | Select and pin the PRO-C baseline, establish the build process, update visible branding, and validate installation and Infinity startup on real hardware. | Beta: installation, Recovery and suspension reported working; Infinity, games and plugins pending |
 | **WPA2 integration** | Integrate WPA2 support, enabled by default, using the ARK implementation as a technical reference. | Connection working on PSP-2010 reported by owner; extended hardware matrix pending |
-| **PRO-X updates** | Adapt the XMB system update entry to retrieve compatible stable releases from the PRO-X repository and verify packages before installation. | Planned |
+| **PRO-X updates** | Adapt the XMB system update entry to retrieve compatible stable releases from the PRO-X repository and verify packages before installation. | Initial PSP HTTPS milestone passed; full updater candidate built, physical installation/second update pending |
 
-Roadmap items are development targets and do not describe features currently available in PRO-X.
+Roadmap items include development targets; the status column distinguishes
+prototypes from validated functionality.
 
 ## Initial milestone
 
@@ -60,6 +99,16 @@ Installable packages are distributed through [GitHub Releases](https://github.co
 PRO-X packages should be treated as experimental until the relevant build and console configuration have passed hardware validation. A successful compilation alone does not establish that a build is ready to install.
 
 ### Wi-Fi requirements for phase 2
+
+An optional [standalone network diagnostic](firmware/tools/netdiag/README.md)
+is available as source and a local test package. It records connection events,
+DNS results and raw/native HTTP comparisons in private reports on the memory
+card. Repeated runs on the owner's setup include successful Sony HTTP 1.0/1.1
+probes and failures reaching even the gateway. The XMB test has also succeeded
+in an owner-supplied photo. These results do not establish reliable connectivity,
+a software fix or completion of the hardware matrix.
+The tool does not modify firmware or network profiles. The exact XMB request,
+sustained transfer, cancellation and additional hardware cases remain unvalidated.
 
 The PSP-2000 family, including PSP-2010, has an **IEEE 802.11b** radio. The WPA2
 patch changes security support; it does not upgrade that radio to g/n/ac/ax.

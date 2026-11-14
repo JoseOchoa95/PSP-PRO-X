@@ -146,4 +146,9 @@ PSP_EXPORT_START(VersionSpoofer, 0, 0x4001)
 PSP_EXPORT_FUNC(versionspoofer)
 PSP_EXPORT_END
 
+PSP_EXPORT_START(ProxUpdateForUser, 0, 0x4001)
+PSP_EXPORT_FUNC(proxUpdateGetState)
+PSP_EXPORT_FUNC(proxUpdateRandom)
+PSP_EXPORT_END
+
 PSP_END_EXPORTS

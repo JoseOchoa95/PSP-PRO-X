@@ -33,6 +33,7 @@
 #include "printk.h"
 
 #include "installer.h"
+#include "prox_ota_args.h"
 #include "Rebootex_prx.h"
 #include "launcher_patch_offset.h"
 #include "rebootex_conf.h"
@@ -50,6 +51,8 @@ PSP_HEAP_SIZE_KB(128);
 
 //installer path
 char installerpath[256];
+static char installer_args[384];
+static unsigned int installer_args_size;
 
 //psp model
 int psp_model = 0;
@@ -328,10 +331,10 @@ int install_in_cfw(void)
 	//installer loaded
 	if (mod >= 0) {
 		//start installer
-		result = sceKernelStartModule(mod, strlen(installerpath) + 1, installerpath, NULL, NULL);
+		result = sceKernelStartModule(mod, installer_args_size, installer_args, NULL, NULL);
 	}
 
-	return 0;
+	return mod < 0 ? mod : result;
 }
 
 int write_file(const char *path, unsigned char *buf, int size)
@@ -347,13 +350,13 @@ int write_file(const char *path, unsigned char *buf, int size)
 
 	ret = sceIoWrite(fd, buf, size);
 
-	if (ret < 0) {
+	if (ret != size) {
 		goto error;
 	}
 
-	sceIoClose(fd);
+	ret=sceIoClose(fd);
 
-	return 0;
+	return ret < 0 ? -1 : 0;
 error:
 	if (fd >= 0)
 		sceIoClose(fd);
@@ -383,21 +386,21 @@ int gzip_decompress(u8 *dst, const u8 *src, int size)
 
 	ret = inflate(&strm, Z_FINISH);
 
-	if(ret == Z_STREAM_ERROR) {
+	if(ret != Z_STREAM_END) {
 		inflateEnd(&strm);
 
 		return -3;
 	}
 
 	memcpy(dst, decompress_buf, strm.total_out);
-	deflateEnd(&strm);
+	inflateEnd(&strm);
 
 	return strm.total_out;
 }
 
 static u8 file_buffer[1024 * 1024L];
 
-void write_files(const char *base)
+int write_files(const char *base)
 {
 	char fn[256];
 	int newsize;
@@ -407,24 +410,24 @@ void write_files(const char *base)
 	if(newsize < 0) {
 		pspDebugScreenPrintf("cannot decompress installer %d\n", newsize);
 
-		return;
+		return -1;
 	}
 
 	strcpy(fn, base);
 	strcat(fn, "installer.prx");
-	write_file(fn, file_buffer, newsize);
+	if (write_file(fn, file_buffer, newsize) < 0) return -1;
 
 	newsize = gzip_decompress(file_buffer, Rebootex_prx, size_Rebootex_prx);
 	
 	if(newsize < 0) {
 		pspDebugScreenPrintf("cannot decompress rebootex %d\n", newsize);
 		
-		return;
+		return -1;
 	}
 
 	strcpy(fn, base);
 	strcat(fn, "Rebootex.prx");
-	write_file(fn, file_buffer, newsize);
+	return write_file(fn, file_buffer, newsize);
 }
 
 #if defined(CONFIG_620) || defined(CONFIG_635)
@@ -589,7 +592,15 @@ void do_exploit(void)
 //entry point
 int main(int argc, char * argv[])
 {
+	char ota_root[192];
+	int ota_mode=prox_ota_args(argc,argv,"/PROUPDATE/EBOOT.PBP",ota_root);
 	pspDebugScreenInit();
+	if (ota_mode < 0 || argc < 1 || !argv[0] || strlen(argv[0]) > 210) {
+		pspDebugScreenPrintf("Invalid installer arguments/path.\n"); goto exit;
+	}
+	if (ota_mode && sctrlHENGetVersion() < 0) {
+		pspDebugScreenPrintf("OTA requires the existing PRO-X session; no exploit fallback.\n"); goto exit;
+	}
 
 	psp_fw_version = sceKernelDevkitVersion();
 
@@ -630,14 +641,27 @@ version_OK:
 	char * slash = strrchr(installerpath, '/');
 	if (slash) slash[1] = '\0';
 	
-	write_files(installerpath);
+	if (write_files(installerpath) < 0) {
+		pspDebugScreenPrintf("Cannot prepare installer modules.\n"); goto exit;
+	}
 	strcat(installerpath, "installer.prx");
+	installer_args_size=strlen(installerpath)+1;
+	memcpy(installer_args,installerpath,installer_args_size);
+	if (ota_mode) {
+		memcpy(installer_args+installer_args_size,"--prox-ota-v1",14); installer_args_size+=14;
+		memcpy(installer_args+installer_args_size,argv[2],65); installer_args_size+=65;
+		memcpy(installer_args+installer_args_size,argv[3],strlen(argv[3])+1); installer_args_size+=strlen(argv[3])+1;
+	}
 
 	printk_init("ms0:/launcher.txt");
 	printk("Hello exploit\n");
 
 	if(sctrlHENGetVersion() >= 0) {
-		install_in_cfw();
+		int result=install_in_cfw();
+		if (result < 0) {
+			pspDebugScreenPrintf("Installer module start failed 0x%08x\n",result);
+			sceKernelDelayThread(5000000); goto exit;
+		}
 
 		return 0;
 	}

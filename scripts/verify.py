@@ -24,6 +24,10 @@ PHASE2_ADDED = {'Common/prox_network.c', 'Common/prox_network.h',
                 'SystemControl/wpa2.c', 'SystemControl/wpa2.h', 'SystemControl/wpa2_variant_661.h',
                 'tools/wpa2diag/Makefile', 'tools/wpa2diag/main.c'}
 
+PHASE3_MODIFIED = {'Installer/main.c', 'Installer/Makefile', 'PXE/Launcher/main.c', 'SystemControl/Makefile', 'SystemControl/exports.exp',
+                   'Vshctrl/custom_update.c', 'Vshctrl/exports.exp', 'Vshctrl/vshpatch.c',
+                   'PXE/Launcher/Makefile', 'FastRecovery/Makefile', 'Vshctrl/Makefile'}
+
 
 def require(condition, message):
     if not condition:
@@ -33,12 +37,20 @@ def require(condition, message):
 def verify_source(reference):
     actual = inventory(ROOT / 'firmware')
     phase2 = json.loads((ROOT / 'docs/phase-2-source.json').read_text())
+    phase3 = json.loads((ROOT / 'scripts/phase-3-source.json').read_text())
+    require(set(phase3['modified']) == PHASE3_MODIFIED, 'Phase 3 modified its reviewed source scope')
     require(set(phase2['modified']) == PHASE2_MODIFIED and set(phase2['added']) == PHASE2_ADDED,
             'Phase 2 changed its authorized file scope')
-    require(set(actual) == set(reference['source_files']) | set(phase2['added']), 'Unexpected/missing firmware files')
+    require(set(actual) == set(reference['source_files']) | set(phase2['added']) | set(phase3['added']),
+            'Unexpected/missing firmware files')
     changes = []
     for name, value in actual.items():
         data = (ROOT / 'firmware' / name).read_bytes()
+        if name in phase3['added'] or name in phase3['modified']:
+            require(value == phase3['added'].get(name, phase3['modified'].get(name)),
+                    'Phase 3 reviewed source changed: ' + name)
+            changes.append(name)
+            continue
         if name in phase2['added'] or name in phase2['modified']:
             expected = phase2['added'].get(name, phase2['modified'].get(name))
             require(value == expected, 'Phase 2 reviewed snapshot changed: ' + name)
@@ -57,8 +69,25 @@ def verify_source(reference):
             data = b''.join(lines)
             changes.append(name)
         require(sha(data) == reference['source_files'][name], 'Out-of-scope change: ' + name)
-    require(len('6.61 PRO-X'.encode('utf-16le')) == len('6.61 PRO-C'.encode('utf-16le')), 'UTF-16 growth')
-    require(len('6.61 PRO-X') + 1 <= 30, 'ASCII buffer overflow')
+    require(len('6.61 PRO-X '+VERSION) + 1 <= 64, 'Dedicated version-label buffer limit')
+    require('prox_system_version_patch((void *)text_addr, mod->text_size,' in
+            (ROOT / 'firmware/Vshctrl/vshpatch.c').read_text(), 'Dedicated 6.61 label hook missing')
+    # Explicitly verify additive exports and unchanged existing contracts.
+    exports = (ROOT / 'firmware/SystemControl/exports.exp').read_bytes()
+    extra = (b'PSP_EXPORT_START(ProxUpdateForUser, 0, 0x4001)\n'
+             b'PSP_EXPORT_FUNC(proxUpdateGetState)\nPSP_EXPORT_FUNC(proxUpdateRandom)\nPSP_EXPORT_END\n\n')
+    if b'\r\n' in exports:
+        extra = extra.replace(b'\n', b'\r\n')
+    require(exports.count(extra) == 1 and sha(exports.replace(extra, b'')) ==
+            reference['source_files']['SystemControl/exports.exp'], 'Existing SystemCtrl exports changed')
+    exports = (ROOT / 'firmware/Vshctrl/exports.exp').read_bytes()
+    line = b'PSP_EXPORT_FUNC(proxInternetUpdate)' + (b'\r\n' if b'\r\n' in exports else b'\n')
+    require(sha(exports.replace(line, b'')) ==
+            reference['source_files']['Vshctrl/exports.exp'], 'Existing VSH exports changed')
+    makefile = (ROOT / 'firmware/SystemControl/Makefile').read_bytes()
+    line = b'\t   prox_update.o \\' + (b'\r\n' if b'\r\n' in makefile else b'\n')
+    require(sha(makefile.replace(line, b'')) == phase2['modified']['SystemControl/Makefile'],
+            'Unrelated SystemControl build contract changed')
     return sorted(changes)
 
 
@@ -111,6 +140,7 @@ def verify_build(metadata):
                'Stargate/stargate', 'SystemControl/systemctrl', 'usbdevice/usbdevice',
                'Vshctrl/vshctrl', 'Recovery/recovery']
     installer = (tree / 'Installer/installer.prx').read_bytes()
+    require(len(installer) <= 1024*1024, 'Installer exceeds launcher decompression buffer')
     for module in modules:
         path = Path(module)
         binary = (tree / (module + '.prx')).read_bytes()
@@ -120,21 +150,23 @@ def verify_build(metadata):
             embedded[module + '.prx'] = sha(binary)
     for name, original in [('installer', 'Installer/installer.prx'), ('Rebootex_prx', 'Rebootex/Rebootex.prx')]:
         require(gzip.decompress(header_bytes(tree / 'PXE/Launcher' / (name + '.h'))) == (tree / original).read_bytes(), 'Launcher payload mismatch: ' + name)
+        require(header_bytes(tree / 'PXE/Launcher' / (name + '.h')) in
+                (tree / 'PXE/Launcher/pxe_launcher.elf').read_bytes(), 'Current payload absent from compiled launcher: '+name)
     require(header_bytes(tree / 'PXE/Launcher/rebootex.h') == (tree / 'PXE/RebootexPXE/rebootex.bin').read_bytes(), 'PXE reboot mismatch')
     require(header_bytes(tree / 'PXE/RebootexPXE/systemctrl.h') == (tree / 'PXE/RebootexPXE/systemctrl.prx').read_bytes(), 'PXE bootstrap mismatch')
     reboot = (tree / 'Rebootex_bin/rebootex.bin').read_bytes()
     require(header_bytes(tree / 'Rebootex_bin/rebootex.h') == reboot, 'Live reboot header mismatch')
     require(reboot in (tree / 'FastRecovery/fast_recovery.elf').read_bytes(), 'Fast Recovery reboot mismatch')
     require(reboot in (tree / 'Rebootex/Rebootex.prx').read_bytes(), 'Installer live reboot mismatch')
-    titles = [('PROUPDATE', '661 PRO-X Installer', '661 PRO-C Updater'),
-              ('FastRecovery', '661 PRO-X Fast Recovery', '661 PRO-C Fast Recovery')]
+    titles = [('PROUPDATE', '661 PRO-X v'+VERSION+' Installer', '661 PRO-C Updater'),
+              ('FastRecovery', '661 PRO-X v'+VERSION+' Fast Recovery', '661 PRO-C Fast Recovery')]
     info = {}
     for directory, branded, original in titles:
         info[directory] = pbp_info((output / 'PSP/GAME' / directory / 'EBOOT.PBP').read_bytes())
         require(info[directory]['title'] == (branded if metadata['mode'] == 'pro-x' else original), 'Wrong EBOOT title')
         require(info[directory]['category'] == 'MG', 'Wrong EBOOT category')
     if metadata['mode'] == 'pro-x':
-        for file, message in [('Vshctrl/vshctrl.prx', b'6.61 PRO-X'), ('Recovery/recovery.prx', b'PRO-X Recovery Menu'), ('Satelite/satelite.prx', b'PRO-X VSH MENU'), ('Installer/installer.prx', b'PRO-X - based on PRO-C by Team PRO')]:
+        for file, message in [('Vshctrl/vshctrl.prx', ('6.61 PRO-X '+VERSION).encode()), ('Recovery/recovery.prx', b'PRO-X Recovery Menu'), ('Satelite/satelite.prx', b'PRO-X VSH MENU'), ('Installer/installer.prx', ('PRO-X v'+VERSION+' - based on PRO-C by Team PRO').encode())]:
             require(message in elf_data(tree / file), 'Visible text absent from generated module: ' + file)
         for name in ['wpa2.o', '../Common/wpa2_patch.o', '../Common/prox_network.o']:
             require((tree / 'SystemControl' / name).is_file(), 'Phase 2 object missing: ' + name)
@@ -143,6 +175,19 @@ def verify_build(metadata):
         require(bool(metadata['diagnostics']), 'Diagnostic not built')
         diagnostic = pbp_info((output / 'diagnostics/PSP/GAME/WPA2DIAG/EBOOT.PBP').read_bytes(), allow_plain=True)
         require(diagnostic['title'] == 'PRO-X WPA2 identification (read only)', 'Wrong diagnostic title')
+        client = pbp_info((output / 'PSP/GAME/PROXUPDATE/EBOOT.PBP').read_bytes(), allow_plain=True)
+        require(client['title'] == 'PRO-X v'+VERSION+' System Update', 'Wrong updater product title')
+        require(metadata['build_id'].encode() in (tree / 'Updater/prox_updater.elf').read_bytes(), 'Updater build ID missing')
+        require(b'ProxUpdateForUser' not in (tree / 'Installer/installer.elf').read_bytes(),
+                'Manual installer must not require the private updater bridge')
+        require(b'ProxUpdateForUser' in (tree / 'SystemControl/systemctrl.elf').read_bytes(), 'Private bridge missing')
+        deps = json.loads((ROOT / 'scripts/updater-dependencies.json').read_text())
+        for dependency in ['mbedtls', 'ca_bundle']:
+            require(sha((ROOT / deps[dependency]['path']).read_bytes()) == deps[dependency]['sha256'],
+                    'Pinned updater dependency changed: '+dependency)
+        require((output / 'PSP/GAME/PROXUPDATE/cacert.pem').read_bytes() ==
+                (ROOT / deps['ca_bundle']['path']).read_bytes(), 'Packaged CA bundle changed')
+        info['PROXUPDATE'] = client
     return {'pbp': info, 'embedded_modules': embedded}
 
 
@@ -157,12 +202,14 @@ def main():
     changes = verify_source(reference)
     require(inventory(ROOT / 'firmware') == branded['source_files'], 'Sources changed since PRO-X compilation')
     results = {'source_scope': 'PASS', 'branding_files': changes,
-               'contracts': 'PASS: outside reviewed phase 2 files and visible branding, firmware matches reference byte for byte; public config/exports/NIDs/HEN/boot paths unchanged',
+               'contracts': 'PASS: reviewed phase 2/3 scope; existing PRO exports/NIDs/config/HEN/boot paths preserved; private updater library and VSH syscall added',
                'phase2': {'status': 'prepared-for-hardware-test', 'verified_variants': 1,
                           'variant_id': WPA2_VARIANT, 'preference_default': 'enabled',
                           'hardware': 'NOT RUN'},
                'reference': verify_build(reference), 'pro-x': verify_build(branded),
-               'utf16_display_bytes_including_nul': 22, 'hardware': 'NOT RUN',
+               'utf16_display_bytes_including_nul': len(('6.61 PRO-X '+VERSION).encode('utf-16le'))+2,
+               'display_storage': 'separately sized user buffer; Sony string capacity not assumed',
+               'hardware': 'NOT RUN',
                'infinity': 'NOT RUN: static contract preservation only'}
     (ROOT / 'artifacts/verification.json').write_text(json.dumps(results, indent=2) + '\n', encoding='utf-8')
     print('PASS: source scope, HEN/ABI/paths preservation, PBP/SFO, visible resources, embedded modules and shared reboot buffers')

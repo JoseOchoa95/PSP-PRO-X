@@ -47,7 +47,8 @@ PSP_EBOOT_TITLE = 661
 endif
 
 BUILD_PRX = 1
-PSP_EBOOT_TITLE += PRO-X Fast Recovery
+include ../Common/prox_product.mk
+PSP_EBOOT_TITLE += PRO-X v$(PROX_PRODUCT_VERSION) Fast Recovery
 
 EXTRA_TARGETS = EBOOT.PBP
 PSP_EBOOT_ICON = ICON0.PNG

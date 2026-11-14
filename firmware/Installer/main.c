@@ -52,6 +52,7 @@
 #include "vshctrl.h"
 #include "recovery.h"
 #include "config.h"
+#include "../Updater/ota_installer.h"
 
 #include "../Permanent/ppatch_config.h"
 
@@ -60,8 +61,11 @@ PSP_MODULE_INFO("PROUpdater", 0x0800, 1, 0);
 
 /* Define the main thread's attribute value (optional) */
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
+PSP_MAIN_THREAD_STACK_SIZE_KB(64);
+PSP_HEAP_SIZE_KB(1024);
 
-#define VERSION_STR "PRO-X"
+#include "prox_product.h"
+#define VERSION_STR "PRO-X v" PROX_PRODUCT_VERSION
 #define printf pspDebugScreenPrintf
 
 int psp_model = 0;
@@ -72,6 +76,7 @@ static u8 g_buf2[64*1024] __attribute__((aligned(64)));
 
 void cleanup_exit(void)
 {
+	if (prox_ota_cleanup_modules()) return;
 	sceIoRemove("installer.prx");
 	sceIoRemove("Rebootex.prx");
 }
@@ -525,9 +530,11 @@ void start_reboot(int mode)
 {
 	int modid, ret;
 	int delay = 0;
-	char modpath[80];
+	char modpath[256];
 
-	sprintf(modpath, "rebootex.prx");
+	ret=prox_ota_reboot_path(modpath);
+	if (ret < 0) { printf("Invalid staged reboot path.\n"); return; }
+	if (!ret) strcpy(modpath,"rebootex.prx");
 	modid = kuKernelLoadModule(modpath, 0, 0);
 
 	if (modid >= 0) {
@@ -553,6 +560,7 @@ int main(int argc, char *argv[])
 	struct SceIoStat stat;
 	SceCtrlData ctl;
 	u32 key;
+	int ota_mode=0;
 
 	memset(&stat, 0, sizeof(stat));
 	pspDebugScreenInit();
@@ -587,19 +595,27 @@ int main(int argc, char *argv[])
 	
 version_OK:
 	psp_model = kuKernelGetModel();
+	ota_mode=prox_ota_begin(argc,argv,psp_fw_version,psp_model);
+	if (ota_mode < 0) goto exit;
 	scePowerSetClockFrequency(333, 333, 166);
 	init_flash();
 	usage();
 
 	printf("Press X to launch CFW.\n");
-	printf("Press Triangle to uninstall CFW.\n");
-	printf("Hold L to reinstall CFW.\n");
+	if (!ota_mode) {
+		printf("Press Triangle to uninstall CFW.\n");
+		printf("Hold L to reinstall CFW.\n");
+	} else printf("Verified update: X installs, R exits. Settings are preserved.\n");
 	printf("Press R to exit.\n");
 
 	sceCtrlReadBufferPositive(&ctl, 1);
 	key = ctl.Buttons;
+	/* A held launch-confirmation X is not another installation confirmation. */
+	while (ota_mode && (key & (PSP_CTRL_CROSS|PSP_CTRL_RTRIGGER|PSP_CTRL_TRIANGLE|PSP_CTRL_LTRIGGER))) {
+		sceKernelDelayThread(50000); sceCtrlReadBufferPositive(&ctl,1); key=ctl.Buttons;
+	}
 
-	while (0 == (key & (PSP_CTRL_CROSS | PSP_CTRL_RTRIGGER | PSP_CTRL_TRIANGLE))) {
+	while (0 == (key & (PSP_CTRL_CROSS | PSP_CTRL_RTRIGGER | (ota_mode ? 0 : PSP_CTRL_TRIANGLE)))) {
 		sceKernelDelayThread(50000);
 		sceCtrlReadBufferPositive(&ctl, 1);
 		key = ctl.Buttons;
@@ -608,8 +624,10 @@ version_OK:
 	if (key & PSP_CTRL_RTRIGGER) {
 		printf("Exiting...\n");
 		cleanup_exit();
+		prox_ota_close();
 		sceKernelDelayThread(100000);
 		sceKernelExitGame();
+		return 0;
 	}
 
 	switch(psp_model) {
@@ -644,14 +662,22 @@ version_OK:
 
 	sceCtrlReadBufferPositive(&ctl, 1);
 
-	if (ctl.Buttons & PSP_CTRL_LTRIGGER) {
+	if (!ota_mode && (ctl.Buttons & PSP_CTRL_LTRIGGER)) {
 		disable_smart = 1;
 	}
 
 	if (key & PSP_CTRL_CROSS) {
+		if (ota_mode && prox_ota_before_write() < 0) {
+			printf("OTA preflight failed. No firmware write started.\n"); goto exit;
+		}
 		ret = install_cfw();
+		if (ota_mode) prox_ota_result(ret);
 
 		if (ret == 0) {
+			if (ota_mode && prox_ota_complete() < 0) {
+				printf("Keep the stage and matching recovery files; storage update needs recovery.\n"); goto exit;
+			}
+			prox_ota_close();
 			printf(" Completed.\nPress X to start CFW.\n");
 
 			sceCtrlReadBufferPositive(&ctl, 1);
@@ -664,6 +690,7 @@ version_OK:
 			}
 
 			printf("Now reboot to " VERSION_STR " :)\n");
+			prox_ota_close();
 			start_reboot(1);
 		}
 	} else if (key & PSP_CTRL_TRIANGLE) {
@@ -674,6 +701,7 @@ version_OK:
 	}
 
 exit:
+	prox_ota_close();
 	printf("Press X to exit.\n");
 
 	sceCtrlReadBufferPositive(&ctl, 1);

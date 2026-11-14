@@ -1,5 +1,25 @@
 # Créditos y avisos
 
+## Phase 3 dependencies and references
+
+The System Information label hook uses the PRO/ARK instruction anchor documented
+in ARK-5 VSHControl, revision
+`c045ddde334580dd92d2d2529df38646b451ab33`, under GPL-3.0-or-later. The pinned
+reference and source hash are recorded in `scripts/updater-dependencies.json`.
+
+The phase 3 client uses **Mbed TLS 3.6.7 LTS**, copyright the Mbed TLS
+contributors, under the Apache-2.0 option. The unmodified pinned source archive
+includes its original notices and licenses and accompanies the binary package.
+Its SHA-256 implementation is also used by installer-side preflight; TLS stays
+in the separate network client and is not added to installed firmware modules.
+The **Mozilla CA extract** obtained from curl's CA extract service retains its
+original header and is distributed under [MPL-2.0](https://www.mozilla.org/MPL/2.0/).
+Dependency URLs and SHA-256
+identities are recorded in `scripts/updater-dependencies.json`. No private keys
+or GitHub tokens are included. The earlier transport prototype passed limited
+owner-supplied PSP tests; the full update candidate still requires physical
+installation validation.
+
 PRO-X es un fork independiente basado en PRO-C de **Team PRO**, especialmente
 Coldbird y Virtuous Flame. No es una publicación oficial de Team PRO, Davee o ARK.
 Los avisos originales del árbol `firmware/` y `firmware/credit.txt` se conservan.

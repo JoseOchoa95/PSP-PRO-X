@@ -5,6 +5,7 @@ TARGET = systemctrl
 OBJS = main.o \
 	   syspatch.o \
 	   wpa2.o \
+	   prox_update.o \
 	   ../Common/wpa2_patch.o \
 	   ../Common/prox_network.o \
 	   loadexec_patch.o \

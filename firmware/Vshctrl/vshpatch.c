@@ -37,6 +37,7 @@
 #include "virtual_pbp.h"
 #include "strsafe.h"
 #include "vshctrl_patch_offset.h"
+#include "version_display.h"
 
 extern int _sceCtrlReadBufferPositive(SceCtrlData *ctrl, int count);
 extern void patch_sceUSB_Driver(void);
@@ -112,7 +113,7 @@ static int vshpatch_module_chain(SceModule2 *mod)
 		goto exit;
 	}
 
-	if(conf.useownupdate && 0 == strcmp(mod->modname, "SceUpdateDL_Library")) {
+	if(0 == strcmp(mod->modname, "SceUpdateDL_Library")) {
 		patch_SceUpdateDL_Library(text_addr);
 		sync_cache();
 		goto exit;
@@ -283,6 +284,12 @@ static void patch_sysconf_plugin_module(SceModule2 *mod)
 	u32 minor_version;
 
 	text_addr = mod->text_addr;
+	if (psp_fw_version == FW_661) {
+		/* No write to Sony's original string storage: the longer product
+		 * label owns an explicitly sized user-readable UTF-16 buffer. */
+		prox_system_version_patch((void *)text_addr, mod->text_size,
+			g_offs->sysconf_plugin_patch.SystemVersion);
+	} else {
 	minor_version = sctrlHENGetMinorVersion();
 
 	sprintf(str, g_offs->sysconf_plugin_patch.SystemVersionMessage, 'A'+(sctrlHENGetVersion()&0xF)-1);
@@ -300,6 +307,7 @@ static void patch_sysconf_plugin_module(SceModule2 *mod)
 
 	_sw(0x3C020000 | ((u32)(p) >> 16), text_addr + g_offs->sysconf_plugin_patch.SystemVersion); // lui $v0, 
 	_sw(0x34420000 | ((u32)(p) & 0xFFFF), text_addr + g_offs->sysconf_plugin_patch.SystemVersion + 4); // or $v0, $v0, 
+	}
 
 	if (conf.machidden) {
 		p = (void*)(text_addr + g_offs->sysconf_plugin_patch.MacAddressStr);
