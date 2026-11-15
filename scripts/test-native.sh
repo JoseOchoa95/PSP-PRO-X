@@ -41,3 +41,11 @@ cc -std=c99 -Wall -Wextra -Werror -I firmware/Updater tests/native/test_connect_
 /tmp/test-connect-retry
 cc -std=c99 -Wall -Wextra -Werror -I tests/native -I firmware/Updater tests/native/test_network_session.c -o /tmp/test-network-session
 /tmp/test-network-session
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NATIVE_PROBE_TEST -I firmware/Vshctrl \
+    tests/native/test_native_update_probe.c firmware/Vshctrl/native_update_probe.c -o /tmp/test-native-update-probe
+/tmp/test-native-update-probe
+cc -std=c99 -Wall -Wextra -Werror -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast \
+    -DPROX_UPDATE_NATIVE -DPROX_NATIVE_UI_PROBE -DPROX_NATIVE_PROBE_TEST -I tests/native -I firmware/Vshctrl \
+    tests/native/test_native_update_probe_dispatch.c firmware/Vshctrl/custom_update.c \
+    firmware/Vshctrl/native_update_dispatch.c firmware/Vshctrl/native_update_probe.c -o /tmp/test-native-update-probe-dispatch
+/tmp/test-native-update-probe-dispatch

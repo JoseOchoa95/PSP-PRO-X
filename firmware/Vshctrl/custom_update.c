@@ -16,6 +16,10 @@
 #include "main.h"
 #endif
 #include <stdio.h>
+#ifdef PROX_NATIVE_UI_PROBE
+#include "native_update_probe.h"
+int prox_hook_native_probe_imports(SceModule2 *);
+#endif
 
 #define UPDATE_ERROR ((int)0x80010002)
 static volatile int launching;
@@ -31,6 +35,11 @@ static void dispatch_log(const char *event, int result)
     n = sprintf(line, "%s result=0x%08x fw=0x%08x\n", event, result, psp_fw_version);
     sceIoWrite(fd, line, n); sceIoClose(fd);
 }
+
+#ifdef PROX_NATIVE_UI_PROBE
+void prox_native_probe_event(const char *event,int result)
+{ int k1=pspSdkSetK1(0); dispatch_log(event,result); pspSdkSetK1(k1); }
+#endif
 
 int proxInternetUpdate(void)
 {
@@ -63,6 +72,7 @@ int proxInternetUpdate(void)
     return rc;
 }
 
+#ifndef PROX_NATIVE_UI_PROBE
 static int in_module(SceModule2 *mod, unsigned int address, unsigned int size)
 {
     unsigned int i;
@@ -114,6 +124,7 @@ static int hook_download_imports(SceModule2 *mod)
     return 0;
 }
 
+#endif
 static void stop_unknown_module(SceModule2 *mod)
 {
     /* Declared entry point, not an offset/signature guess. Refuse startup on
@@ -129,7 +140,11 @@ static void stop_unknown_module(SceModule2 *mod)
 void patch_update_plugin_module(SceModule *mod)
 {
     SceModule2 *module = (SceModule2 *)mod;
+#ifdef PROX_NATIVE_UI_PROBE
+    int result = psp_fw_version == FW_661 ? prox_hook_native_probe_imports(module) : -1;
+#else
     int result = psp_fw_version == FW_661 ? hook_download_imports(module) : -1;
+#endif
     dispatch_log("update_plugin imports", result);
     if (result < 0)
         stop_unknown_module(module);
