@@ -99,6 +99,10 @@ Preserve literal code identifiers, file paths, version strings, commands, exact 
 
 This rule does not change the language of the conversation or grant permission to commit, push, post comments, create PRs, or publish releases. The existing authorization requirements still apply.
 
+### Markdown paragraph formatting
+
+Write each prose paragraph as one continuous physical line in GitHub descriptions, PR/release bodies, changelogs, repository documentation and other publication text. Do not wrap a paragraph at an arbitrary column width or insert a newline, trailing backslash or Markdown hard break merely to continue the same sentence or paragraph. Use blank lines only for intentional paragraph separation, and retain meaningful line breaks in headings, lists, tables, quotations and code blocks. Preserve intended Markdown syntax such as `**bold**`; do not add literal escape characters that turn formatting into visible punctuation. When posting through a CLI or API, preserve the reviewed text and actual paragraph boundaries without introducing literal `\\n` sequences or shell-escaping artifacts. Apply this rule to new or revised text; do not reflow unrelated historical content solely for formatting.
+
 ## Tests and evidence
 
 Run the checks and tests appropriate to the change and required by the relevant workflow specification.

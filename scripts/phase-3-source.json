@@ -1,5 +1,5 @@
 {
-  "status": "Phase 3 stable GitHub updater candidate: bounded contract/staging and PRO installer handoff; physical acceptance pending",
+  "status": "Native original-system-update UI diagnostic checkpoint; authenticated GitHub/native installer integration excluded",
   "modified": {
     "FastRecovery/Makefile": "7f77f83c0992c7baf8dba69c6f6d43907b53c4facf5a2742537faf3b5eb9c10d",
     "Installer/Makefile": "a469e4a1616c1f3221ff6445b651f686b119688277e98b89f8a81d4df20b511f",
@@ -8,15 +8,15 @@
     "PXE/Launcher/main.c": "a8433f655cd4541e05458e16cadbf3d9fbdbfca34ee0f9e9c9da8d4dffaad69f",
     "SystemControl/Makefile": "b3b9499200d6c87239ca73f0d1cb1966c49129ae5cad98b2304db59c6a9ae083",
     "SystemControl/exports.exp": "84114462104a58de401c3718c9213b3d6482ee863c795d51f1c568ac90860dbe",
-    "Vshctrl/Makefile": "210a5b02ee797ab2e5931a22a4e64a3a9c4611ea390d2124eb0a43c78e5de508",
-    "Vshctrl/custom_update.c": "54c8069265582a3b834607ef8b0cb65a6abde1d85dc31ae0cef24ab3966bd215",
+    "Vshctrl/Makefile": "32e82b5d13c8d51e40280d06ebd421d197311e798821c46eb3589c855b20dedd",
+    "Vshctrl/custom_update.c": "0fd4b0292de708c66b8a2b3e5ac3292859a4e20dfe37a931ae25fb0283a176b1",
     "Vshctrl/exports.exp": "2efd6868871e071962813e54e9865e8ecc6c2ac2d2096f82739c6110ca16d1ef",
     "Vshctrl/vshpatch.c": "f9ea2a5aee502b07d11c2ff69eba42a2d14570b14de6e36e907041ba97f595ed"
   },
   "added": {
     "Common/prox_ota_args.h": "3c1fc012238e044eed63834682d66a729a429dcbc535f8221f33f42ad03d538a",
-    "Common/prox_product.h": "6d7c384199794e9f64fb889ce20694a7a2298d529fb1b20cb98de5a0fe5a5ee7",
-    "Common/prox_product.mk": "58e867afd8e33ab702c670ff8c1d345f5fef9b1b25ac7adae2495681634c53ec",
+    "Common/prox_product.h": "c1c001bfcf106889aed1005763f956d18494bde003587cb14db9e51e50e2c242",
+    "Common/prox_product.mk": "9de03ca6f8406408b7caece505c16e993f6707e7b3fbe8787028ad4e9a0cf07a",
     "SystemControl/prox_update.c": "06a395a7a2d96a180c176da2c3f7a0590279313b45d73d62243df09e00f44310",
     "Updater/Makefile": "4b0a40faa5a43b07b95ec49a603127e87e0c5d9b0b5842c951bb38f7e848f277",
     "Updater/bridge.S": "fbf9292e34d29fc8f276c926b2257232c44d868725f76984a0b80615b9e7ac88",
@@ -56,6 +56,10 @@
     "tools/netdiag/README.md": "473b6e977aa3b4d15109a7bd9cb27dc6c616b6737d79779587136a7ab1303ab5",
     "tools/netdiag/main.c": "1652d68234090b9715455653a819eedd2e2b0603447cb5e507fb97b671e1dcd9",
     "tools/netdiag/protocol.c": "c116ebc0455a14e518181f36981b808e555a6a16f82ee3758f76edd3a3fde9a1",
-    "tools/netdiag/protocol.h": "09e1cc71d9368469c330fdadd2ded63b8b68f868ae448896718309065290fab5"
+    "tools/netdiag/protocol.h": "09e1cc71d9368469c330fdadd2ded63b8b68f868ae448896718309065290fab5",
+    "Vshctrl/native_update_probe.c": "c43111c466b1175bbb5c258be93f4af4b94e281d9e6ae819362fd0aef9e32afa",
+    "Vshctrl/native_update_probe.h": "ca1fd90ab529b790d10e2e210a099df2201544350f4af38b07b141ccdf5c7224",
+    "Vshctrl/native_probe_exports.inc": "0187a8cd0f24ec010ec719cfdc5fbe75c80ad4526d95dfa6cf59c04b67f4ad22",
+    "Vshctrl/native_update_dispatch.c": "ed158192ba033999774070cae5f49138cb9400a52bfbc9afc60f9a4c9e250f13"
   }
 }

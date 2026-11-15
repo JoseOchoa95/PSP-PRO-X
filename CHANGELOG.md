@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### v0.3.2 — original System Update UI diagnostic checkpoint
+
+- Add an opt-in diagnostic that preserves the original PSP update UI, entry point and installed language/theme resources, returning an explicitly simulated latest-version result without HTTP requests, package downloads or installation through that query.
+- Validate all ten inspected provider imports and register the diagnostic syscalls separately; reject incomplete/unknown layouts before patching. Keep the existing updater as the default and preserve Installer, Fast Recovery, configuration, plugins and PRO/Infinity contracts.
+- Prepare matching local Installer/Fast Recovery packages, source, manifest and hashes. The owner reports that the isolated build passed its installation/native-query check; the earlier prototype's native message/language/theme behavior also passed owner testing. Real GitHub/native installer integration is outside this checkpoint.
+- Require continuous Markdown prose paragraphs in GitHub publication text, preserving intentional paragraph breaks, lists, tables, code blocks and formatting. No release or new product-version increment is authorized by this documentation rule or PR.
+
 ### v0.3.1 — version and release-packaging chore
 
 - Require owner acceptance and merge of the corresponding PR before publishing

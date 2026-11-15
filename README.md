@@ -8,14 +8,13 @@ PRO-X aims to continue the PRO lineage through regular updates, bug fixes, and n
 
 ## Project status
 
-**v0.3.1 — release candidate awaiting PR acceptance; PSP OTA installation pending.**
-This build advances the product identity and System Information label to 0.3.1
-and supplies matching stable OTA assets for the owner's first console-update
-test. It does not change the updater/network logic from the tested 0.3.0 build.
-Its installation/restart on PSP has not yet been validated. Publication is held
-until the owner accepts the corresponding PR and it is merged; local test
-packages remain in `builds/`. See GitHub Releases for published versions and
-their remaining limitations.
+**v0.3.2 — original System Update UI diagnostic checkpoint; no new release.**
+
+An opt-in firmware diagnostic preserves the PSP's original System Update interface and its installed language/theme resources. It replaces the inspected update-provider calls with a simulated latest-version response; that diagnostic query does not contact GitHub/Sony, download a package or launch an installer. The owner reports that the isolated checkpoint build passed the requested installation/native-query check; the preceding prototype's native result and system language/theme changes also passed owner testing.
+
+This checkpoint excludes the rejected custom panel and changes to the installer/consent protocol. The existing updater remains the default build path; the simulation requires explicit diagnostic build flags. Integration of real GitHub updates into the native UI and reuse of the original standalone installer UI remain future work. Product numbering stays v0.3.2 for this ticket; a PR does not create v0.3.3 or authorize a release.
+
+The owner reports that the preceding v0.3.1 OTA worked after connecting the charger. That report does not validate a new native backend, every model/router or Infinity startup. See GitHub Releases for published versions; this PR does not publish or modify a release.
 
 The updater routes the XMB Internet system-update entry to a PRO-X client
 that selects compatible newer stable releases, verifies an explicit update

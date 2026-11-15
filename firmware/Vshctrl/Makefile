@@ -7,6 +7,10 @@ IMPORTS =
 
 INCDIR = ../Common/ ../include/
 CFLAGS = -Os -G0 -Wall -fno-pic
+CFLAGS += $(PROX_NATIVE_UPDATE_FLAGS)
+ifneq ($(findstring -DPROX_NATIVE_UI_PROBE=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+OBJS += native_update_probe.o native_update_dispatch.o
+endif
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -DDEBUG=1
@@ -49,6 +53,11 @@ ASFLAGS = $(CFLAGS)
 
 BUILD_PRX = 1
 PRX_EXPORTS = exports.exp
+ifneq ($(findstring -DPROX_NATIVE_UI_PROBE=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+PRX_EXPORTS = exports-native-probe.exp
+exports-native-probe.exp: exports.exp native_probe_exports.inc
+	python3 -c 'from pathlib import Path; p=Path("exports.exp").read_text(); assert p.count("PSP_END_EXPORTS")==1; Path("exports-native-probe.exp").write_text(p.replace("PSP_END_EXPORTS",Path("native_probe_exports.inc").read_text()+"\nPSP_END_EXPORTS"))'
+endif
 
 USE_KERNEL_LIBC=1
 USE_KERNEL_LIBS=1
