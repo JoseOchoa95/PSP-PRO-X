@@ -73,11 +73,13 @@ def prepare():
                                  'CFLAGS='+flags, 'all'], stdout=output, stderr=subprocess.STDOUT)
     if result.returncode:
         raise RuntimeError(log.read_text()[-6000:])
-    run('cc', '-std=c99', '-DPROX_HTTPS_NATIVE', '-DMBEDTLS_CONFIG_FILE="prox_mbedtls_config.h"',
+    run('cc', '-std=c99', '-DPROX_HTTPS_NATIVE', '-DPROX_NETWORK_NATIVE', '-DPROX_SESSION_NATIVE',
+        '-DMBEDTLS_CONFIG_FILE="prox_mbedtls_config.h"',
         '-I'+str(ROOT / 'tests/native'), '-I'+str(ROOT / 'firmware/Updater'),
         '-I'+str(ROOT / 'firmware/Common'), '-I'+str(tls / 'include'),
         str(ROOT / 'tests/native/test_update_transport.c'), str(ROOT / 'firmware/Updater/transport.c'),
-        str(ROOT / 'firmware/Updater/policy.c'), str(ROOT / 'firmware/Updater/connect_retry.c'), '-L'+str(tls / 'library'),
+        str(ROOT / 'firmware/Updater/policy.c'), str(ROOT / 'firmware/Updater/connect_retry.c'),
+        str(ROOT / 'firmware/Updater/network_session.c'), str(ROOT / 'firmware/Updater/network_close.c'), '-L'+str(tls / 'library'),
         '-lmbedtls', '-lmbedx509', '-lmbedcrypto', '-o', str(WORK / 'transport-test'))
     run('cc', '-std=c99', '-DMBEDTLS_CONFIG_FILE="prox_mbedtls_config.h"',
         '-I'+str(ROOT/'firmware/Updater'), '-I'+str(tls/'include'),
@@ -163,20 +165,36 @@ class HttpsTests(unittest.TestCase):
     def setUpClass(cls):
         prepare()
 
-    def request(self, suffix='ok', host='api.github.com', ca='ca', certificate='server', cancel='0', dns_failures=0, tcp_failures=0):
+    def request(self, suffix='ok', host='api.github.com', ca='ca', certificate='server', cancel='0', dns_failures=0, tcp_failures=0, resident=False):
         with server(certificate) as port:
             path = ('/repos/JoseOchoa95/PSP-PRO-X/' if host == 'api.github.com' else
                     '/JoseOchoa95/PSP-PRO-X/releases/download/v0.3.0/')
             result = subprocess.run([str(WORK / 'transport-test'), str(port),
                 'https://'+host+path+suffix,
                 str(WORK / (ca+'.pem')), '32', cancel], capture_output=True, text=True, timeout=15,
-                env=dict(os.environ, PROX_TEST_DNS_FAILURES=str(dns_failures), PROX_TEST_TCP_FAILURES=str(tcp_failures)))
+                env=dict(os.environ, PROX_TEST_DNS_FAILURES=str(dns_failures), PROX_TEST_TCP_FAILURES=str(tcp_failures), **({'PROX_TEST_RESIDENT_CA':'1'} if resident else {})))
         (WORK / (self._testMethodName+'.log')).write_text(result.stdout+result.stderr)
         return result.returncode, result.stdout
 
     def test_valid_chain_hostname_and_body(self):
         rc, out = self.request(); self.assertEqual(rc, 0, out)
         self.assertIn('verify_flags=0', out); self.assertIn('status=200 bytes=2 sink=2', out)
+
+    def test_resident_ca_without_storage(self):
+        rc,out=self.request(resident=True); self.assertEqual(rc,0,out)
+        self.assertIn('filesystem path unavailable',out); self.assertIn('verify_flags=0',out)
+
+    def test_resident_ca_rejects_hostname(self):
+        rc,out=self.request(host='github.com',resident=True)
+        self.assertNotEqual(rc,0,out); self.assertIn('sink=0',out)
+
+    def test_resident_ca_rejects_expired(self):
+        rc,out=self.request(certificate='expired',resident=True)
+        self.assertNotEqual(rc,0,out); self.assertIn('sink=0',out)
+
+    def test_resident_ca_rejects_untrusted(self):
+        rc,out=self.request(ca='other',resident=True)
+        self.assertNotEqual(rc,0,out); self.assertIn('sink=0',out)
 
     def test_sha384_ecdsa_chain(self):
         rc, out = self.request(ca='ca384', certificate='server384'); self.assertEqual(rc, 0, out)
@@ -259,15 +277,21 @@ class HttpsTests(unittest.TestCase):
         rc, out = self.request(dns_failures=4); self.assertEqual(rc, 0, out)
         self.assertIn('CONNECT dns=5 tcp=1', out); self.assertIn('verify_flags=0', out)
         self.assertIn('Connection attempt 5/5', out)
+        self.assertIn('Native reconnect APCTL state=0', out)
+        self.assertIn('Native Wi-Fi reconnect ready', out)
+        self.assertIn('LINK disconnects=4 reconnects=4 state=4', out)
+        self.assertIn('OWNED resolvers=5/5 sockets=1/1', out)
 
     def test_dns_exhaustion_no_tls_or_body(self):
         rc, out = self.request(dns_failures=99); self.assertNotEqual(rc, 0, out)
         self.assertIn('CONNECT dns=5 tcp=0', out); self.assertIn('sink=0', out)
         self.assertNotIn('TLS PASS', out)
+        self.assertIn('OWNED resolvers=5/5 sockets=0/0', out)
 
     def test_tcp_recovery_and_cleanup(self):
         rc, out = self.request(tcp_failures=2); self.assertEqual(rc, 0, out)
         self.assertIn('CONNECT dns=3 tcp=3', out); self.assertIn('verify_flags=0', out)
+        self.assertIn('OWNED resolvers=3/3 sockets=3/3', out)
 
     def test_retry_then_bad_certificate_stops(self):
         rc, out = self.request(dns_failures=1, ca='other'); self.assertNotEqual(rc, 0, out)

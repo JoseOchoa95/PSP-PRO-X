@@ -49,3 +49,77 @@ cc -std=c99 -Wall -Wextra -Werror -Wno-pointer-to-int-cast -Wno-int-to-pointer-c
     tests/native/test_native_update_probe_dispatch.c firmware/Vshctrl/custom_update.c \
     firmware/Vshctrl/native_update_dispatch.c firmware/Vshctrl/native_update_probe.c -o /tmp/test-native-update-probe-dispatch
 /tmp/test-native-update-probe-dispatch
+cc -std=c99 -Wall -Wextra -Werror -I firmware/Common -I firmware/Vshctrl \
+    tests/native/test_native_query_state.c firmware/Vshctrl/native_query_state.c -o /tmp/test-native-query-state
+/tmp/test-native-query-state
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NQ_PROVIDER_TEST \
+    -I tests/native -I firmware/Common -I firmware/Vshctrl \
+    tests/native/test_native_query_provider.c firmware/Vshctrl/native_query_provider.c \
+    firmware/Vshctrl/native_query_state.c -o /tmp/test-native-query-provider
+/tmp/test-native-query-provider
+cc -std=c99 -Wall -Wextra -Werror -I firmware/Common tests/native/test_pbp_payload.c -o /tmp/test-pbp-payload
+/tmp/test-pbp-payload
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NATIVE_PREVIEW_TEST \
+    -I tests/native -I firmware/Vshctrl tests/native/test_native_offer_preview.c \
+    firmware/Vshctrl/native_offer_preview.c -o /tmp/test-native-offer-guard
+/tmp/test-native-offer-guard
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NQ_PROVIDER_TEST -DPROX_NATIVE_OFFER_PREVIEW \
+    -I tests/native -I firmware/Common -I firmware/Vshctrl \
+    tests/native/test_native_query_provider.c firmware/Vshctrl/native_query_provider.c \
+    firmware/Vshctrl/native_query_state.c -o /tmp/test-native-preview-provider
+/tmp/test-native-preview-provider
+cc -std=c99 -Wall -Wextra -Werror -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast \
+    -DPROX_UPDATE_NATIVE -DPROX_NATIVE_UI_PROBE -DPROX_NATIVE_PROBE_TEST \
+    -DPROX_NATIVE_OFFER_PREVIEW -DPROX_NATIVE_PREVIEW_TEST -I tests/native -I firmware/Vshctrl \
+    tests/native/test_native_update_probe_dispatch.c firmware/Vshctrl/custom_update.c \
+    firmware/Vshctrl/native_update_dispatch.c firmware/Vshctrl/native_update_probe.c \
+    firmware/Vshctrl/native_offer_preview.c -o /tmp/test-native-preview-dispatch
+/tmp/test-native-preview-dispatch
+cc -std=c99 -Wall -Wextra -Werror -I firmware/Vshctrl \
+    tests/native/test_native_preview_stream.c firmware/Vshctrl/native_preview_stream.c -o /tmp/test-native-preview-stream
+/tmp/test-native-preview-stream
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NATIVE_PREVIEW_TEST -DPROX_NATIVE_PROGRESS_PREVIEW \
+    -I tests/native -I firmware/Vshctrl tests/native/test_native_progress_preview.c \
+    firmware/Vshctrl/native_offer_preview.c firmware/Vshctrl/native_preview_stream.c -o /tmp/test-native-progress-preview
+/tmp/test-native-progress-preview
+cc -std=c99 -Wall -Wextra -Werror -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast \
+    -DPROX_UPDATE_NATIVE -DPROX_NATIVE_UI_PROBE -DPROX_NATIVE_PROBE_TEST \
+    -DPROX_NATIVE_OFFER_PREVIEW -DPROX_NATIVE_PROGRESS_PREVIEW -DPROX_NATIVE_PREVIEW_TEST \
+    -I tests/native -I firmware/Vshctrl tests/native/test_native_update_probe_dispatch.c \
+    firmware/Vshctrl/custom_update.c firmware/Vshctrl/native_update_dispatch.c \
+    firmware/Vshctrl/native_update_probe.c firmware/Vshctrl/native_offer_preview.c \
+    firmware/Vshctrl/native_preview_stream.c -o /tmp/test-native-progress-dispatch
+/tmp/test-native-progress-dispatch
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NQ_PROVIDER_TEST \
+    -DPROX_NATIVE_OFFER_PREVIEW -DPROX_NATIVE_PROGRESS_PREVIEW \
+    -I tests/native -I firmware/Common -I firmware/Vshctrl \
+    tests/native/test_native_query_provider.c firmware/Vshctrl/native_query_provider.c \
+    firmware/Vshctrl/native_query_state.c -o /tmp/test-native-progress-provider
+/tmp/test-native-progress-provider
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NQ_PROVIDER_TEST -DPROX_NATIVE_PREVIEW_TEST -DPROX_NATIVE_OTA -DPROX_ERROR_TEXT_NATIVE \
+    -I tests/native -I firmware/Common -I firmware/Vshctrl tests/native/test_native_ota_provider.c \
+    firmware/Vshctrl/native_query_provider.c firmware/Vshctrl/native_query_state.c \
+    firmware/Vshctrl/native_offer_preview.c firmware/Vshctrl/native_preview_stream.c \
+    firmware/Vshctrl/native_error_text.c -o /tmp/test-native-ota-provider
+/tmp/test-native-ota-provider
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NATIVE_SERVICE_TEST -DPROX_BUILD_ID=\"native-service-fixture\" \
+    -I tests/native -I firmware/Common -I firmware/Updater -I firmware/Vshctrl \
+    tests/native/test_native_service.c firmware/Updater/native_service.c \
+    firmware/Vshctrl/native_query_state.c -o /tmp/test-native-service
+/tmp/test-native-service
+cc -std=c99 -Wall -Wextra -Werror -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast \
+    -DPROX_UPDATE_NATIVE -DPROX_NATIVE_UI_PROBE -DPROX_NATIVE_PROBE_TEST -DPROX_NATIVE_OTA -DPROX_NATIVE_PREVIEW_TEST \
+    -I tests/native -I firmware/Vshctrl tests/native/test_native_update_probe_dispatch.c \
+    firmware/Vshctrl/custom_update.c firmware/Vshctrl/native_update_dispatch.c \
+    firmware/Vshctrl/native_update_probe.c firmware/Vshctrl/native_offer_preview.c \
+    firmware/Vshctrl/native_preview_stream.c -o /tmp/test-native-ota-dispatch
+/tmp/test-native-ota-dispatch
+cc -std=c99 -Wall -Wextra -Werror -DPROX_ERROR_TEXT_NATIVE -I firmware/Common -I firmware/Vshctrl \
+    tests/native/test_native_error_text.c firmware/Vshctrl/native_error_text.c -o /tmp/test-native-error-text
+/tmp/test-native-error-text
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NATIVE_OTA -I tests/native/loader_sdk -I firmware/Common -I firmware/Vshctrl \
+    tests/native/test_native_query_loader.c firmware/Vshctrl/native_query_loader.c -o /tmp/test-native-query-loader
+/tmp/test-native-query-loader
+cc -std=c99 -Wall -Wextra -Werror -DPROX_CACHE_TEST -I tests/native -I tests/native/loader_sdk -I firmware/Common -I firmware/Vshctrl \
+    tests/native/test_native_query_cache.c firmware/Vshctrl/native_query_cache.c -o /tmp/test-native-query-cache
+/tmp/test-native-query-cache

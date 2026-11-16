@@ -38,6 +38,9 @@
 #include "strsafe.h"
 #include "vshctrl_patch_offset.h"
 #include "version_display.h"
+#ifdef PROX_NATIVE_OTA
+#include "native_query_cache.h"
+#endif
 
 extern int _sceCtrlReadBufferPositive(SceCtrlData *ctrl, int count);
 extern void patch_sceUSB_Driver(void);
@@ -591,6 +594,10 @@ int vshpatch_init(void)
 	vpbp_init();
 	hook_iso_file_io();
 	hook_iso_directory_io();
+
+#ifdef PROX_NATIVE_OTA
+	if(psp_fw_version == FW_661 && conf.useownupdate) prox_native_query_prepare();
+#endif
 
 	return 0;
 }

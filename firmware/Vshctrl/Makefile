@@ -3,6 +3,10 @@ all:
 
 TARGET = vshctrl
 OBJS = main.o vshpatch.o custom_update.o version_display.o xmbiso.o isoreader.o virtual_pbp.o vshmenu.o usbdevice.o dirent_track.o vshctrl_patch_offset.o disctype.o hibernation_delete.o ../Common/utils.o ../Common/libs.o ../Common/strsafe.o
+OBJS += native_query_provider.o native_query_state.o native_query_loader.o
+ifneq ($(findstring -DPROX_NATIVE_OTA=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+OBJS += native_error_text.o native_query_cache.o
+endif
 IMPORTS =
 
 INCDIR = ../Common/ ../include/
@@ -10,6 +14,15 @@ CFLAGS = -Os -G0 -Wall -fno-pic
 CFLAGS += $(PROX_NATIVE_UPDATE_FLAGS)
 ifneq ($(findstring -DPROX_NATIVE_UI_PROBE=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
 OBJS += native_update_probe.o native_update_dispatch.o
+endif
+ifneq ($(findstring -DPROX_NATIVE_UI_QUERY=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+OBJS += native_update_dispatch.o
+endif
+ifneq ($(filter -DPROX_NATIVE_OFFER_PREVIEW=1 -DPROX_NATIVE_OTA=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+OBJS += native_offer_preview.o
+endif
+ifneq ($(filter -DPROX_NATIVE_PROGRESS_PREVIEW=1 -DPROX_NATIVE_OTA=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+OBJS += native_preview_stream.o
 endif
 
 ifeq ($(DEBUG), 1)
@@ -52,11 +65,18 @@ CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
 ASFLAGS = $(CFLAGS)
 
 BUILD_PRX = 1
-PRX_EXPORTS = exports.exp
+PRX_EXPORTS = exports-native-query.exp
+exports-native-query.exp: exports.exp native_query_exports.inc
+	python3 -c 'from pathlib import Path; p=Path("exports.exp").read_text(); assert p.count("PSP_END_EXPORTS")==1; Path("exports-native-query.exp").write_text(p.replace("PSP_END_EXPORTS",Path("native_query_exports.inc").read_text()+"\nPSP_END_EXPORTS"))'
+ifneq ($(filter -DPROX_NATIVE_OFFER_PREVIEW=1 -DPROX_NATIVE_OTA=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+PRX_EXPORTS = exports-native-preview.exp
+exports-native-preview.exp: exports-native-query.exp native_preview_exports.inc
+	python3 -c 'from pathlib import Path; p=Path("exports-native-query.exp").read_text(); assert p.count("PSP_END_EXPORTS")==1; Path("exports-native-preview.exp").write_text(p.replace("PSP_END_EXPORTS",Path("native_preview_exports.inc").read_text()+"\nPSP_END_EXPORTS"))'
+endif
 ifneq ($(findstring -DPROX_NATIVE_UI_PROBE=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
 PRX_EXPORTS = exports-native-probe.exp
-exports-native-probe.exp: exports.exp native_probe_exports.inc
-	python3 -c 'from pathlib import Path; p=Path("exports.exp").read_text(); assert p.count("PSP_END_EXPORTS")==1; Path("exports-native-probe.exp").write_text(p.replace("PSP_END_EXPORTS",Path("native_probe_exports.inc").read_text()+"\nPSP_END_EXPORTS"))'
+exports-native-probe.exp: exports-native-query.exp native_probe_exports.inc
+	python3 -c 'from pathlib import Path; p=Path("exports-native-query.exp").read_text(); assert p.count("PSP_END_EXPORTS")==1; Path("exports-native-probe.exp").write_text(p.replace("PSP_END_EXPORTS",Path("native_probe_exports.inc").read_text()+"\nPSP_END_EXPORTS"))'
 endif
 
 USE_KERNEL_LIBC=1

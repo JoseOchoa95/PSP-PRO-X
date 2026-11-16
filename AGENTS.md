@@ -87,6 +87,10 @@ For every completed feature:
 
 Preparing a changelog does not authorize creating a tag or publishing a release.
 
+### Release title and description
+
+Use the release title only in GitHub's title field. Begin the release description with substantive changes, validation, installation information or limitations; do not repeat the release title as a heading or opening line in the body. Include version/build details where useful without duplicating the title. Apply this rule when preparing a new release or an explicitly authorized revision; it does not authorize editing existing releases or publishing anything.
+
 ## Language for GitHub publication
 
 Use **English for all human-authored documentation and publication text intended for GitHub**, not only pull requests. This includes repository documentation and READMEs, changelogs, commit messages, PR titles and descriptions, release titles and notes, issue/review text when posting it is authorized, and documentation shipped with downloadable artifacts.
@@ -210,6 +214,8 @@ Examples:
 | Following distinct feature ticket | `v0.4.0` |
 
 Before assigning a version, inspect the latest delivered build metadata and relevant `context/` records. Do not rely only on the latest Git tag: a tested build may not have been tagged or published. Once a later build exists, continue from it rather than resetting to `v0.2.0`.
+
+Do not reuse a product version already assigned to another change unless the owner explicitly authorizes it. Treat versions in accepted/merged PRs as used even when no tag or release has been published; also check existing version assignments, delivered builds, tags and releases before choosing a version. An unpublished release does not make its version available for a different change. Record any owner-authorized reuse or temporary test-version exception, its scope and the intended final version in `context/`; do not relabel existing binaries or rewrite their historical identity. Rebuilds of the same assigned change continue to follow the same-ticket iteration rule below and use distinct build identifiers.
 
 Assign one product version per feature ticket when generating its first build. Rebuilds, corrections, and test iterations of that same ticket retain its assigned version. Distinguish them with a separate build identifier and hashes in the manifest and context record. This identifier must not reintroduce a beta/alpha suffix into the product version.
 

@@ -1,0 +1,9 @@
+PSP_EXPORT_START(ProxNativePreviewForUser, 0, 0x4001)
+PSP_EXPORT_FUNC(proxNativePreviewDeny)
+PSP_EXPORT_FUNC(proxNativePreviewOpen)
+PSP_EXPORT_FUNC(proxNativePreviewIoctl)
+PSP_EXPORT_FUNC(proxNativePreviewDevctl)
+PSP_EXPORT_FUNC(proxNativePreviewWrite)
+PSP_EXPORT_FUNC(proxNativePreviewClose)
+PSP_EXPORT_FUNC(proxNativePreviewNoop)
+PSP_EXPORT_END

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### v0.3.3 — native GitHub System Update
+
+- Integrate authenticated GitHub checking, compatible stable offers and verified download progress with the original PSP System Update screens, preserving the installed language and theme.
+- Reuse the connection selected in XMB and renew the same profile between bounded DNS/TCP retries without tearing down shared network libraries.
+- Check update eligibility before requiring download storage or installation power; use the original localized storage/start-error messages after a real offer and download acceptance.
+- Prepare the matching worker and pinned public CA bundle in RAM for checking after storage removal from an initialized CFW session. Correct the native 6.61 buffer-loader ABI and preserve legitimate PAF variable imports.
+- Bind consent to the exact compatible manifest and verify HTTPS certificates, redirects, versions, sizes, SHA-256 and staged files before handing off to the existing PRO-X installer. Reject drafts, prereleases, downgrades and unsafe packages without Sony fallback.
+- Make the real native flow the normal build and generate matching manual/source packages, OTA manifest/update ZIP and hashes. Keep temporary versions and simulated/query-only diagnostics excluded from stable distribution.
+- Record limited owner-reported success for missing-power/storage errors, a real temporary 0.3.0 -> 0.3.1 update, and the final 0.3.3 System Information label/no-update result. Retain the existing text installer and X prompts; native installer/silent restart, Infinity and powered-on storage-reinsertion routing remain outside this release.
+- Require unique version assignments across changes and release descriptions that do not repeat their title.
+
 ### v0.3.2 — original System Update UI diagnostic checkpoint
 
 - Add an opt-in diagnostic that preserves the original PSP update UI, entry point and installed language/theme resources, returning an explicitly simulated latest-version result without HTTP requests, package downloads or installation through that query.

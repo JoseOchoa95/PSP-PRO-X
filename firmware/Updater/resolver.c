@@ -42,6 +42,8 @@ static int release(int thread)
 }
 static void live_worker_exit(void)
 {
+    extern void prox_native_resident_fault(void) __attribute__((weak));
+    if(prox_native_resident_fault) prox_native_resident_fault();
     prox_log("DNS worker still live; exit to XMB without freeing/unloading its resources");
     sceKernelExitGame(); sceKernelExitDeleteThread(0);
     /* Do not fall through to freeing a live worker's static storage even if an

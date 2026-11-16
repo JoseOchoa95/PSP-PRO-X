@@ -4,6 +4,9 @@
 #include <sys/mman.h>
 #include "update_dispatch_shim.h"
 #include "native_update_probe.h"
+#if defined(PROX_NATIVE_OFFER_PREVIEW) || defined(PROX_NATIVE_OTA)
+#include "native_offer_preview.h"
+#endif
 struct Config conf={1}; unsigned int psp_fw_version=FW_661;
 static SceModule *loaded; static int missing;
 int pspSdkSetK1(int x) { (void)x; return 0; }
@@ -11,7 +14,27 @@ int sceIoOpen(const char *p,int f,int m) { (void)p; (void)f; (void)m; return -1;
 int sceIoWrite(int f,const void *p,int n) { (void)f; (void)p; return n; }
 int sceIoClose(int f) { (void)f; return 0; }
 int sceIoGetstat(const char *p,SceIoStat *s) { (void)p; (void)s; return -1; }
+#if defined(PROX_NATIVE_OFFER_PREVIEW) || defined(PROX_NATIVE_OTA)
+int sceIoIoctl(int f,unsigned int c,void *i,int n,void *o,int z)
+{ (void)f;(void)c;(void)i;(void)n;(void)o;(void)z; assert(0); return -1; }
+int sceIoDevctl(const char *p,unsigned int c,void *i,int n,void *o,int z)
+{ (void)p;(void)c;(void)i;(void)n;(void)o;(void)z; assert(0); return -1; }
+#if defined(PROX_NATIVE_PROGRESS_PREVIEW) || defined(PROX_NATIVE_OTA)
+int prox_preview_test_bytes(const void *p,unsigned int n) { (void)p;(void)n; assert(0); return 0; }
+int sceKernelGetThreadId(void) { assert(0); return 0; }
+unsigned int pspSdkDisableInterrupts(void) { assert(0); return 0; }
+void pspSdkEnableInterrupts(unsigned int x) { (void)x; assert(0); }
+int sceKernelDelayThread(unsigned int us) { (void)us; assert(0); return 0; }
+#endif
+#endif
 int prox_start_xmb_update(void) { assert(0); return -1; }
+#ifdef PROX_NATIVE_OTA
+static int redirect_missing;
+unsigned int prox_native_error_prepare(void) { return redirect_missing?0:0x08812340; }
+int prox_native_ota_begin(int owner,unsigned int total) { (void)owner;(void)total; assert(0); return -1; }
+int prox_native_ota_wait(int owner,unsigned int received,unsigned int wanted)
+{ (void)owner;(void)received;(void)wanted; assert(0); return -1; }
+#endif
 int sctrlKernelLoadExecVSHMs2(const char *p,struct SceKernelLoadExecVSHParam *v)
 { (void)p; (void)v; assert(0); return -1; }
 int sctrlKernelLoadExecVSHEf2(const char *p,struct SceKernelLoadExecVSHParam *v)
@@ -35,10 +58,74 @@ int main(void)
     table->name=(char *)memory+768; strcpy((char *)table->name,"sceLibUpdateDL");
     table->funcCount=10; table->fnids=(void *)(memory+800); table->funcs=(void *)(memory+1000);
     nids=table->fnids; stubs=table->funcs; memcpy(nids,expected,sizeof(expected)); loaded=&module;
+#if defined(PROX_NATIVE_OFFER_PREVIEW) || defined(PROX_NATIVE_OTA)
+    {
+        static const unsigned int io_nids[]={0x42ec03ac,0x54f5fb11,0x63632449,0x6a638d83,0x779103a0,
+            0x810c4bc3,0x06a70004,0xace946e8,0xb29ddf9c,0xb8a740f4,0xeb092469,0xf27a9c51,
+            0x109f50bc,0x1117c65f,0x27eb27b8};
+        PspModuleImport *io=(void *)(memory+512+sizeof(PspModuleImport));
+        module.stub_size=2*sizeof(PspModuleImport); io->entLen=sizeof(*io)/4;
+        io->name=(char *)memory+1200; strcpy((char *)io->name,"IoFileMgrForUser");
+        io->funcCount=15; io->fnids=(void *)(memory+1256); io->funcs=(void *)(memory+1400);
+        memcpy(io->fnids,io_nids,sizeof(io_nids)); memset(io->funcs,0x5a,120);
+        /* Missing one mutation import rejects every patch atomically. */
+        io->funcCount=14; memset(stubs,0x5a,80); patch_update_plugin_module(&module);
+        for(i=0;i<20;++i) assert(stubs[i]==0x5a5a5a5a);
+        io->funcCount=15;
+    }
+#endif
     *(unsigned int *)memory=0x27bdfff0; *(unsigned int *)(memory+4)=0xafbf0000;
+#ifdef PROX_NATIVE_OTA
+    {
+        PspModuleImport *paf=(void *)(memory+512+2*sizeof(PspModuleImport));
+        module.stub_size=3*sizeof(PspModuleImport)+sizeof(void *); paf->entLen=(sizeof(*paf)+sizeof(void *))/4;
+        paf->name=(char *)memory+1800; strcpy((char *)paf->name,"scePaf");
+        /* Preserve the real ABI's two variables and extended-header bytes.
+         * Host pointers are widened; function/variable counts come from the
+         * owner's actual captured 6.61 module, not a zero-variable mock. */
+        paf->funcCount=69; paf->varCount=2; paf->fnids=(void *)(memory+1820); paf->funcs=(void *)(memory+2200);
+        { void *variables=memory+3000; memcpy((unsigned char *)paf+sizeof(*paf),&variables,sizeof(variables)); }
+        memset(memory+3000,0x7b,32);
+        for(i=0;i<69;++i) paf->fnids[i]=0x12340000+i;
+        paf->fnids[13]=0x3874a5f8; memset(paf->funcs,0x5a,69*8);
+        redirect_missing=1; patch_update_plugin_module(&module);
+        for(i=0;i<20;++i) assert(stubs[i]==0x5a5a5a5a);
+        for(i=0;i<69*2;++i) assert(paf->funcs[i]==0x5a5a5a5a);
+        redirect_missing=0; paf->funcCount=68; patch_update_plugin_module(&module);
+        for(i=0;i<20;++i) assert(stubs[i]==0x5a5a5a5a);
+        paf->funcCount=69;
+        paf->varCount=0; patch_update_plugin_module(&module);
+        for(i=0;i<20;++i) assert(stubs[i]==0x5a5a5a5a);
+        paf->varCount=2;
+        *(unsigned int *)memory=0x27bdfff0; *(unsigned int *)(memory+4)=0xafbf0000;
+    }
+#endif
     patch_update_plugin_module(&module);
     assert(*(unsigned int *)memory==0x27bdfff0 && *(unsigned int *)(memory+4)==0xafbf0000);
     for(i=0;i<10;++i) assert(stubs[2*i]==0x03e00008 && stubs[2*i+1]==MAKE_SYSCALL(7));
+#ifdef PROX_NATIVE_OTA
+    {
+        PspModuleImport *paf=(void *)(memory+512+2*sizeof(PspModuleImport));
+        assert(paf->funcs[26]==(0x08000000u|((0x08812340u&0x0fffffffu)>>2)) && !paf->funcs[27]);
+        assert(paf->varCount==2);
+        { void *variables=NULL; memcpy(&variables,(unsigned char *)paf+sizeof(*paf),sizeof(variables)); assert(variables==memory+3000); }
+        for(i=0;i<32;++i) assert(memory[3000+i]==0x7b);
+        for(i=0;i<69;++i) if(i!=13) assert(paf->funcs[2*i]==0x5a5a5a5a);
+    }
+#endif
+#if defined(PROX_NATIVE_OFFER_PREVIEW) || defined(PROX_NATIVE_OTA)
+    {
+        PspModuleImport *io=(void *)(memory+512+sizeof(PspModuleImport));
+        for(i=0;i<15;++i) {
+            unsigned int expected_word=prox_native_preview_io_function(io->fnids[i])?0x03e00008:0x5a5a5a5a;
+            assert(io->funcs[2*i]==expected_word);
+        }
+        memset(stubs,0x5a,80); io->fnids[0]=0x12345678;
+        patch_update_plugin_module(&module);
+        for(i=0;i<20;++i) assert(stubs[i]==0x5a5a5a5a);
+        io->fnids[0]=0x42ec03ac;
+    }
+#endif
     memset(stubs,0x5a,80); nids[9]=nids[0];
     patch_update_plugin_module(&module);
     for(i=0;i<20;++i) assert(stubs[i]==0x5a5a5a5a);
