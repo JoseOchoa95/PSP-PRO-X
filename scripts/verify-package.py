@@ -36,9 +36,20 @@ def main():
         if phase3:
             title = pbp_info(archive.read('PSP/GAME/PROXUPDATE/EBOOT.PBP'), allow_plain=True)['title']
             require(title == 'PRO-X v'+manifest['version']+' System Update', 'Wrong client title')
-            require(manifest['hardware'] == 'NOT RUN' and manifest['status'] == 'phase3-update-test-candidate' and
-                    phase3['online_installation_implemented'] is True and phase3['physical_validation'] == 'NOT RUN for this candidate',
-                    'Misleading updater candidate status')
+            if phase3.get('native_frontend'):
+                from native_validation_report import for_build
+                evidence=for_build({'build_id':manifest['build_id'],'product_version':manifest['version'],
+                                    'source_tree_sha256':manifest['source_tree_sha256'],
+                                    'artifacts':{n[4:]:h for n,h in manifest['files'].items() if n.startswith('PSP/')}})
+                status=evidence['status'] if evidence else 'NOT RUN'
+                require(manifest['status']=='native-update-release-candidate' and manifest['hardware']==status and
+                        manifest.get('native_update_hardware_report')==evidence and phase3['native_ota'] is True and
+                        phase3['online_installation_implemented'] is True and phase3['physical_validation']==status,
+                        'Native release identity or exact-build hardware evidence differs')
+            else:
+                require(manifest['hardware'] == 'NOT RUN' and manifest['status'] == 'phase3-update-test-candidate' and
+                        phase3['online_installation_implemented'] is True and phase3['physical_validation'] == 'NOT RUN for this candidate',
+                        'Misleading updater candidate status')
         require(manifest['firmware_target'] == '6.61' and manifest['hardware'] in
                 {'NOT RUN', 'USER_REPORTED_PARTIAL_PASS'}, 'Invalid release status')
         source = path.parent / manifest['source_archive']['file']
@@ -56,7 +67,8 @@ def main():
     if phase3:
         compact_path = path.with_name(path.stem+'-build.json')
         compact = json.loads(compact_path.read_text())
-        require(compact['build_id'] == manifest['build_id'] and compact['hardware'] == 'NOT RUN',
+        require(compact['build_id'] == manifest['build_id'] and compact['hardware'] == manifest['hardware'] and
+                compact.get('native_update_hardware_report')==manifest.get('native_update_hardware_report'),
                 'Compact manifest identity/status mismatch')
         update_path=path.with_name(path.stem+'-update.zip')
         update_json=path.parent/'pro-x-update.json'

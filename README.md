@@ -1,182 +1,47 @@
 # PRO-X
 
-A community-driven custom firmware project for the PlayStation Portable, based on PRO-C.
+A community-driven PSP custom firmware project based on PRO-C, targeting system software 6.61.
 
-**AI-assisted development:** PRO-X is being developed with assistance from artificial intelligence (AI), including Codex, for code changes, build tooling and documentation. The original PRO-C code and third-party components retain their authorship, credits and licenses.
+**AI-assisted development:** PRO-X is developed with assistance from AI, including Codex. Original PRO-C code and third-party components retain their authorship, credits and licenses.
 
-PRO-X aims to continue the PRO lineage through regular updates, bug fixes, and new features, prioritizing stability and compatibility with Infinity and the existing PRO ecosystem.
+## System Update
 
-## Project status
+Product v0.3.3 uses **Settings -> System Update -> Update via Internet** to check public [PRO-X GitHub releases](https://github.com/JoseOchoa95/PSP-PRO-X/releases), offer a newer compatible stable product version and download/verify its dedicated update package through the original PSP interface. Installed system language and theme resources remain in use. Drafts, prereleases, equal/older versions, insecure destinations and incompatible or ambiguous contracts are rejected. HTTPS certificate, hostname, date, redirect and digest checks remain mandatory; Sony update servers are not a fallback.
 
-**v0.3.2 — original System Update UI diagnostic checkpoint; no new release.**
+The query reuses the XMB connection. Installation storage, free space, AC and battery readiness are required after an eligible offer and download acceptance, with rechecks before handoff. After successful CFW initialization with the matching local client available, a RAM-prepared worker and its compiled public CA bundle permit checking without writable removable storage. This does not provide cold boot or installation without storage. If the client cannot be prepared, a failed query remains an error.
 
-An opt-in firmware diagnostic preserves the PSP's original System Update interface and its installed language/theme resources. It replaces the inspected update-provider calls with a simulated latest-version response; that diagnostic query does not contact GitHub/Sony, download a package or launch an installer. The owner reports that the isolated checkpoint build passed the requested installation/native-query check; the preceding prototype's native result and system language/theme changes also passed owner testing.
+The download shows original native progress and launches only the verified PRO-X job. The destination's existing installer still uses its text screen and X confirmations. A new native installer UI, single-confirmation installation and automatic restart are not included in this version. Configuration, plugin paths and existing PRO/HEN/Infinity contracts are retained; Infinity startup and powered-on storage-reinsertion routing are not validated by this change.
 
-This checkpoint excludes the rejected custom panel and changes to the installer/consent protocol. The existing updater remains the default build path; the simulation requires explicit diagnostic build flags. Integration of real GitHub updates into the native UI and reuse of the original standalone installer UI remain future work. Product numbering stays v0.3.2 for this ticket; a PR does not create v0.3.3 or authorize a release.
+## Validation and compatibility
 
-The owner reports that the preceding v0.3.1 OTA worked after connecting the charger. That report does not validate a new native backend, every model/router or Infinity startup. See GitHub Releases for published versions; this PR does not publish or modify a release.
+The owner reports that the matching temporary v0.3.0 build correctly found the existing v0.3.1 target, displayed native errors for missing AC/storage after the offer, and completed the update with those conditions satisfied. The final v0.3.3 build's `6.61 PRO-X 0.3.3` label and no-newer-update result also passed owner testing. These are limited owner reports, not a universal hardware guarantee. The OTA contract currently restricts eligible models to model ID 1; do not infer support for every PRO-C model or router from a single console.
 
-The updater routes the XMB Internet system-update entry to a PRO-X client
-that selects compatible newer stable releases, verifies an explicit update
-contract and package, stages allowed files and launches the existing installer.
-Drafts, prereleases, downgrades and legacy/Sony fallback destinations are rejected.
-The first installation uses the manual package; future eligible releases need
-the generated update manifest and OTA ZIP from that same release.
+The existing WPA2 integration has a limited owner-reported connection result on PSP-2010. Use a 2.4 GHz network allowing legacy 802.11b clients; g/n-only or n-only modes are insufficient. The tested report used mixed b/g/n and WPA2-only security. Broader router/cipher/model coverage remains unvalidated.
 
-Three owner-supplied reports from the earlier transport prototype confirm real
-PSP API HTTPS and redirected asset downloads with the expected size and SHA-256.
-The owner confirms normal manual installation/start and the corrected System
-Information label. Earlier full-client reports include successful catalog checks
-and intermittent DNS stalls before TLS. The earlier 0.3.0 candidate completed all
-fourteen newly supplied PSP catalog checks on the first attempt, reusing the
-last valid network profile and completing checked network teardown. It recreates
-the user-mode network session on retries, but none of those runs exercised that
-recovery path. The DNS root cause remains unresolved and no general reliability
-guarantee is inferred. Retries retain mandatory HTTPS validation. A newer compatible stable
-installation, second update and remaining regression tests are pending. No
-universal model/router or Infinity result is inferred.
-An existing 0.3.0 client can discover an eligible 0.3.1 release without copying
-the new files first. GitHub prereleases, including v0.3.0-beta.1, remain excluded
-from the stable channel. After a successful update, System Information should
-show `6.61 PRO-X 0.3.1`; that observation remains a required PSP test.
+## Install and activate
 
-**v0.2.0 — experimental, limited owner-reported connection testing.**
-The owner has classified v0.2.0 as a full Latest release on GitHub; this does
-not extend the hardware validation described below.
-WPA2 is enabled by default for one identified 6.61 Wi-Fi module variant. The
-firmware checks original contents, layout and relocated calls before applying
-the integrated patch; other variants remain unchanged. Identification comes
-from an owner-provided PSP-2010 diagnostic report. The owner reports creating a
-new profile and connecting on a WPA2-only, 2.4 GHz b/g/n network with PRO-X;
-the same connection failed after full shutdown without starting PRO-X.
-Repeated owner-supplied reports from the same diagnostic build demonstrate
-intermittent data connectivity after IP readiness: one run completes gateway,
-DNS and historical Sony HTTP probes through both raw sockets and Sony's HTTP
-library, while others time out even when contacting the local gateway and return
-DNS error `80410410`. The owner also reports an XMB Internet-test failure.
-The owner later supplied a successful XMB result with UPnP enabled and NAT type 2.
-The cause of the intermittent behavior remains unresolved; a focused source
-review found no confirmed PRO-X defect explaining it. PSP/router compatibility
-remains a working hypothesis, with a second-access-point comparison unavailable.
-Extended transfer tests, Recovery toggling, suspend/reconnect, Infinity and
-additional routers/models have not been reported as tested.
-See [WPA2 support](docs/wpa2-support.md) and [validation](docs/wpa2-validation.md).
-This report does not establish universal compatibility or completion of the
-hardware test matrix. The phase 1 report below remains historical evidence.
+1. Use a PSP already running system software **6.61**. Download the matching binary ZIP and SHA-256 list from [Releases](https://github.com/JoseOchoa95/PSP-PRO-X/releases); source ZIPs are for building. Keep storage and AC connected with at least 50 percent battery during installation.
+2. Copy all three matching folders into `PSP/GAME`: `PROUPDATE`, `FastRecovery` and `PROXUPDATE`, including `PROXUPDATE/cacert.pem`. Preserve configuration, plugin lists, games and reports.
+3. Open the matching PRO-X Installer from Games. Press X to install, wait for completion and press X to start PRO-X. Check **Settings -> System Settings -> System Information** for `6.61 PRO-X 0.3.3`.
+4. After a full shutdown, use the matching Fast Recovery when PRO-X is not already active. For Internet updates, use the Settings route above. Leave the matching package available while CFW starts and allow ten seconds in inactive XMB for RAM preparation.
 
-**0.1.0-beta.1 — partial physical testing reported by the project owner.**
+PRO-X writes firmware modules and reuses PRO-C paths; it does not install alongside PRO-C. It does not install, remove or configure Infinity/cIPL. Do not uninstall existing CFW or reflash official firmware as a routine update step. Preserve previous working packages and follow the installer result instead of assuming a successful reboot after an error.
 
-The repository contains a PRO-C-based experimental build for PSP firmware **6.61**, with PRO-X text in the installer, Fast Recovery, system version, VSH and Recovery menus, including bundled translations. Clean reference and branded builds passed development checks. The project owner reports installation, Recovery and suspension working on a physical PSP and selected the release tag `v0.1.0-beta.1`. Infinity, games and plugins remain untested. The console model, exact tested build and detailed test conditions have not yet been recorded; see the [physical test report](docs/hardware-report-0.1.0-beta.1.md).
+Future stable Internet-update releases must attach the matching `pro-x-update.json` and dedicated `pro-x-<version>-661-update.zip` to the same non-draft, non-prerelease release, together with the manual binary/source ZIPs, build manifests and hashes. A manual/source/diagnostic ZIP is not an OTA substitute. Publication follows an accepted merged PR and explicit owner authorization.
 
-## Goals
+## Build and contribute
 
-- Continue development with maintainable, incremental updates.
-- Preserve compatibility with the PRO ecosystem wherever possible.
-- Support persistent startup through Infinity.
-- Introduce new features in separate, reviewable milestones.
-- Document build requirements, changes, and hardware test results.
+Build with the pinned Docker toolchain; generated firmware and packages stay in ignored `builds/`, with intermediate trees/logs in `artifacts/`.
 
-## Roadmap
+```text
+docker build -t pro-x-toolchain:phase1 -f scripts/Dockerfile scripts
+python scripts/build.py reference
+python scripts/build.py pro-x
+python scripts/package.py
+python scripts/verify-package.py builds/pro-x-0.3.3-661.zip
+```
 
-| Milestone | Scope | Status |
-| --- | --- | --- |
-| **0.1.0 — Initial foundation** | Select and pin the PRO-C baseline, establish the build process, update visible branding, and validate installation and Infinity startup on real hardware. | Beta: installation, Recovery and suspension reported working; Infinity, games and plugins pending |
-| **WPA2 integration** | Integrate WPA2 support, enabled by default, using the ARK implementation as a technical reference. | Connection working on PSP-2010 reported by owner; extended hardware matrix pending |
-| **PRO-X updates** | Adapt the XMB system update entry to retrieve compatible stable releases from the PRO-X repository and verify packages before installation. | Initial PSP HTTPS milestone passed; full updater candidate built, physical installation/second update pending |
-
-Roadmap items include development targets; the status column distinguishes
-prototypes from validated functionality.
-
-## Initial milestone
-
-The experimental release uses PRO-C revision `d9435ff4af6ba60466b46019393f6bbd1fc72ac0`. The imported source and original credits are in `firmware/`; provenance and inherited binary limitations are documented in [docs/upstream.md](docs/upstream.md).
-
-Internal module paths, exported interfaces, HEN values and boot contracts remain unchanged. Infinity is expected to use its existing **PRO** selection to start PRO-X; this behavior must be confirmed on hardware. PRO-X shares PRO-C's installation paths and does not provide a parallel installation.
-
-Acceptance requires checking installation, full shutdown and startup through Infinity, suspend and resume, menu operation, and a representative set of games, homebrew, and plugins. Test results will identify the exact console model, firmware, Infinity version, and build tested.
-
-## Building and installation
-
-See [docs/build.md](docs/build.md) for the pinned Docker toolchain, actual commands and checks, and [docs/install-and-validation.md](docs/install-and-validation.md) for the console information required before installation and the physical test matrix.
-
-Installable packages are distributed through [GitHub Releases](https://github.com/JoseOchoa95/PSP-PRO-X/releases), together with corresponding build sources, a manifest and SHA-256 hashes. Download the assets attached to your chosen release when published; the automatic GitHub source-code archive is not an installable package. Packages contain `PSP/GAME/PROUPDATE/EBOOT.PBP` and `PSP/GAME/FastRecovery/EBOOT.PBP` from the same build, translations, notices and a build manifest. They exclude Infinity, Sony firmware and IPL/cIPL tools. Ready-to-use local ZIP packages, corresponding sources, manifests and hashes are placed in the ignored `builds/` directory. Logs, internal build metadata and intermediate files remain in the ignored `artifacts/` directory. [Development results](docs/phase-1-results.md) distinguish completed checks from pending hardware tests. See [artifact and release guidance](docs/artifacts-and-releases.md) for the distribution policy.
-
-PRO-X packages should be treated as experimental until the relevant build and console configuration have passed hardware validation. A successful compilation alone does not establish that a build is ready to install.
-
-### Wi-Fi requirements for phase 2
-
-An optional [standalone network diagnostic](firmware/tools/netdiag/README.md)
-is available as source and a local test package. It records connection events,
-DNS results and raw/native HTTP comparisons in private reports on the memory
-card. Repeated runs on the owner's setup include successful Sony HTTP 1.0/1.1
-probes and failures reaching even the gateway. The XMB test has also succeeded
-in an owner-supplied photo. These results do not establish reliable connectivity,
-a software fix or completion of the hardware matrix.
-The tool does not modify firmware or network profiles. The exact XMB request,
-sustained transfer, cancellation and additional hardware cases remain unvalidated.
-
-The PSP-2000 family, including PSP-2010, has an **IEEE 802.11b** radio. The WPA2
-patch changes security support; it does not upgrade that radio to g/n/ac/ax.
-See [Sony's PSP-2000 specifications](https://www.sony.com/en/SonyInfo/IR/news/qfhh7c00000d2yu7-att/psp.pdf).
-
-| Parameter | Target test network |
-| --- | --- |
-| Frequency band | **2.4 GHz** |
-| Access-point wireless mode | **802.11b**, **b/g mixed** or **b/g/n mixed**, with b clients enabled |
-| Security | **WPA2-Personal / WPA2-PSK, AES/CCMP** |
-| IP configuration | IPv4 with DHCP for the initial test |
-| Protected Management Frames (PMF) | Must not be required |
-
-A 2.4 GHz network running g/n-only or n-only is insufficient because it excludes
-b clients. Mixed-mode terminology is illustrated in [TP-Link's wireless-mode guide](https://www.tp-link.com/us/configuration-guides/configuring_the_wireless_parameters_cpe_and_wbs_/?configurationId=18611).
-Record the router/AP model and firmware, actual mode, channel and channel-width
-settings with the test result. Hardware validation currently covers only the
-owner-reported connection test described above.
-
-### Installation requirements
-
-- A PSP running **firmware 6.61**. Check the complete software version in **Settings → System Settings → System Information**. This package is not a firmware update and has not been validated for 6.60 or other firmware versions.
-- Access to the PSP's storage through USB or a card reader, and the **binary ZIP** attached to the chosen release. Source archives are for building, not installation.
-- A charged battery, the charger connected, and a backup of saved data, plugins and existing configuration. Keep the previous CFW installer and its recovery instructions if applicable.
-- A record of the current model, firmware, CFW and startup method for the test report. The PRO-C base contains support for PSP-1000, 2000, 3000, Go and Street. The model used in the owner's partial physical test has not yet been recorded; no model-wide compatibility claim is made.
-
-The procedure below describes temporary activation from official 6.61 without automatic CFW loading. If another CFW, Infinity or cIPL is already present, review the [installation and validation guide](docs/install-and-validation.md) for that existing state before applying these steps. Do not assume that removing the existing CFW or reflashing official firmware is required.
-
-**PRO-X writes to flash and reuses PRO-C's module paths. It does not install alongside PRO-C. This package does not install, remove or configure Infinity or cIPL, and successful development checks do not guarantee a brick-free installation.**
-
-### Installation steps
-
-1. Download and extract the installable ZIP from [GitHub Releases](https://github.com/JoseOchoa95/PSP-PRO-X/releases). Check its SHA-256 against the hash list attached to that same release. For example, in PowerShell, replacing `package.zip` with the actual downloaded filename:
-
-   ```powershell
-   Get-FileHash .\package.zip -Algorithm SHA256
-   ```
-
-2. Connect the PSP's storage to the computer. Copy the extracted `PROUPDATE` and `FastRecovery` folders into `PSP/GAME` on that storage. Merge the folders with the existing directory; do not delete other applications. The resulting paths must be:
-
-   ```text
-   PSP/GAME/PROUPDATE/EBOOT.PBP
-   PSP/GAME/FastRecovery/EBOOT.PBP
-   ```
-
-3. Disconnect safely and leave USB mode. In the PSP's **Game** menu, open **661 PRO-X Installer** from the storage where you copied it.
-4. Press **X** at `Press X to launch CFW`. Allow installation to finish without interrupting power or removing storage. When it reports `Completed. Press X to start CFW.`, press **X** to activate PRO-X. If an error appears, stop and record its exact text/code.
-5. Check **System Information** for **6.61 PRO-X**. Record the full displayed version, installer result, console model and package revision in the physical test report.
-6. If using translated menus, first back up existing translations/fonts, then copy the bundled `seplugins/recovery_*.txt`, `satelite_*.txt` and `fonts/` resources into the corresponding `seplugins` paths. Existing custom translations can retain the old PRO heading. Keep plugin lists such as `vsh.txt`, `game.txt` and `pops.txt`; the package does not contain replacement lists.
-
-Use only the normal **X** installation path for the initial test. **Triangle** uninstalls CFW modules and configuration; holding **L** forces reinstallation and removes configuration. These are separate operations, not required installation steps.
-
-### After a full shutdown
-
-Without a configured permanent startup mechanism, the expected behavior is that a **full shutdown** followed by power-on starts official firmware. To activate the installed PRO-X again, open **661 PRO-X Fast Recovery**; reinstalling is not normally needed. Suspending and resuming keeps the current session active.
-
-The installed PRO-X files remain in flash after shutdown. If Infinity is already configured to load **PRO**, or another permanent mechanism is active, it may load the CFW automatically instead. This package does not disable that existing behavior. Installation has been reported working; the exact Recovery path and automatic startup still need the detailed tests recorded in [the validation matrix](docs/install-and-validation.md).
-
-## Contributing
-
-Contributions should focus on small, clearly scoped changes. Include the purpose of the change, relevant compatibility considerations, and the checks performed.
-
-For hardware reports, include the console model, base firmware, PRO-X revision, Infinity version when applicable, enabled plugins, reproduction steps, and observed behavior. Clearly distinguish completed tests from pending validation.
+The normal PRO-X build enables the real native updater. Explicit query-only, simulated-offer and incomplete-progress options remain separate diagnostic builds and cannot generate stable OTA assets. No build or packaging command publishes a release. Follow [AGENTS.md](AGENTS.md) for validation, versioning and Git/release authorization. Contributions should preserve upstream credits, existing compatibility contracts and exact-build evidence.
 
 ## Credits and references
 

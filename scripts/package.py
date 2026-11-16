@@ -10,13 +10,11 @@ from verify import require
 from product import VERSION, WPA2_VARIANT, WPA2_REPORT_SHA256
 from hardware_report import REPORT as HARDWARE_REPORT
 from update_contract import generate as generate_update
+from native_release import verify_native_release
+from native_validation_report import for_build as native_validation
 
 NAME = 'pro-x-' + VERSION + '-661'
 OUTPUT_DIR = ROOT / 'builds'
-SOURCE_DIRS = {'Common', 'CrossFW', 'FastRecovery', 'Imports', 'Installer',
-               'ISODrivers', 'Popcorn', 'PXE', 'Rebootex', 'Rebootex_bin',
-               'Recovery', 'Satelite', 'Stargate', 'SystemControl', 'Translated',
-               'Vshctrl', 'include', 'libs', 'usbdevice', 'tools', 'Updater'}
 
 
 def archive(path, files):
@@ -32,29 +30,29 @@ def main():
     subprocess.run([sys.executable, str(ROOT / 'scripts/verify.py')], check=True, cwd=ROOT)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     build = json.loads((ROOT / 'artifacts/pro-x-build.json').read_text())
+    verify_native_release(ROOT,build)
+    native_report=native_validation(build)
+    native_status=native_report['status'] if native_report else 'NOT RUN'
     require(build.get('product_version') == VERSION, 'Product version differs from compiled build')
     source_commit = repository_head()
     reference = json.loads((ROOT / 'artifacts/reference-build.json').read_text())
     verification = json.loads((ROOT / 'artifacts/verification.json').read_text())
     sources = {}
     for name in inventory(ROOT / 'firmware'):
-        parts = Path(name).parts
-        if (parts[0] in SOURCE_DIRS or name in ['Permanent/ppatch_config.h', 'Makefile', 'README.txt', 'credit.txt']
-                or name == 'contrib/pspgz.py' or name == 'contrib/SystemControl.hdr' or name.startswith('contrib/fonts/')):
-            sources['firmware/' + name] = (ROOT / 'firmware' / name).read_bytes()
+        sources['firmware/' + name] = (ROOT / 'firmware' / name).read_bytes()
     for directory in ['scripts', 'tests', 'docs']:
         for name in inventory(ROOT / directory):
             sources[directory + '/' + name] = (ROOT / directory / name).read_bytes()
-    for name in ['README.md', 'LICENSE', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', '.gitattributes', '.gitignore']:
+    for name in ['README.md', 'AGENTS.md', 'LICENSE', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', '.gitattributes', '.gitignore']:
         sources[name] = (ROOT / name).read_bytes()
     source_note = (
-        f'PRO-X v{VERSION} / 6.61: GitHub updater test candidate; hardware NOT RUN for this build.\n'
-        'The earlier transport prototype passed owner-supplied HTTPS/asset tests.\n'
-        'The new release/staging/installer flow still needs physical validation.\n'
-        'WPA2 inherits the previous limited report; this build has not been hardware tested.\n\n'
+        f'PRO-X v{VERSION} / 6.61: original native System Update frontend and verified GitHub updater.\n'
+        'The owner reports successful missing-AC/missing-storage checks after a real offer and a complete 0.3.0 -> 0.3.1 update using the matching temporary-version variant.\n'
+        'See the exact-build owner-report scope in manifest.json; do not infer universal model/router or Infinity validation.\n'
+        'The existing target installer retains its text screen and X confirmations.\n\n'
         'This archive contains the exact inputs needed to build Installer and Fast Recovery,\n'
         'including inherited libraries/March33, scripts, notices and documentation.\n'
-        'Unrelated IPL tools and dumping utilities are omitted. No Sony firmware or Infinity is included.\n'
+        'Inherited source tools are preserved; compilation and the binary package omit IPL/permanent/dumping programs. No Sony firmware or Infinity is included.\n'
         'See docs/upstream.md for upstream SHA, authorship and inherited binary limitations.\n'
         'Build: docker build -t pro-x-toolchain:phase1 -f scripts/Dockerfile scripts\n'
         '       python scripts/build.py pro-x\n'
@@ -66,7 +64,7 @@ def main():
     sources['source-snapshot.json'] = (json.dumps({
         'upstream_revision': build['upstream_revision'], 'firmware_tree_sha256': build['source_tree_sha256'],
         'repository_head': source_commit, 'build_repository_head': build['repository_head'],
-        'files': source_hashes, 'complete_build_inputs': True, 'complete_upstream_tree': False,
+        'files': source_hashes, 'complete_build_inputs': True, 'complete_upstream_tree': True,
     }, indent=2) + '\n').encode()
     source_zip = OUTPUT_DIR / (NAME + '-source.zip')
     archive(source_zip, sources)
@@ -82,7 +80,7 @@ def main():
     name = 'PSP/GAME/PROXUPDATE/cacert.pem'
     files[name] = (output / name).read_bytes()
     (OUTPUT_DIR / name).write_bytes(files[name])
-    files['UPDATE-TEST.md'] = (ROOT / 'scripts/resources/UPDATE-TEST.md').read_bytes()
+    files['NATIVE-UPDATE.md'] = (ROOT / 'scripts/resources/NATIVE-UPDATE.md').read_bytes()
     with tarfile.open(ROOT / 'firmware/Updater/vendor/mbedtls-3.6.7.tar.bz2') as tls_source:
         for entry in tls_source:
             parts = Path(entry.name).parts[1:]
@@ -105,10 +103,12 @@ def main():
     update_zip, update_json = generate_update(OUTPUT_DIR, VERSION, build['build_id'], files)
     manifest = {
         'product': 'PRO-X', 'version': VERSION, 'firmware_target': '6.61',
-        'status': 'phase3-update-test-candidate', 'hardware': 'NOT RUN', 'infinity': 'NOT RUN',
+        'status': 'native-update-release-candidate', 'hardware': native_status, 'infinity': 'NOT RUN',
+        'native_update_hardware_report': native_report,
         'baseline_hardware_report': HARDWARE_REPORT,
-        'phase3': {'milestone': 'stable selection, verified staging and installer candidate',
-                   'online_installation_implemented': True, 'physical_validation': 'NOT RUN for this candidate',
+        'phase3': {'milestone': 'native GitHub checking, verified download and existing-installer handoff',
+                   'native_frontend': True, 'native_ota': True,
+                   'online_installation_implemented': True, 'physical_validation': native_status,
                    'transport_baseline': {'build_id': 'pro-x-c41ee2ff7b5e', 'status': 'USER_SUPPLIED_REPORTS_PASS',
                                           'reports': ['report-006', 'report-007', 'report-008']},
                    'update_assets': {p.name: sha(p.read_bytes()) for p in (update_zip,update_json)},
@@ -142,7 +142,8 @@ def main():
     compact_path = OUTPUT_DIR / (NAME + '-build.json')
     compact = {
         'product': 'PRO-X', 'version': VERSION, 'firmware_target': '6.61',
-        'build_id': build['build_id'], 'status': 'phase3-update-test-candidate', 'hardware': 'NOT RUN',
+        'build_id': build['build_id'], 'status': 'native-update-release-candidate', 'hardware': native_status,
+        'native_update_hardware_report': native_report,
         'repository_head': build['repository_head'], 'source_tree_sha256': build['source_tree_sha256'],
         'source_identity': 'working tree identified by hashes; HEAD alone is not this build',
         'toolchain_image': build['toolchain_image'],

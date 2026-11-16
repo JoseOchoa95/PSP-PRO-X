@@ -16,7 +16,8 @@
 #include "main.h"
 #endif
 #include <stdio.h>
-#ifdef PROX_NATIVE_UI_PROBE
+#include "native_query_provider.h"
+#if defined(PROX_NATIVE_UI_PROBE) || defined(PROX_NATIVE_UI_QUERY)
 #include "native_update_probe.h"
 int prox_hook_native_probe_imports(SceModule2 *);
 #endif
@@ -40,6 +41,8 @@ static void dispatch_log(const char *event, int result)
 void prox_native_probe_event(const char *event,int result)
 { int k1=pspSdkSetK1(0); dispatch_log(event,result); pspSdkSetK1(k1); }
 #endif
+void prox_native_query_event(const char *event,int result)
+{ int k1=pspSdkSetK1(0); dispatch_log(event,result); pspSdkSetK1(k1); }
 
 int proxInternetUpdate(void)
 {
@@ -72,7 +75,7 @@ int proxInternetUpdate(void)
     return rc;
 }
 
-#ifndef PROX_NATIVE_UI_PROBE
+#if !defined(PROX_NATIVE_UI_PROBE) && !defined(PROX_NATIVE_UI_QUERY)
 static int in_module(SceModule2 *mod, unsigned int address, unsigned int size)
 {
     unsigned int i;
@@ -140,7 +143,7 @@ static void stop_unknown_module(SceModule2 *mod)
 void patch_update_plugin_module(SceModule *mod)
 {
     SceModule2 *module = (SceModule2 *)mod;
-#ifdef PROX_NATIVE_UI_PROBE
+#if defined(PROX_NATIVE_UI_PROBE) || defined(PROX_NATIVE_UI_QUERY)
     int result = psp_fw_version == FW_661 ? prox_hook_native_probe_imports(module) : -1;
 #else
     int result = psp_fw_version == FW_661 ? hook_download_imports(module) : -1;

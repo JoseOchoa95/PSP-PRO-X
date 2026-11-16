@@ -17,10 +17,10 @@ int sceNetInetSocket(int, int, int);
 int sceNetInetSetsockopt(int, int, int, const void *, socklen_t);
 int sceNetInetConnect(int, const struct sockaddr *, socklen_t);
 int sceNetInetGetErrno(void);
+int sceNetInetClose(int);
 #define SO_NONBLOCK 0x7777
 #define sceNetInetSend send
 #define sceNetInetRecv recv
-#define sceNetInetClose close
 #define sceNetInetSelect select
 #define sceNetInetGetsockopt getsockopt
 #endif

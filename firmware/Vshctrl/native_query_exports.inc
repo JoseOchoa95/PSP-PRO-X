@@ -1,0 +1,10 @@
+PSP_EXPORT_START(ProxNativeQueryForUser, 0, 0x4001)
+PSP_EXPORT_FUNC(proxNativeQueryInitEx)
+PSP_EXPORT_FUNC(proxNativeQuerySetting)
+PSP_EXPORT_FUNC(proxNativeQueryConnect)
+PSP_EXPORT_FUNC(proxNativeQueryRead)
+PSP_EXPORT_FUNC(proxNativeQueryAbort)
+PSP_EXPORT_FUNC(proxNativeQueryEnd)
+PSP_EXPORT_FUNC(proxNativeQueryService)
+PSP_EXPORT_FUNC(proxNativeQueryTextKey)
+PSP_EXPORT_END

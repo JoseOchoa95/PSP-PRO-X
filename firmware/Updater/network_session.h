@@ -2,6 +2,8 @@
 #ifndef PROX_NETWORK_SESSION_H
 #define PROX_NETWORK_SESSION_H
 int prox_network_begin(void);
+/* Borrow a connected XMB stack without initializing or terminating its owners. */
+int prox_network_borrow(void);
 int prox_network_end(void);
 int prox_network_connect(int profile);
 int prox_network_retry(unsigned int request_start);

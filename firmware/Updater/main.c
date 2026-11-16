@@ -23,11 +23,16 @@
 #include "stage.h"
 #include "network_close.h"
 #include "network_session.h"
+#ifndef PROX_UPDATER_UI_NATIVE
+#include "native_service.h"
+#endif
 
 PSP_MODULE_INFO("ProxUpdater", 0, 0, 3);
 PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER);
 PSP_MAIN_THREAD_STACK_SIZE_KB(128);
-PSP_HEAP_SIZE_KB(8192);
+PSP_HEAP_SIZE_KB(4096);
+
+int prox_native_mode;
 
 static FILE *report;
 static volatile int exiting;
@@ -50,6 +55,9 @@ static unsigned int buttons(void)
 
 int prox_stopping(void)
 {
+#ifndef PROX_UPDATER_UI_NATIVE
+    if(prox_native_mode) return prox_native_is_cancelled();
+#endif
     if (buttons() & PSP_CTRL_CIRCLE) exiting = 1;
     return exiting;
 }
@@ -59,6 +67,9 @@ void prox_log(const char *format, ...)
     char buffer[384];
     va_list arguments;
     va_start(arguments, format); vsnprintf(buffer, sizeof(buffer), format, arguments); va_end(arguments);
+#ifndef PROX_UPDATER_UI_NATIVE
+    if(prox_native_mode) { prox_native_log_line(buffer); return; }
+#endif
     pspDebugScreenPrintf("%s\n", buffer);
     if (report && (fprintf(report, "%s\n", buffer) < 0 || fflush(report))) exiting = 1;
 }
@@ -138,6 +149,14 @@ int main(int argc, char **argv)
     int callback, rc, i;
     unsigned int version[3];
     time_t now;
+#ifndef PROX_UPDATER_UI_NATIVE
+    if(argc==3 && argv && argv[1] && !strcmp(argv[1],"--prox-native-query-v3")) {
+        prox_native_mode=1;
+        prox_native_worker(argc,argv);
+        /* The resident worker never returns or enters application ExitGame. */
+        for(;;) sceKernelDelayThread(1000000);
+    }
+#endif
     memset(&job,0,sizeof(job));
     pspDebugScreenInit();
     if (argc < 1 || strlen(argv[0]) >= sizeof(directory) ||

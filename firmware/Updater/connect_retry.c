@@ -26,7 +26,7 @@ int prox_connect_retry(ProxRetryBudget *budget,const ProxConnectOps *ops,void *c
         if (ops->stopped(context)) return -1;
         ++budget->used; ++attempt;
         if (ops->restart(context)) {
-            prox_log("Fresh Wi-Fi session failed; retry stopped"); return -1;
+            prox_log("Connection retry preparation failed; retry stopped"); return -1;
         }
     }
 }

@@ -53,10 +53,29 @@ def prepare_reference(destination):
         str(ROOT / 'scripts/build-compat.patch'))
 
 
+def configure_native_mode(args):
+    """Normal PRO-X builds use the accepted real native flow; previews stay opt-in."""
+    selected=sum(bool(getattr(args,name)) for name in
+                 ('native_query','native_offer_preview','native_progress_preview','native_ota'))
+    if selected>1 or (selected and args.mode!='pro-x'):
+        raise ValueError('select one native mode for pro-x only')
+    if args.mode=='pro-x' and not selected:
+        args.native_ota=True
+    if args.native_ota: args.native_query=True
+    if args.native_progress_preview: args.native_offer_preview=True
+    if args.native_offer_preview: args.native_query=True
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=['reference', 'pro-x'])
+    parser.add_argument('--native-query',action='store_true',help='real catalog query in original UI; native installation blocked')
+    parser.add_argument('--native-offer-preview',action='store_true',help='simulated positive native UI after real query; all native writes blocked')
+    parser.add_argument('--native-progress-preview',action='store_true',help='synthetic incomplete progress through a virtual file; no real update writes')
+    parser.add_argument('--native-ota',action='store_true',help='real native download/staging and existing target installer (the PRO-X default)')
     args = parser.parse_args()
+    try: configure_native_mode(args)
+    except ValueError as error: parser.error(str(error))
     if args.mode == 'pro-x':
         run(__import__('sys').executable, 'scripts/generate-product.py', '--check')
     identifier = args.mode + '-' + uuid.uuid4().hex[:12]
@@ -75,6 +94,12 @@ def main():
                'type=bind,source=' + str(ROOT) + ',target=/work', image, 'sh',
                '/work/scripts/compile.sh', '/work/' + source.relative_to(ROOT).as_posix(),
                '/work/' + output.relative_to(ROOT).as_posix()]
+    if args.native_query:
+        flags='-DPROX_NATIVE_UI_QUERY=1'
+        if args.native_offer_preview: flags+=' -DPROX_NATIVE_OFFER_PREVIEW=1'
+        if args.native_progress_preview: flags+=' -DPROX_NATIVE_PROGRESS_PREVIEW=1'
+        if args.native_ota: flags+=' -DPROX_NATIVE_OTA=1'
+        command[command.index(image):command.index(image)]=['--env','PROX_NATIVE_UPDATE_FLAGS='+flags]
     with log.open('wb') as stream:
         result = subprocess.run(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT)
     print(log.relative_to(ROOT), flush=True)
@@ -83,6 +108,10 @@ def main():
         raise SystemExit(result.returncode)
     metadata = {
         'mode': args.mode, 'upstream_revision': UPSTREAM,
+        'native_query_only':args.native_query and not args.native_ota,
+        'native_offer_preview':args.native_offer_preview,
+        'native_progress_preview':args.native_progress_preview,
+        'native_ota':args.native_ota,
         'product_version': VERSION if args.mode == 'pro-x' else None,
         'build_id': identifier,
         'repository_head': repository_head(),
@@ -95,6 +124,14 @@ def main():
         'diagnostics': inventory(output / 'diagnostics'),
         'hardware_validated': False,
     }
+    snapshot=ROOT/'source-snapshot.json'
+    if snapshot.exists():
+        origin=json.loads(snapshot.read_text())
+        if origin.get('test_only'):
+            if origin.get('temporary_test_product_version')!=VERSION:
+                raise RuntimeError('Temporary test identity differs from generated product')
+            metadata.update(test_only=True,feature_product_version=origin['feature_product_version'],
+                            temporary_test_product_version=VERSION)
     (output / 'build.json').write_text(json.dumps(metadata, indent=2) + '\n', encoding='utf-8')
     latest = ROOT / 'artifacts' / (args.mode + '-build.json')
     latest.write_text(json.dumps(metadata, indent=2) + '\n', encoding='utf-8')

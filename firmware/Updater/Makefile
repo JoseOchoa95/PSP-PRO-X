@@ -1,5 +1,5 @@
 TARGET = prox_updater
-OBJS = main.o transport.o policy.o bridge.o json.o contract.o stage.o update.o platform.o storage_power.o resolver.o network_close.o connect_retry.o network_session.o network_profile.o
+OBJS = main.o transport.o policy.o bridge.o json.o contract.o stage.o update.o platform.o storage_power.o resolver.o network_close.o connect_retry.o network_session.o network_profile.o catalog.o native_download.o native_service.o native_query_bridge.o native_trust.o native_ca.o
 INCDIR = ../Common ../include vendor/mbedtls/include .
 CFLAGS = -Os -G0 -Wall -Wextra -Werror -DPROX_BUILD_ID=\"$(BUILD_ID)\" -DMBEDTLS_CONFIG_FILE=\"prox_mbedtls_config.h\"
 BUILD_PRX = 1

@@ -45,12 +45,24 @@ typedef struct {
 /* Process lifetime is one updater invocation; all requests/redirects share this
  * budget so a failing catalog cannot multiply five attempts per page/asset. */
 static ProxRetryBudget retry_budget;
+static size_t live_memory, peak_memory;
+static const unsigned char *resident_trust;
+static size_t resident_trust_size;
+int prox_transport_set_trust(const unsigned char *pem,size_t size)
+{
+    if(!pem || size<2 || size>512*1024u || pem[size-1] || resident_trust || live_memory) return -1;
+    resident_trust=pem; resident_trust_size=size; return 0;
+}
 typedef struct { Connection *connection; const char *host; } ConnectContext;
 
 mbedtls_ms_time_t mbedtls_ms_time(void)
 { return (mbedtls_ms_time_t)(sceKernelGetSystemTimeWide()/1000); }
 
-static size_t live_memory, peak_memory;
+int prox_transport_new_query(void)
+{
+    if(live_memory) return -1;
+    memset(&retry_budget,0,sizeof(retry_budget)); peak_memory=0; return 0;
+}
 static void *tls_calloc(size_t count, size_t size)
 {
     size_t bytes;
@@ -198,11 +210,7 @@ static int connect_stopped(void *arg)
 static void connect_pause(unsigned int us) { sceKernelDelayThread(us); }
 static int connect_restart(void *arg)
 {
-#ifdef PROX_HTTPS_NATIVE
-    (void)arg; return 0; /* Real session lifecycle has its own production-code suite. */
-#else
     ConnectContext *ctx=arg; return prox_network_retry(ctx->connection->start);
-#endif
 }
 static int connect_with_retries(Connection *c,const char *host)
 {
@@ -307,13 +315,16 @@ int prox_https(const char *url, const char *ca_file, size_t limit,
     c.start = sceKernelGetSystemTimeLow();
     mbedtls_ssl_init(&c.ssl); mbedtls_ssl_config_init(&config);
     mbedtls_x509_crt_init(&ca); mbedtls_ctr_drbg_init(&drbg); mbedtls_sha256_init(&sha);
-    file = fopen(ca_file, "rb");
-    if (!file || fseek(file, 0, SEEK_END) || (pem_size = ftell(file)) < 1 || pem_size > 512*1024 ||
-        fseek(file, 0, SEEK_SET)) goto done;
-    pem = malloc((size_t)pem_size + 1);
-    if (!pem || fread(pem, 1, (size_t)pem_size, file) != (size_t)pem_size) goto done;
-    fclose(file); file = NULL; pem[pem_size] = 0;
-    rc = mbedtls_x509_crt_parse(&ca, pem, (size_t)pem_size+1);
+    if(resident_trust) rc=mbedtls_x509_crt_parse(&ca,resident_trust,resident_trust_size);
+    else {
+        file = fopen(ca_file, "rb");
+        if (!file || fseek(file, 0, SEEK_END) || (pem_size = ftell(file)) < 1 || pem_size > 512*1024 ||
+            fseek(file, 0, SEEK_SET)) goto done;
+        pem = malloc((size_t)pem_size + 1);
+        if (!pem || fread(pem, 1, (size_t)pem_size, file) != (size_t)pem_size) goto done;
+        fclose(file); file = NULL; pem[pem_size] = 0;
+        rc = mbedtls_x509_crt_parse(&ca, pem, (size_t)pem_size+1);
+    }
     free(pem); pem = NULL;
     if (rc < 0) goto done;
     prox_log("CA parse skipped=%d; chain, dates, hostname REQUIRED", rc);
