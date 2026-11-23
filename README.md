@@ -12,6 +12,8 @@ The query reuses the XMB connection. Installation storage, free space, AC and ba
 
 The download shows original native progress and launches only the verified PRO-X job. The destination's existing installer still uses its text screen and X confirmations. A new native installer UI, single-confirmation installation and automatic restart are not included in this version. Configuration, plugin paths and existing PRO/HEN/Infinity contracts are retained; Infinity startup and powered-on storage-reinsertion routing are not validated by this change.
 
+Unreleased v0.3.4 adds a matched background writer for Internet updates after the original offer is accepted, without a text console or additional installation prompts. Original native completion waits for a fresh X to restart. The owner reports a successful temporary 0.3.2 -> stable 0.3.3 background update and correct version/menu/no-newer checks on final 0.3.4. This is limited owner acceptance; the owner-supplied original completion resource remains a separate runtime dependency and is not distributed in the package. Initial manual setup and updates initiated by older workers retain their existing controls.
+
 ## Validation and compatibility
 
 The owner reports that the matching temporary v0.3.0 build correctly found the existing v0.3.1 target, displayed native errors for missing AC/storage after the offer, and completed the update with those conditions satisfied. The final v0.3.3 build's `6.61 PRO-X 0.3.3` label and no-newer-update result also passed owner testing. These are limited owner reports, not a universal hardware guarantee. The OTA contract currently restricts eligible models to model ID 1; do not infer support for every PRO-C model or router from a single console.
@@ -38,7 +40,7 @@ docker build -t pro-x-toolchain:phase1 -f scripts/Dockerfile scripts
 python scripts/build.py reference
 python scripts/build.py pro-x
 python scripts/package.py
-python scripts/verify-package.py builds/pro-x-0.3.3-661.zip
+python scripts/verify-package.py builds/pro-x-0.3.4-661.zip
 ```
 
 The normal PRO-X build enables the real native updater. Explicit query-only, simulated-offer and incomplete-progress options remain separate diagnostic builds and cannot generate stable OTA assets. No build or packaging command publishes a release. Follow [AGENTS.md](AGENTS.md) for validation, versioning and Git/release authorization. Contributions should preserve upstream credits, existing compatibility contracts and exact-build evidence.

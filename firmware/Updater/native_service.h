@@ -6,4 +6,9 @@ int prox_native_is_cancelled(void);
 void prox_native_log_line(const char *line);
 void prox_native_resident_fault(void);
 int prox_native_trust(void);
+int prox_native_completion_prepare(const unsigned short *text,unsigned int count);
+int prox_native_completion_pending(void);
+#include "prox_native_install.h"
+int prox_native_install_exchange(int,ProxNativeInstallMessage *);
+int prox_native_handoff_close(void);
 #endif

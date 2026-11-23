@@ -7,4 +7,8 @@ PSP_EXPORT_FUNC(proxNativeQueryAbort)
 PSP_EXPORT_FUNC(proxNativeQueryEnd)
 PSP_EXPORT_FUNC(proxNativeQueryService)
 PSP_EXPORT_FUNC(proxNativeQueryTextKey)
+PSP_EXPORT_FUNC(proxNativeCompletionControl)
+PSP_EXPORT_FUNC(proxNativeCompletionText)
+PSP_EXPORT_FUNC(proxNativeCompletionBack)
+PSP_EXPORT_FUNC(proxNativeInstallService)
 PSP_EXPORT_END

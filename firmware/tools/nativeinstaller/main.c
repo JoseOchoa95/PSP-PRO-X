@@ -1,0 +1,174 @@
+/* Local matched writer. Target binaries are authenticated data until Cross
+ * starts the target's preloaded rebooter. No framebuffer/console/LoadExec. */
+#ifdef PROX_NATIVE_ENGINE_TEST
+#include "native_engine_shim.h"
+#else
+#include <pspkernel.h>
+#include <pspiofilemgr.h>
+#include <psppower.h>
+#include "kubridge.h"
+#endif
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "prox_native_install.h"
+#include "prox_completion_preview.h"
+#include "prox_product.h"
+#include "native_flash.h"
+#include "native_payload.h"
+#include "ota_installer.h"
+#include "stage.h"
+#include "bridge.h"
+#include "transport.h"
+PSP_MODULE_INFO(PROX_NI_MODULE,0x0800,1,0);
+/* Keep the CRT-created writer in the VSH API class of its 0x0800 module.
+ * An ordinary USER main shares low-level per-device descriptor limits with
+ * the live shell; do not raise privileges by patching another thread. */
+PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_VSH | THREAD_ATTR_VFPU);
+PSP_MAIN_THREAD_STACK_SIZE_KB(64);
+PSP_HEAP_SIZE_KB(512);
+const char prox_native_writer_identity[]="PROX-NATIVE-INSTALL-WRITER-V1";
+static ProxNativeInstallMessage message;
+static int rpc(int action)
+{ return proxNativeInstallService(action,&message,sizeof(message)); }
+int prox_native_engine_cancelled(void)
+{ return rpc(PROX_NI_STATUS)<0 || message.cancel || message.phase==PROX_NI_FAILED; }
+int prox_native_engine_write_gate(void)
+{
+    if(proxUpdateGetState(0)!=1 || proxUpdateGetState(1)!=PROX_PRODUCT_MAJOR ||
+       proxUpdateGetState(2)!=PROX_PRODUCT_MINOR || proxUpdateGetState(3)!=PROX_PRODUCT_PATCH ||
+       proxUpdateGetState(4)!=0x06060110 || proxUpdateGetState(5)!=(int)message.job.model)return -1;
+    return rpc(PROX_NI_WRITE);
+}
+static int number(const char *text,unsigned int *value)
+{
+    unsigned int i,n=0;
+    if(!text)return -1;
+    for(i=0;i<8;++i) {
+        unsigned int d=(unsigned char)text[i];
+        if(d>='0'&&d<='9')d-='0';else if(d>='a'&&d<='f')d=d-'a'+10;else return -1;
+        n=(n<<4)|d;
+    }
+    if(text[8])return -1;
+    *value=n;return 0;
+}
+static int verify_parts(const ProxNativeInstallJob *job)
+{
+    unsigned int i;char path[256],name[28];
+    for(i=0;i<PROX_NI_PARTS;++i) {
+        FILE *file;unsigned char *bytes;unsigned int extent;int rc;
+        if(prox_stopping() || !job->parts[i].size || job->parts[i].size>1024u*1024u ||
+           snprintf(path,sizeof(path),"%s/native/%02u.prx",job->root,i)>=(int)sizeof(path) ||
+           prox_file_check(path,job->parts[i].size,job->parts[i].sha256,0))return -1;
+        bytes=malloc(job->parts[i].size);if(!bytes)return -1;
+        file=fopen(path,"rb");if(!file) { free(bytes);return -1; }
+        rc=fread(bytes,1,job->parts[i].size,file)==job->parts[i].size?0:-1;
+        if(fclose(file))rc=-1;
+        if(!rc)rc=prox_native_image(bytes,job->parts[i].size,name,&extent);
+        free(bytes);
+        if(rc || extent!=job->parts[i].size || strcmp(name,prox_native_payload_names[i]))return -1;
+    }
+    return 0;
+}
+static int writable(int *mounted)
+{
+    int transport;memset(&message.access,0,sizeof(message.access));message.result=-1;
+    transport=rpc(PROX_NI_ACCESS_BEGIN);
+    if(!transport)*mounted=message.access.active;
+    prox_log("Background access BEGIN: rpc=%d result=%d stage=%d active=%d owned=%d refs=%u",
+             transport,message.result,message.access.stage,message.access.active,message.access.owned_fd,message.access.refs_before);
+    return transport || message.result || !*mounted?-1:0;
+}
+static int readonly(int *mounted)
+{
+    int transport=rpc(PROX_NI_ACCESS_END);
+    prox_log("Background access END: rpc=%d result=%d stage=%d active=%d restored=%d flush=%d retained=%d flags=0x%08x refs=%u",
+             transport,message.result,message.access.stage,message.access.active,message.access.restored,message.access.flush_result,
+             message.access.retained_fd,message.access.flags_after,message.access.refs_after);
+    if(transport || message.result || message.access.active || !message.access.restored)return -1;
+    *mounted=0;return 0;
+}
+int main(int argc,char **argv)
+{
+    char path[256];unsigned int module_number,i;int reboot=-1,status=-1,rc=-1,mounted=0,finalizing=0,committed=0,level;
+    ProxNativeFlash transaction={0};const ProxNativeInstallJob *job=&message.job;
+    memset(&message,0,sizeof(message));message.protocol=PROX_NI_PROTOCOL;
+    if(argc!=5 || !argv || !argv[0] || !argv[1] || strcmp(argv[1],PROX_NI_ARGUMENT) ||
+       number(argv[2],&message.lease) || number(argv[3],&message.generation) || number(argv[4],&module_number))return -1;
+    message.module=(int)module_number;
+    if(rpc(PROX_NI_CLAIM))return -1;
+    level=kuKernelGetUserLevel();
+    prox_log("Background writer thread: VSH API expected level=4 actual=%d; no global privilege changes",level);
+    if(level!=4)goto failure;
+    if(!memchr(job->root,0,sizeof(job->root)) ||
+       snprintf(path,sizeof(path),"%s/native/engine.prx",job->root)>=(int)sizeof(path) || strcmp(argv[0],path) ||
+       sceKernelDevkitVersion()!=0x06060110u || proxUpdateGetState(0)!=1 ||
+       proxUpdateGetState(5)!=(int)job->model || kuKernelGetModel()!=(int)job->model ||
+       prox_ota_native_begin(job,0x06060110u,job->model)!=1 || verify_parts(job))goto failure;
+    if(rpc(PROX_NI_ACCESS_CAPS) || message.result!=PROX_NI_ACCESS_REVISION) {
+        prox_log("Background resident access revision mismatch; install/start the matching PROUPDATE before this test");goto failure;
+    }
+    /* Kernel target rebooter is loaded but never started until completion/X.
+     * All code/memory needed for restart is prepared before flash changes. */
+    snprintf(path,sizeof(path),"%s/native/10.prx",job->root);
+    reboot=kuKernelLoadModule(path,0,NULL);if(reboot<0)goto failure;
+    if(prox_ota_before_write())goto failure;
+    if(writable(&mounted))goto failure;
+    prox_log("Background firmware transaction begins; fixed PRO module paths only; no configuration/plugin/Infinity changes");
+    rc=prox_native_flash_prepare(job,&transaction);
+    prox_log("TRANSACTION stage=firmware-prepare rc=%d prepared=0x%03x changed=0x%03x originals=0x%03x identical=0x%03x",rc,transaction.prepared,transaction.changed,transaction.originals,transaction.identical);
+    if(rc)goto failure;
+    /* Persist every verified original backup before destructive opens. The
+     * public global sync drops per-volume errors; END uses the checked native
+     * flush under the original mutex, then BEGIN reacquires the same lease. */
+    prox_log("TRANSACTION stage=backup-flush begins; no original replaced");
+    if(readonly(&mounted) || writable(&mounted))goto failure;
+    rc=prox_native_flash_commit(job,&transaction);
+    prox_log("TRANSACTION stage=firmware-replace rc=%d prepared=0x%03x changed=0x%03x originals=0x%03x",rc,transaction.prepared,transaction.changed,transaction.originals);
+    if(rc)goto failure;
+    rc=sceIoSync("flash0:",0);prox_log("TRANSACTION stage=firmware-sync rc=0x%08x",(unsigned int)rc);if(rc<0)goto failure;
+    /* Confirm target persistence while original backups still exist. */
+    prox_log("TRANSACTION stage=target-flush begins; verified original backups retained");
+    if(readonly(&mounted) || writable(&mounted))goto failure;
+    rc=prox_ota_storage_commit();prox_log("TRANSACTION stage=application-commit rc=%d",rc);if(rc)goto failure;
+    finalizing=1;
+    rc=prox_native_flash_finalize(job,&transaction);prox_log("TRANSACTION stage=firmware-finalize rc=%d",rc);if(rc)goto failure;
+    rc=readonly(&mounted);if(rc)goto failure;
+    rc=prox_ota_mark_committed();prox_log("TRANSACTION stage=mark-committed rc=%d",rc);if(rc)goto failure;
+    if(rpc(PROX_NI_COMMIT))goto failure;
+    committed=1;
+    prox_log("Background target %s/%s: firmware bytes verified, applications committed, flash0 readonly; restart observation pending",job->target_version,job->build_id);
+    if(proxNativeCompletionControl(PROX_COMPLETION_FINISH)<0)goto failure;
+    for(i=0;i<250;++i) {
+        rc=proxNativeCompletionControl(PROX_COMPLETION_POLL);
+        if(rc<0)goto failure;
+        if(rc>=1)break;
+        sceKernelDelayThread(20000);
+    }
+    if(i==250)goto failure;
+    for(;;) {
+        while(rc!=2) {
+            scePowerTick(0);sceKernelDelayThread(20000);
+            rc=proxNativeCompletionControl(PROX_COMPLETION_POLL);if(rc<0)goto failure;
+        }
+        prox_log("Cross requests verified target CFW restart; no additional installation confirmation");
+        prox_ota_close();
+        { int mode=1;status=-1;rc=sceKernelStartModule(reboot,sizeof(mode),&mode,&status,NULL); }
+        /* Actual activation is verified after reboot, never inferred from
+         * StartModule. If still alive, retain completion and allow fresh X. */
+        sceKernelDelayThread(3000000);
+        if(proxNativeCompletionControl(PROX_COMPLETION_RETRY)<0)goto failure;
+        rc=1;
+    }
+failure:
+    if(mounted) {
+        if(!finalizing && prox_native_flash_rollback(job,&transaction))
+            prox_log("Background firmware rollback incomplete; keep exact stage and recovery package");
+        if(readonly(&mounted))prox_log("Background readonly restoration incomplete; retain exact stage and recovery package; no success/reboot");
+    }
+    prox_log("Background installation/restart returned failure; committed=%d. No automatic reboot; retain stage/pending/backups",committed);
+    prox_ota_close();
+    if(!committed && reboot>=0)sceKernelUnloadModule(reboot);
+    (void)rpc(PROX_NI_FAIL);
+    return -1;
+}

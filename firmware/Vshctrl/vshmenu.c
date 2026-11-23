@@ -99,6 +99,10 @@ static SceUID load_satelite(void)
 	return modid;
 }
 
+#if defined(PROX_NATIVE_INSTALL_PREVIEW) || defined(PROX_NATIVE_BACKGROUND)
+#include "native_query_provider.h"
+#include "native_completion_preview.h"
+#endif
 int _sceCtrlReadBufferPositive(SceCtrlData *ctrl, int count)
 {
 	int ret;
@@ -107,6 +111,18 @@ int _sceCtrlReadBufferPositive(SceCtrlData *ctrl, int count)
 
 	ret = (*g_sceCtrlReadBufferPositive)(ctrl, count);
 	k1 = pspSdkSetK1(0);
+
+#if defined(PROX_NATIVE_INSTALL_PREVIEW) || defined(PROX_NATIVE_BACKGROUND)
+	/* Diagnostic-only bounded input ownership, never a permanent global lock. */
+	if (ret > 0 && ret <= count && prox_native_install_preview_locked()) {
+		int i;
+		for (i=0;i<ret;++i) {
+			prox_native_completion_buttons(ctrl[i].Buttons);
+			ctrl[i].Buttons=0; ctrl[i].Lx=128; ctrl[i].Ly=128;
+		}
+		goto exit;
+	}
+#endif
 
 	if (sceKernelFindModuleByName("VshCtrlSatelite")) {
 		if (g_VshMenuCtrl) {

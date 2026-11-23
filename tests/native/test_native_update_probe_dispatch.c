@@ -30,6 +30,13 @@ int sceKernelDelayThread(unsigned int us) { (void)us; assert(0); return 0; }
 int prox_start_xmb_update(void) { assert(0); return -1; }
 #ifdef PROX_NATIVE_OTA
 static int redirect_missing;
+#ifdef PROX_NATIVE_INSTALL_PREVIEW
+static int completion_guard;
+static int back_missing;
+void prox_native_completion_guard(int ready) { completion_guard=ready; }
+unsigned int prox_native_completion_noop_address(void) { return 0x08812400; }
+unsigned int prox_native_completion_back_address(void) { return back_missing?0:0x08812500; }
+#endif
 unsigned int prox_native_error_prepare(void) { return redirect_missing?0:0x08812340; }
 int prox_native_ota_begin(int owner,unsigned int total) { (void)owner;(void)total; assert(0); return -1; }
 int prox_native_ota_wait(int owner,unsigned int received,unsigned int wanted)
@@ -58,6 +65,18 @@ int main(void)
     table->name=(char *)memory+768; strcpy((char *)table->name,"sceLibUpdateDL");
     table->funcCount=10; table->fnids=(void *)(memory+800); table->funcs=(void *)(memory+1000);
     nids=table->fnids; stubs=table->funcs; memcpy(nids,expected,sizeof(expected)); loaded=&module;
+#ifdef PROX_NATIVE_INSTALL_PREVIEW
+    {
+        unsigned int *events=(void *)(memory+3120);
+        strcpy((char *)memory+3300,"onCancelNoNetworkUpdate");
+        strcpy((char *)memory+3340,"onPushNetworkDownloadComplete");
+        strcpy((char *)memory+3380,"onInitNetworkDownload");
+        events[0]=(unsigned int)(uintptr_t)(memory+3300);events[1]=module.text_addr+80;events[2]=0;
+        events[3]=(unsigned int)(uintptr_t)(memory+3340);events[4]=module.text_addr+64;events[5]=0;
+        events[6]=(unsigned int)(uintptr_t)(memory+3380);events[7]=module.text_addr+100;events[8]=0;
+        *(unsigned int *)(memory+64)=0x27bdff20;*(unsigned int *)(memory+68)=0xafbf00dc;
+    }
+#endif
 #if defined(PROX_NATIVE_OFFER_PREVIEW) || defined(PROX_NATIVE_OTA)
     {
         static const unsigned int io_nids[]={0x42ec03ac,0x54f5fb11,0x63632449,0x6a638d83,0x779103a0,
@@ -97,12 +116,46 @@ int main(void)
         paf->varCount=0; patch_update_plugin_module(&module);
         for(i=0;i<20;++i) assert(stubs[i]==0x5a5a5a5a);
         paf->varCount=2;
+#ifdef PROX_NATIVE_INSTALL_PREVIEW
+        {
+            PspModuleImport *gui=(void *)(memory+512+3*sizeof(PspModuleImport)+sizeof(void *));
+            module.stub_size=4*sizeof(PspModuleImport)+sizeof(void *);gui->entLen=sizeof(*gui)/4;
+            gui->name=(char *)memory+3500;strcpy((char *)gui->name,"sceVshCommonGui");
+            gui->funcCount=16;gui->fnids=(void *)(memory+3600);gui->funcs=(void *)(memory+3700);
+            for(i=0;i<16;++i) gui->fnids[i]=0x11110000+i;
+            gui->fnids[15]=0xf708c5e4;memset(gui->funcs,0x5a,128);
+            back_missing=1;patch_update_plugin_module(&module);
+            for(i=0;i<20;++i) assert(stubs[i]==0x5a5a5a5a);
+            back_missing=0;gui->funcCount=15;patch_update_plugin_module(&module);
+            for(i=0;i<20;++i) assert(stubs[i]==0x5a5a5a5a);
+            gui->funcCount=16;
+        }
+#endif
         *(unsigned int *)memory=0x27bdfff0; *(unsigned int *)(memory+4)=0xafbf0000;
     }
 #endif
     patch_update_plugin_module(&module);
     assert(*(unsigned int *)memory==0x27bdfff0 && *(unsigned int *)(memory+4)==0xafbf0000);
     for(i=0;i<10;++i) assert(stubs[2*i]==0x03e00008 && stubs[2*i+1]==MAKE_SYSCALL(7));
+#ifdef PROX_NATIVE_INSTALL_PREVIEW
+    {
+        unsigned int *events=(void *)(memory+3120);
+        assert(completion_guard==1 && events[4]==0x08812400);
+        {
+            PspModuleImport *gui=(void *)(memory+512+3*sizeof(PspModuleImport)+sizeof(void *));
+            assert(gui->funcs[30]==(0x08000000u|((0x08812500u&0x0fffffffu)>>2)) && !gui->funcs[31]);
+            for(i=0;i<30;++i) assert(gui->funcs[i]==0x5a5a5a5a);
+        }
+        memset(stubs,0x5a,80);patch_update_plugin_module(&module);
+        assert(completion_guard==1 && events[4]==0x08812400);
+        for(i=0;i<10;++i) assert(stubs[2*i]==0x03e00008 && stubs[2*i+1]==MAKE_SYSCALL(7));
+        events[4]=module.text_addr+64;
+        memset(stubs,0x5a,80);events[5]=1;patch_update_plugin_module(&module);
+        assert(!completion_guard && events[4]==module.text_addr+64);
+        for(i=0;i<20;++i) assert(stubs[i]==0x5a5a5a5a);
+        events[5]=0;
+    }
+#endif
 #ifdef PROX_NATIVE_OTA
     {
         PspModuleImport *paf=(void *)(memory+512+2*sizeof(PspModuleImport));

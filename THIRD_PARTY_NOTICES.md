@@ -54,3 +54,40 @@ componentes compilables, scripts y documentación. Los componentes precompilados
 heredados se identifican por hash; su fuente completa no está disponible en
 esta base y no se presenta como reconstruida. No retirar sus avisos ni anunciar
 una distribución estable sin resolver también esta limitación de procedencia.
+
+
+## Native target data decoder
+
+The native update worker reuses the retained `firmware/contrib/PrxEncrypter/kirk_engine.c` and `crypto.c` as local data decoding code. The KIRK source credits coyotebean, Davee, hitchhikr, kgsws, Mathieulh and SilverSpring. The AES implementation credits Vincent Rijmen, Antoon Bosselaers and Paulo Barreto. Original source notices remain intact in the matching companion source archive. These routines decode the existing PRO signer envelopes after the release package has passed its mandatory HTTPS and manifest/hash checks; they do not replace the TLS implementation or execute a target program.
+
+Original AES notice:
+
+```text
+/*	$OpenBSD: rijndael.c,v 1.19 2008/06/09 07:49:45 djm Exp $ */
+
+/**
+ * rijndael-alg-fst.c
+ *
+ * @version 3.0 (December 2000)
+ *
+ * Optimised ANSI C code for the Rijndael cipher (now AES)
+ *
+ * @author Vincent Rijmen <vincent.rijmen@esat.kuleuven.ac.be>
+ * @author Antoon Bosselaers <antoon.bosselaers@esat.kuleuven.ac.be>
+ * @author Paulo Barreto <paulo.barreto@terra.com.br>
+ *
+ * This code is hereby placed in the public domain.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHORS ''AS IS'' AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+ * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+```

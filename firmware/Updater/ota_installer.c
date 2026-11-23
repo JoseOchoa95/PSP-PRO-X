@@ -6,7 +6,9 @@
 #else
 #include <pspkernel.h>
 #include <psppower.h>
+#ifndef PROX_BACKGROUND_ENGINE
 #include <pspdebug.h>
+#endif
 #include <pspiofilemgr.h>
 #include <pspctrl.h>
 #endif
@@ -20,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <errno.h>
 
 static char root[192],game[32];
 static ProxManifest manifest;
@@ -27,16 +30,24 @@ static FILE *trace;
 static int locked,trace_failed;
 int prox_stopping(void)
 {
+#ifdef PROX_BACKGROUND_ENGINE
+    extern int prox_native_engine_cancelled(void);
+    if(locked)return 0;
+    return prox_native_engine_cancelled();
+#else
     SceCtrlData pad; int rc;
     if (locked) return 0; /* No cancellation during firmware/storage commit. */
     memset(&pad,0,sizeof(pad)); rc=sceCtrlPeekBufferPositive(&pad,1);
     return rc < 0 || (rc > 0 && (pad.Buttons & PSP_CTRL_RTRIGGER));
+#endif
 }
 void prox_log(const char *format,...)
 {
     char b[384]; va_list args;
     va_start(args,format); vsnprintf(b,sizeof(b),format,args); va_end(args);
+#ifndef PROX_BACKGROUND_ENGINE
     pspDebugScreenPrintf("%s\n",b);
+#endif
     if (trace && (fprintf(trace,"%s\n",b) < 0 || fflush(trace))) trace_failed=1;
 }
 static int trace_open(void)
@@ -49,28 +60,29 @@ static int trace_open(void)
 }
 static int pending(int committed)
 {
-    char name[96]; FILE *f; int rc;
+    char name[96]; FILE *f; int rc,error=0;
     snprintf(name,sizeof(name),"%s/PROXUPDATE/installed.pending",game);
-    if (!committed) { f=fopen(name,"rb"); if (f) { fclose(f); return -1; } }
-    f=fopen(name,"wb"); if (!f) return -1;
+    if (!committed) { f=fopen(name,"rb"); if (f) { fclose(f);prox_log("PENDING_FAIL operation=existing-marker path=%s",name);return -1; } }
+    errno=0;f=fopen(name,"wb"); if (!f) { prox_log("PENDING_FAIL operation=open-marker path=%s errno=%d",name,errno);return -1; }
     rc=fprintf(f,"PROX-OTA-1\n%s\n%s\n%s\n",manifest.version,manifest.build_id,committed ? "committed" : "prepared") < 0 ? -1 : 0;
-    if (fclose(f)) rc=-1;
+    if(rc)error=errno;
+    if (fclose(f)) { rc=-1;if(!error)error=errno; }
+    if(rc)prox_log("PENDING_FAIL operation=write-marker path=%s errno=%d committed=%d",name,error,committed);
     if (rc) remove(name); /* This invocation created it after absence check. */
     return rc;
 }
-int prox_ota_begin(int argc,char **argv,unsigned int firmware,unsigned int model)
+static int begin_data(const char *target,const char *source,const char *digest,unsigned int firmware,unsigned int model,int change_directory)
 {
     size_t n; char name[256],*data=NULL; PjToken *tokens=NULL; Pj json;
-    ProxRelease release; unsigned int running[3],client[3]; FILE *f=NULL; int i,rc=-1;
-    i=prox_ota_args(argc,argv,"/PROUPDATE/installer.prx",root);
-    if (i <= 0) return i;
+    ProxRelease release; unsigned int running[3],client[3]; FILE *f=NULL; int rc=-1;
     memset(&release,0,sizeof(release));
     if (firmware != 0x06060110) return -1;
     memcpy(game,root,4); strcpy(game+4,"/PSP/GAME");
-    if (trace_open() || prox_version(argv[3],running)) goto done;
+    if (trace_open() || prox_version(source,running)) goto done;
     memcpy(client,running,sizeof(client));
-    strcpy(release.version,PROX_PRODUCT_VERSION);
-    snprintf(release.tag,sizeof(release.tag),"v%s",PROX_PRODUCT_VERSION);
+    if(strlen(target)>=sizeof(release.version))goto done;
+    strcpy(release.version,target);
+    snprintf(release.tag,sizeof(release.tag),"v%s",target);
     snprintf(name,sizeof(name),"%s/pro-x-update.json",root);
     f=fopen(name,"rb"); if (!f) goto done;
     data=malloc(32769); tokens=calloc(2048,sizeof(*tokens));
@@ -78,13 +90,13 @@ int prox_ota_begin(int argc,char **argv,unsigned int firmware,unsigned int model
     n=fread(data,1,32769,f);
     if (ferror(f) || n > 32768) goto done;
     if (fclose(f)) { f=NULL; goto done; } f=NULL;
-    if (prox_file_check(name,(unsigned int)n,argv[2],0) || pj_parse(&json,data,n,tokens,2048) ||
+    if (prox_file_check(name,(unsigned int)n,digest,0) || pj_parse(&json,data,n,tokens,2048) ||
         pj_uint(&json,pj_field(&json,pj_field(&json,0,"package_asset"),"size"),&release.package.size) ||
         prox_manifest(&json,&release,running,client,model,&manifest) ||
         strncmp(strrchr(root,'/')+1+7,manifest.build_id,18) || prox_stage_check(root,&manifest) || !prox_power_ready()) goto done;
     prox_log("Verified OTA installer for %s / %s; preserving configuration and plugins",manifest.version,manifest.build_id);
     snprintf(name,sizeof(name),"%s/PROUPDATE",root);
-    if (sceIoChdir(name) < 0) goto done;
+    if (change_directory && sceIoChdir(name) < 0) goto done;
     rc=1;
 done:
     if (f) fclose(f);
@@ -92,6 +104,25 @@ done:
     if (rc < 0) prox_log("OTA validation failed before flash setup; nothing installed");
     return rc;
 }
+int prox_ota_begin(int argc,char **argv,unsigned int firmware,unsigned int model)
+{
+    int mode=prox_ota_args(argc,argv,"/PROUPDATE/installer.prx",root);
+    if(mode<=0)return mode;
+    return begin_data(PROX_PRODUCT_VERSION,argv[3],argv[2],firmware,model,1);
+}
+#ifdef PROX_BACKGROUND_ENGINE
+int prox_ota_native_begin(const ProxNativeInstallJob *job,unsigned int firmware,unsigned int model)
+{
+    char path[256];char *args[4];
+    if(!job || !memchr(job->root,0,sizeof(job->root)) || !memchr(job->source_version,0,40) ||
+       !memchr(job->target_version,0,40) || !memchr(job->manifest_sha256,0,65) ||
+       strcmp(job->source_version,PROX_PRODUCT_VERSION) || job->model!=model ||
+       snprintf(path,sizeof(path),"%s/PROUPDATE/installer.prx",job->root)>=(int)sizeof(path))return -1;
+    args[0]=path;args[1]="--prox-ota-v1";args[2]=(char *)job->manifest_sha256;args[3]=(char *)job->source_version;
+    if(prox_ota_args(4,args,"/PROUPDATE/installer.prx",root)!=1)return -1;
+    return begin_data(job->target_version,job->source_version,job->manifest_sha256,firmware,model,0);
+}
+#endif
 int prox_ota_before_write(void)
 {
     unsigned long long required=2u*1024u*1024u; int i;
@@ -112,17 +143,29 @@ int prox_ota_before_write(void)
         snprintf(name,sizeof(name),"%s/PROXUPDATE/installed.pending",game); remove(name);
         prox_storage_discard(game,&manifest); prox_ota_close(); return -1;
     }
+#ifdef PROX_BACKGROUND_ENGINE
+    {
+        extern int prox_native_engine_write_gate(void);
+        if(prox_native_engine_write_gate()) {
+            char name[96];snprintf(name,sizeof(name),"%s/PROXUPDATE/installed.pending",game);remove(name);
+            prox_storage_discard(game,&manifest);prox_ota_close();return -1;
+        }
+    }
+#endif
     return 0;
 }
-int prox_ota_complete(void)
+int prox_ota_storage_commit(void)
 {
     if (prox_storage_commit(game,&manifest)) {
         prox_log("Storage replacement failed after firmware write. Keep stage/backups and use the matched recovery package.");
         return -1;
     }
     prox_log("Matched applications replaced; pending version observation after CFW restart");
-    return pending(1);
+    return 0;
 }
+int prox_ota_mark_committed(void) { return trace_failed?-1:pending(1); }
+int prox_ota_complete(void)
+{ return prox_ota_storage_commit() || prox_ota_mark_committed()?-1:0; }
 void prox_ota_result(int result) { prox_log("Installer firmware-write result=0x%08x",result); }
 int prox_ota_reboot_path(char path[256])
 {

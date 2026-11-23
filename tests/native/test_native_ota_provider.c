@@ -9,14 +9,42 @@
 int proxNativeQueryService(int,ProxNativeQueryMessage *,unsigned int);
 static int thread=1,locked,loaded,mode,started,staged,handed,steps;
 static unsigned int ticks,lease_id,last_progress;
-int prox_native_test_valid(const void *p,unsigned int n) { return p && n && n<=sizeof(ProxNativeQueryMessage); }
+#if defined(PROX_NATIVE_INSTALL_PREVIEW) || defined(PROX_NATIVE_BACKGROUND)
+#include "prox_install_preview.h"
+#include "prox_completion_preview.h"
+static ProxCompletionState notice;
+static unsigned short notice_text[120];
+static int preview_loaded;
+#ifdef PROX_NATIVE_BACKGROUND
+#include "prox_product.h"
+#include "prox_native_install.h"
+int prox_native_install_test_module(void) { return 17; }
+#endif
+void prox_native_completion_reset(void) { memset(&notice,0,sizeof(notice)); }
+int prox_native_completion_arm(unsigned int g,const unsigned short *p,unsigned int n)
+{ assert(locked);return prox_completion_arm(&notice,g,notice_text,p,n); }
+int prox_native_completion_ready(unsigned int g) { assert(locked);return g==notice.generation && notice.ready; }
+int prox_native_completion_health(unsigned int g,unsigned int now) { assert(locked);return prox_completion_health(&notice,g,now); }
+#endif
+int prox_native_test_valid(const void *p,unsigned int n) {
+#ifdef PROX_NATIVE_BACKGROUND
+    return p && n && n<=sizeof(ProxNativeInstallMessage);
+#else
+    return p && n && n<=sizeof(ProxNativeQueryMessage);
+#endif
+}
 int prox_preview_test_bytes(const void *p,unsigned int n) { return p && n && n<=32768; }
 int pspSdkSetK1(int n) { (void)n; return 0; }
 unsigned int pspSdkDisableInterrupts(void) { assert(!locked); locked=1; return 7; }
 void pspSdkEnableInterrupts(unsigned int n) { assert(locked && n==7); locked=0; }
 int sceKernelGetThreadId(void) { assert(!locked); return thread; }
 unsigned int sceKernelGetSystemTimeLow(void) { assert(!locked); return ticks; }
-void *sceKernelFindModuleByName(const char *n) { (void)n; return loaded?(void *)1:0; }
+void *sceKernelFindModuleByName(const char *n) {
+#if defined(PROX_NATIVE_INSTALL_PREVIEW) || defined(PROX_NATIVE_BACKGROUND)
+    if(!strcmp(n,PROX_INSTALL_PREVIEW_MODULE)) return preview_loaded?(void *)1:0;
+#endif
+    (void)n;return loaded?(void *)1:0;
+}
 int prox_native_query_is_loading(void) { return 0; }
 const char *prox_native_error_redirect(unsigned int failure,const char *key)
 { return prox_native_error_select(failure,key,"msgshare_error_notplay_ms","msgupdate_error_start"); }
@@ -42,6 +70,9 @@ int sceKernelDelayThread(unsigned int us)
     assert(!proxNativeQueryService(PROX_NQ_POLL,&m,sizeof(m)));
     if(m.command==PROX_NQ_CHECK) {
         m.result=mode==4?0:1; m.package_size=131072; strcpy(m.version,"0.3.1");
+#ifdef PROX_NATIVE_BACKGROUND
+        strcpy(m.version,"0.3.5"); /* Isolated future-target protocol fixture. */
+#endif
         assert(!proxNativeQueryService(PROX_NQ_RESULT,&m,sizeof(m)));
     } else if(m.command==PROX_NQ_DOWNLOAD) {
         started=1; ++steps;
@@ -56,7 +87,44 @@ int sceKernelDelayThread(unsigned int us)
         }
     } else if(m.command==PROX_NQ_INSTALL) {
         assert(staged && last_progress==131072 && !m.cancel); ++handed;
+#if defined(PROX_NATIVE_INSTALL_PREVIEW) || defined(PROX_NATIVE_BACKGROUND)
+        {
+#ifdef PROX_NATIVE_BACKGROUND
+            ProxNativeInstallMessage install={0};unsigned int part;
+            install.protocol=1;install.lease=m.lease;install.generation=m.generation;install.module=17;
+            strcpy(install.job.root,"ms0:/PSP/GAME/PROXUPDATE/.stage-pro-x-123456789abc-00112233");
+            strcpy(install.job.build_id,"pro-x-123456789abc");strcpy(install.job.source_version,PROX_PRODUCT_VERSION);
+            strcpy(install.job.target_version,"0.3.5");memset(install.job.manifest_sha256,'a',64);install.job.model=1;
+            for(part=0;part<11;++part) { install.job.parts[part].size=512;memset(install.job.parts[part].sha256,'b',64); }
+            thread=3;assert(proxNativeInstallService(PROX_NI_ARM,&install,sizeof(install))<0);thread=2;
+            assert(!proxNativeInstallService(PROX_NI_ARM,&install,sizeof(install)));
+            assert(!proxNativeInstallService(PROX_NI_BIND,&install,sizeof(install)));
+            assert(proxNativeInstallService(PROX_NI_CLAIM,&install,sizeof(install))<0);
+            thread=4;assert(!proxNativeInstallService(PROX_NI_CLAIM,&install,sizeof(install)));
+            assert(!prox_native_install_completion_owner(4,m.generation));
+            thread=2;assert(proxNativeInstallService(PROX_NI_WRITE,&install,sizeof(install))<0);
+            thread=4;assert(!proxNativeInstallService(PROX_NI_WRITE,&install,sizeof(install)));
+            thread=1;assert(!((int (*)(void))prox_native_query_function(0x4f49c9c1))());
+            thread=4;assert(!proxNativeInstallService(PROX_NI_STATUS,&install,sizeof(install)) && !install.cancel);
+            assert(!proxNativeInstallService(PROX_NI_COMMIT,&install,sizeof(install)));
+            assert(prox_native_install_completion_owner(4,m.generation) && !prox_native_install_completion_owner(2,m.generation));
+            thread=2;
+#endif
+            unsigned short text[]={'O','K',0};unsigned int saved=m.lease;
+            m.downloaded=3;memcpy(m.summary,text,sizeof(text));
+            thread=3;assert(proxNativeQueryService(PROX_NQ_NOTICE_ARM,&m,sizeof(m))<0);thread=2;
+            m.lease^=1;assert(proxNativeQueryService(PROX_NQ_NOTICE_ARM,&m,sizeof(m))<0);m.lease=saved;
+            --m.generation;assert(proxNativeQueryService(PROX_NQ_NOTICE_ARM,&m,sizeof(m))<0);++m.generation;
+            m.downloaded=121;assert(proxNativeQueryService(PROX_NQ_NOTICE_ARM,&m,sizeof(m))<0);m.downloaded=3;
+            assert(!proxNativeQueryService(PROX_NQ_NOTICE_ARM,&m,sizeof(m)));
+            assert(!prox_completion_finish(&notice,m.generation,4));preview_loaded=1;
+            notice.last_poll=ticks;
+            thread=3;assert(proxNativeQueryService(PROX_NQ_NOTICE_STATUS,&m,sizeof(m))<0);thread=2;
+            assert(!proxNativeQueryService(PROX_NQ_NOTICE_STATUS,&m,sizeof(m)) && m.result==1);
+        }
+#else
         m.result=-1; assert(!proxNativeQueryService(PROX_NQ_RESULT,&m,sizeof(m))); /* Returned launch fails. */
+#endif
     }
     thread=1; return 0;
 }
@@ -81,19 +149,42 @@ int main(void)
         else {
             i=0;
             while((rc=read(bytes,sizeof(bytes),&detail))>0) {
+#if defined(PROX_NATIVE_INSTALL_PREVIEW) || defined(PROX_NATIVE_BACKGROUND)
+                assert(rc==32768 && ++i<=4 && last_progress>=(unsigned int)i*32768);
+#else
                 assert(rc==32768 && ++i<=3 && last_progress>=(unsigned int)i*32768);
+#endif
                 assert(proxNativePreviewWrite(fd,bytes,rc-1)<0);
                 assert(proxNativePreviewWrite(fd,bytes,rc)==rc);
             }
             assert(rc==(int)0x805f0007 && !detail);
-            if(mode==0) assert(i==3 && staged && handed==1);
+            if(mode==0) {
+#if defined(PROX_NATIVE_INSTALL_PREVIEW) || defined(PROX_NATIVE_BACKGROUND)
+                assert(i==4 && staged && handed==1 && notice.ready && !notice.shown);
+                assert(prox_native_completion_generation()==notice.generation);
+                assert(!end() && prox_native_completion_generation()==notice.generation);
+#ifdef PROX_NATIVE_BACKGROUND
+                {
+                    ProxNativeInstallMessage install={0};install.protocol=1;install.lease=lease_id;install.generation=notice.generation;
+                    thread=4;assert(!proxNativeInstallService(PROX_NI_FAIL,&install,sizeof(install)));thread=1;
+                }
+#endif
+                preview_loaded=0;
+#else
+                assert(i==3 && staged && handed==1);
+#endif
+            }
             else assert(!i && !staged && !handed);
         }
         if(mode==5) assert(!strcmp(proxNativeQueryTextKey("msgupdate_error_download_cannot_connect"),"msgupdate_error_start"));
         if(mode==2) assert(!strcmp(proxNativeQueryTextKey("msgupdate_error_download_cannot_connect"),"msgupdate_error_download_cannot_connect"));
         assert(!proxNativePreviewClose(fd)); assert(!end());
         /* Model the resident worker acknowledging cancellation before next InitEx. */
-        if(mode==3) { thread=2; ProxNativeQueryMessage m={0}; m.protocol=PROX_NQ_PROTOCOL; m.lease=lease_id;
+        if(mode==3
+#if defined(PROX_NATIVE_INSTALL_PREVIEW) || defined(PROX_NATIVE_BACKGROUND)
+           || mode==0
+#endif
+        ) { thread=2; ProxNativeQueryMessage m={0}; m.protocol=PROX_NQ_PROTOCOL; m.lease=lease_id;
             assert(!proxNativeQueryService(PROX_NQ_POLL,&m,sizeof(m))); m.result=-1;
             assert(!proxNativeQueryService(PROX_NQ_RESULT,&m,sizeof(m))); thread=1; }
     }

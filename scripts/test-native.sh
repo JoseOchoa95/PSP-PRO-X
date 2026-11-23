@@ -1,6 +1,51 @@
 #!/bin/sh
 set -eu
+mkdir -p /tmp/prox-signed-include
+python3 scripts/native_signed_templates.py firmware/contrib/PrxEncrypter/main.c /tmp/prox-signed-include/native_signed_templates.h
+cc -std=c99 -Wall -Wextra -Werror -I firmware/Common -I firmware/Updater -I /tmp/prox-signed-include \
+    -c firmware/Updater/native_signed.c -o /tmp/prox-native-signed.o
+cc -O2 -c firmware/Updater/native_kirk.c -o /tmp/prox-native-kirk.o
+cc -O2 -c firmware/Updater/native_crypto.c -o /tmp/prox-native-crypto.o
+cc -O2 -I firmware/Common -I firmware/Updater tests/native/test_native_signed.c firmware/Updater/native_payload.c \
+    /tmp/prox-native-signed.o /tmp/prox-native-kirk.o /tmp/prox-native-crypto.o -lz -o /tmp/test-native-signed
+/tmp/test-native-signed
+cc -std=c99 -Wall -Wextra -Werror -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast -DPROX_BACKGROUND_TARGET_TEST \
+    -I tests/native -I firmware/Common -I firmware/Updater tests/native/test_native_background_target.c \
+    firmware/Updater/native_background.c -o /tmp/test-native-background-target
+/tmp/test-native-background-target
+cc -O2 tests/native/test_signer_template.c \
+    firmware/contrib/PrxEncrypter/kirk_engine.c firmware/contrib/PrxEncrypter/crypto.c -lz -o /tmp/test-signer-template
+/tmp/test-signer-template
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NATIVE_ENGINE_TEST -DPROX_BACKGROUND_ENGINE -Dmain=prox_native_engine_main \
+    -I tests/native -I firmware/Common -I firmware/Updater tests/native/test_native_engine.c \
+    firmware/tools/nativeinstaller/main.c -o /tmp/test-native-engine
+/tmp/test-native-engine
+sh scripts/test-mount-access.sh
 cd /work
+cc -std=c99 -Wall -Wextra -Werror -I firmware/Common -I firmware/Updater \
+    tests/native/test_native_payload.c firmware/Updater/native_payload.c -lz -o /tmp/test-native-payload
+/tmp/test-native-payload
+cc -std=c99 -Wall -Wextra -Werror -I firmware/Common -I firmware/Vshctrl \
+    tests/native/test_native_install_state.c firmware/Vshctrl/native_install_state.c -o /tmp/test-native-install-state
+/tmp/test-native-install-state
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NATIVE_FLASH_TEST -DMBEDTLS_CONFIG_FILE=\"prox_mbedtls_config.h\" \
+    -I firmware/Common -I firmware/Updater -I artifacts/phase3/https-native/mbedtls/include \
+    tests/native/test_native_flash.c firmware/Updater/native_flash.c \
+    -L artifacts/phase3/https-native/mbedtls/library -lmbedcrypto -o /tmp/test-native-flash
+/tmp/test-native-flash
+cc -std=c99 -Wall -Wextra -Werror -I firmware/Common tests/native/test_install_preview_lock.c -o /tmp/test-install-preview-lock
+/tmp/test-install-preview-lock
+cc -std=c99 -Wall -Wextra -Werror -DPROX_INSTALL_PREVIEW_TEST -I tests/native -I firmware/Common tests/native/test_install_preview_module.c -o /tmp/test-install-preview-module
+/tmp/test-install-preview-module
+cc -std=c99 -Wall -Wextra -Werror -DPROX_INSTALL_LOADER_TEST -I tests/native -I firmware/Common -I firmware/Updater \
+    tests/native/test_install_preview_loader.c -o /tmp/test-install-preview-loader
+/tmp/test-install-preview-loader
+cc -std=c99 -Wall -Wextra -Werror -DPROX_ERROR_TEXT_NATIVE -I firmware/Common -I firmware/Vshctrl \
+    tests/native/test_completion_preview.c firmware/Vshctrl/native_preview_stream.c firmware/Vshctrl/native_error_text.c -o /tmp/test-completion-preview
+/tmp/test-completion-preview
+cc -std=c99 -Wall -Wextra -Werror -I firmware/Updater \
+    tests/native/test_completion_rco.c firmware/Updater/native_completion_text.c -o /tmp/test-completion-rco
+/tmp/test-completion-rco
 cc -std=c99 -Wall -Wextra -Werror -I firmware/Common \
     tests/native/test_wpa2.c firmware/Common/wpa2_patch.c -o /tmp/test-wpa2
 /tmp/test-wpa2
@@ -102,11 +147,33 @@ cc -std=c99 -Wall -Wextra -Werror -DPROX_NQ_PROVIDER_TEST -DPROX_NATIVE_PREVIEW_
     firmware/Vshctrl/native_offer_preview.c firmware/Vshctrl/native_preview_stream.c \
     firmware/Vshctrl/native_error_text.c -o /tmp/test-native-ota-provider
 /tmp/test-native-ota-provider
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NQ_PROVIDER_TEST -DPROX_NATIVE_OTA -DPROX_NATIVE_PREVIEW_TEST -DPROX_ERROR_TEXT_NATIVE -DPROX_NATIVE_INSTALL_PREVIEW \
+    -I tests/native -I firmware/Common -I firmware/Vshctrl \
+    tests/native/test_native_ota_provider.c firmware/Vshctrl/native_query_provider.c \
+    firmware/Vshctrl/native_query_state.c firmware/Vshctrl/native_offer_preview.c \
+    firmware/Vshctrl/native_preview_stream.c firmware/Vshctrl/native_error_text.c -o /tmp/test-native-completion-provider
+/tmp/test-native-completion-provider
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NQ_PROVIDER_TEST -DPROX_NATIVE_OTA -DPROX_NATIVE_PREVIEW_TEST -DPROX_ERROR_TEXT_NATIVE -DPROX_NATIVE_BACKGROUND \
+    -I tests/native -I firmware/Common -I firmware/Vshctrl \
+    tests/native/test_native_ota_provider.c firmware/Vshctrl/native_query_provider.c \
+    firmware/Vshctrl/native_install_state.c firmware/Vshctrl/native_query_state.c firmware/Vshctrl/native_offer_preview.c \
+    firmware/Vshctrl/native_preview_stream.c firmware/Vshctrl/native_error_text.c -o /tmp/test-native-background-provider
+/tmp/test-native-background-provider
 cc -std=c99 -Wall -Wextra -Werror -DPROX_NATIVE_SERVICE_TEST -DPROX_BUILD_ID=\"native-service-fixture\" \
     -I tests/native -I firmware/Common -I firmware/Updater -I firmware/Vshctrl \
     tests/native/test_native_service.c firmware/Updater/native_service.c \
     firmware/Vshctrl/native_query_state.c -o /tmp/test-native-service
 /tmp/test-native-service
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NATIVE_SERVICE_TEST -DPROX_NATIVE_INSTALL_PREVIEW -DPROX_BUILD_ID=\"native-service-fixture\" \
+    -I tests/native -I firmware/Common -I firmware/Updater -I firmware/Vshctrl \
+    tests/native/test_native_service.c firmware/Updater/native_service.c \
+    firmware/Vshctrl/native_query_state.c -o /tmp/test-native-install-preview-service
+/tmp/test-native-install-preview-service
+cc -std=c99 -Wall -Wextra -Werror -DPROX_NATIVE_SERVICE_TEST -DPROX_NATIVE_BACKGROUND -DPROX_BUILD_ID=\"native-service-fixture\" \
+    -I tests/native -I firmware/Common -I firmware/Updater -I firmware/Vshctrl \
+    tests/native/test_native_service.c firmware/Updater/native_service.c \
+    firmware/Vshctrl/native_query_state.c -o /tmp/test-native-background-service
+/tmp/test-native-background-service
 cc -std=c99 -Wall -Wextra -Werror -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast \
     -DPROX_UPDATE_NATIVE -DPROX_NATIVE_UI_PROBE -DPROX_NATIVE_PROBE_TEST -DPROX_NATIVE_OTA -DPROX_NATIVE_PREVIEW_TEST \
     -I tests/native -I firmware/Vshctrl tests/native/test_native_update_probe_dispatch.c \
@@ -114,6 +181,13 @@ cc -std=c99 -Wall -Wextra -Werror -Wno-pointer-to-int-cast -Wno-int-to-pointer-c
     firmware/Vshctrl/native_update_probe.c firmware/Vshctrl/native_offer_preview.c \
     firmware/Vshctrl/native_preview_stream.c -o /tmp/test-native-ota-dispatch
 /tmp/test-native-ota-dispatch
+cc -std=c99 -Wall -Wextra -Werror -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast \
+    -DPROX_UPDATE_NATIVE -DPROX_NATIVE_UI_PROBE -DPROX_NATIVE_PROBE_TEST -DPROX_NATIVE_OTA -DPROX_NATIVE_PREVIEW_TEST -DPROX_NATIVE_INSTALL_PREVIEW \
+    -I tests/native -I firmware/Common -I firmware/Vshctrl tests/native/test_native_update_probe_dispatch.c \
+    firmware/Vshctrl/custom_update.c firmware/Vshctrl/native_update_dispatch.c \
+    firmware/Vshctrl/native_update_probe.c firmware/Vshctrl/native_offer_preview.c \
+    firmware/Vshctrl/native_preview_stream.c -o /tmp/test-native-completion-dispatch
+/tmp/test-native-completion-dispatch
 cc -std=c99 -Wall -Wextra -Werror -DPROX_ERROR_TEXT_NATIVE -I firmware/Common -I firmware/Vshctrl \
     tests/native/test_native_error_text.c firmware/Vshctrl/native_error_text.c -o /tmp/test-native-error-text
 /tmp/test-native-error-text

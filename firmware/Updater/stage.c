@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <zlib.h>
+#include <errno.h>
 #ifdef PROX_OTA_FAULT_TEST
 extern int prox_native_rename(const char *,const char *);
 #define rename prox_native_rename
@@ -244,23 +245,34 @@ void prox_storage_discard(const char *game,const ProxManifest *m)
     for (i=0;i<PROX_UPDATE_FILES;++i)
         if (!destination(target,game,i,".prox-new") && !file_check(target,m->files[i].size,m->files[i].sha256,i < 3,0)) remove(target);
 }
+static int storage_move(const char *from,const char *to,const char *operation)
+{
+    int rc,error;errno=0;rc=rename(from,to);error=errno;
+    prox_log("STORAGE_MOVE operation=%s from=%s to=%s rc=%d errno=%d",operation,from,to,rc,error);return rc;
+}
 int prox_storage_commit(const char *game, const ProxManifest *m)
 {
-    char target[256],temp[256],backup[256]; int i,changed=0; unsigned int originals=0;
+    char target[256]={0},temp[256]={0},backup[256]={0}; int i,changed=0; unsigned int originals=0;
     for (i=0;i<PROX_UPDATE_FILES;++i) {
         FILE *exists;
+        errno=0;
         if (destination(temp,game,i,".prox-new") || destination(backup,game,i,".prox-old") ||
-            prox_file_check(temp,m->files[i].size,m->files[i].sha256,i < 3)) return -1;
-        exists=fopen(backup,"rb"); if (exists) { fclose(exists); return -1; }
+            prox_file_check(temp,m->files[i].size,m->files[i].sha256,i < 3)) {
+            prox_log("STORAGE_FAIL operation=verify-prepared part=%d path=%s errno=%d",i,temp,errno);return -1;
+        }
+        exists=fopen(backup,"rb"); if (exists) { fclose(exists);prox_log("STORAGE_FAIL operation=stale-backup part=%d path=%s",i,backup);return -1; }
     }
     for (i=0;i<PROX_UPDATE_FILES;++i) {
         FILE *old;
         int existed;
+        errno=0;
         if (destination(target,game,i,"") || destination(temp,game,i,".prox-new") || destination(backup,game,i,".prox-old") ||
-            prox_file_check(temp,m->files[i].size,m->files[i].sha256,i < 3)) goto rollback;
+            prox_file_check(temp,m->files[i].size,m->files[i].sha256,i < 3)) {
+            prox_log("STORAGE_FAIL operation=verify-before-replace part=%d path=%s errno=%d",i,temp,errno);goto rollback;
+        }
         old=fopen(target,"rb"); existed=old != NULL; if (old) fclose(old);
-        if (existed && rename(target,backup)) goto rollback;
-        if (rename(temp,target)) { if (existed && rename(backup,target)) prox_log("Storage restore failed; keep .prox-old backups"); goto rollback; }
+        if (existed && storage_move(target,backup,"backup-application")) goto rollback;
+        if (storage_move(temp,target,"replace-application")) { if (existed && storage_move(backup,target,"restore-application")) prox_log("Storage restore failed; keep .prox-old backups"); goto rollback; }
         if (existed) originals |= 1u<<i;
         changed=i+1;
     }
@@ -270,7 +282,7 @@ int prox_storage_commit(const char *game, const ProxManifest *m)
 rollback:
     while (changed--) {
         destination(target,game,changed,""); destination(temp,game,changed,".prox-new"); destination(backup,game,changed,".prox-old");
-        if (rename(target,temp) || ((originals & (1u<<changed)) && rename(backup,target)))
+        if (storage_move(target,temp,"rollback-target") || ((originals & (1u<<changed)) && storage_move(backup,target,"rollback-original")))
             prox_log("Storage rollback incomplete; preserve stage/.prox-old for recovery");
     }
     return -1;

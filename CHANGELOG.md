@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### v0.3.4 — native background installation (unreleased)
+
+- Install verified GitHub updates in the background after one acceptance on the original PSP update screen, preserving system language/theme and avoiding the target installer's text console and additional installation prompts.
+- Show original localized completion after verified firmware/storage success, hide Back on that page and wait for a fresh X to restart; no automatic restart timer.
+- Replace unsupported firmware renames with bounded verified copies, exact original backups and checked native flush/restoration. Retain recovery evidence on failure and never report an incomplete update as successful.
+- Preserve configuration, plugins, PRO/HEN/Infinity contracts and the existing HTTPS, redirect, stable-release, numeric-version, compatibility and post-offer storage/power checks. Keep manual Installer controls unchanged.
+- Verify the authenticated target as signed data and prepare its matching modules/rebooter before replacement; correct compressed signer-template selection and retain precise failure logs.
+- Limited owner PSP acceptance: the temporary 0.3.2 build updated to unchanged stable 0.3.3; final 0.3.4 displayed the correct version, opened the SELECT menu and reported no newer update. Successful-run raw logs were not supplied; broader hardware/router and Infinity validation remain pending.
+- The exact original completion RCO remains a separate runtime requirement and is not bundled. Firmware copies are not atomic against power loss; powered-on card reinsertion and the self-contained update redesign remain deferred. Older installed workers retain their existing update behavior.
+
 ### v0.3.3 — native GitHub System Update
 
 - Integrate authenticated GitHub checking, compatible stable offers and verified download progress with the original PSP System Update screens, preserving the installed language and theme.

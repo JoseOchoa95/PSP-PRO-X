@@ -19,7 +19,9 @@ def main():
     preview=build.get('native_offer_preview',False)
     progress=build.get('native_progress_preview',False)
     ota=build.get('native_ota',False)
-    source = ROOT/'builds'/('pro-x-'+VERSION+'-661-'+('native-ota-test' if ota else 'native-progress-preview' if progress else 'native-offer-preview' if preview else 'native-github-query')+'-source.zip')
+    install_preview=build.get('native_install_preview',False)
+    background=build.get('native_background',False)
+    source = ROOT/'builds'/('pro-x-'+VERSION+'-661-'+('native-install-preview' if install_preview else 'native-ota-test' if ota else 'native-progress-preview' if progress else 'native-offer-preview' if preview else 'native-github-query')+'-source.zip')
     if args.source: source=args.source.resolve()
     source_bytes=source.read_bytes(); source_sha=sha(source_bytes)
     base = ROOT/'artifacts/phase3'/('query-replay-'+source_sha[:12])
@@ -37,7 +39,9 @@ def main():
     command = ['docker', 'run', '--rm', '--network', 'none', '--mount',
                'type=bind,source='+str(base)+',target=/work', '--env',
                'PROX_NATIVE_UPDATE_FLAGS=-DPROX_NATIVE_UI_QUERY=1'+(' -DPROX_NATIVE_OFFER_PREVIEW=1' if preview else '')+
-               (' -DPROX_NATIVE_PROGRESS_PREVIEW=1' if progress else '')+(' -DPROX_NATIVE_OTA=1' if ota else ''), build['toolchain_image'],
+               (' -DPROX_NATIVE_PROGRESS_PREVIEW=1' if progress else '')+(' -DPROX_NATIVE_OTA=1' if ota else '')+
+               (' -DPROX_NATIVE_INSTALL_PREVIEW=1' if install_preview else '')+
+               (' -DPROX_NATIVE_BACKGROUND=1' if background else ''), build['toolchain_image'],
                'sh', '/work/scripts/compile.sh', '/work/firmware',
                '/work/artifacts/work/'+build['build_id']]
     with log.open('wb') as stream:

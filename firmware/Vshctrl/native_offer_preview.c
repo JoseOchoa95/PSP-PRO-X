@@ -140,10 +140,20 @@ int prox_native_preview_read(void *buffer,unsigned int capacity)
     if(size<=0) {
 #ifdef PROX_NATIVE_OTA
         unsigned int received;
-        mask=pspSdkDisableInterrupts(); received=stream.read;
+        mask=pspSdkDisableInterrupts(); received=stream.read; serial=stream.serial;
         rc=stream.opened && !stream.cancelled && stream.owner==owner && !stream.pending;
         pspSdkEnableInterrupts(mask);
-        if(rc) prox_native_ota_wait(owner,received,0); /* Successful LoadExec never returns. */
+        if(rc) {
+            rc=prox_native_ota_wait(owner,received,0); /* Normal successful LoadExec never returns. */
+#if defined(PROX_NATIVE_INSTALL_PREVIEW) || defined(PROX_NATIVE_BACKGROUND)
+            if(rc==2 && valid_bytes(buffer,PROX_PREVIEW_CHUNK)) {
+                mask=pspSdkDisableInterrupts();
+                rc=prox_preview_stream_finish(&stream,owner,capacity,serial,1);
+                pspSdkEnableInterrupts(mask);
+                if(rc>0) { memset(buffer,0,(unsigned int)rc); return rc; }
+            }
+#endif
+        }
 #endif
 #ifdef PROX_NATIVE_OTA
         prox_native_query_event("native transfer stopped or installer handoff returned",DENIED); return DENIED;

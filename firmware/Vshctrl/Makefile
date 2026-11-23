@@ -3,14 +3,19 @@ all:
 
 TARGET = vshctrl
 OBJS = main.o vshpatch.o custom_update.o version_display.o xmbiso.o isoreader.o virtual_pbp.o vshmenu.o usbdevice.o dirent_track.o vshctrl_patch_offset.o disctype.o hibernation_delete.o ../Common/utils.o ../Common/libs.o ../Common/strsafe.o
-OBJS += native_query_provider.o native_query_state.o native_query_loader.o
+OBJS += native_query_provider.o native_query_state.o native_query_loader.o native_completion_preview.o
+ifneq ($(findstring -DPROX_NATIVE_BACKGROUND=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+OBJS += native_install_state.o
+OBJS += native_mount_access.o native_mount_lease.o native_mount_platform.o
+CFLAGS += -DPROX_NATIVE_MOUNT_ACCESS=1
+endif
 ifneq ($(findstring -DPROX_NATIVE_OTA=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
 OBJS += native_error_text.o native_query_cache.o
 endif
 IMPORTS =
 
 INCDIR = ../Common/ ../include/
-CFLAGS = -Os -G0 -Wall -fno-pic
+CFLAGS += -Os -G0 -Wall -fno-pic
 CFLAGS += $(PROX_NATIVE_UPDATE_FLAGS)
 ifneq ($(findstring -DPROX_NATIVE_UI_PROBE=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
 OBJS += native_update_probe.o native_update_dispatch.o

@@ -10,11 +10,32 @@
 #include "native_download.h"
 #include "stage.h"
 #include "prox_product.h"
+
 int prox_native_mode=1;
 static ProxNativeQueryState state;
 static jmp_buf finished;
 static int mode,opened,queries,downloads,launches,removes,borrowed,live=1,report_open,steps,power_calls;
 static unsigned int expected_running[3];
+#ifdef PROX_NATIVE_BACKGROUND
+#include "native_background.h"
+int proxNativeInstallService(int action,ProxNativeInstallMessage *m,unsigned int size)
+{ (void)action;(void)m;(void)size;assert(0);return -1; }
+int prox_native_background_prepare(const ProxJob *job,const ProxManifest *manifest,unsigned int model,ProxNativeInstallJob *out)
+{
+    assert(!borrowed && report_open && model==1 && !strcmp(manifest->version,"0.3.1"));
+    assert(!strcmp(job->source_version,PROX_PRODUCT_VERSION));
+    memset(out,0,sizeof(*out));strcpy(out->root,job->root);return 0;
+}
+void prox_native_background_discard(const char *root)
+{ assert(strstr(root,".stage-pro-x-583ad26f7cce")); }
+int prox_native_background_launch(const char *directory,const ProxNativeInstallJob *job)
+{
+    assert(strstr(job->root,".stage-") && !strcmp(directory,"ms0:/PSP/GAME/PROXUPDATE"));
+    assert(!borrowed && report_open && !state.cancel && state.phase==PROX_NQ_HANDOFF);
+    assert(!prox_native_handoff_close() && !report_open);++launches;return 0;
+}
+int prox_native_background_wait(void) { assert(!report_open);return -1; }
+#endif
 int proxNativeQueryService(int action,ProxNativeQueryMessage *m,unsigned int size)
 {
     assert(size==sizeof(*m));
@@ -29,7 +50,13 @@ int sceIoOpen(const char *p,int f,int m)
 int sceIoWrite(int fd,const void *p,unsigned int n) { assert(fd==9 && report_open && p); return mode==12?-1:(int)n; }
 int prox_native_trust(void) { return 0; }
 int sceIoClose(int fd) { assert(fd==9 && report_open); report_open=0; return 0; }
-void prox_log(const char *f,...) { char b[384]; va_list v; va_start(v,f); vsnprintf(b,sizeof(b),f,v); va_end(v); prox_native_log_line(b); }
+void prox_log(const char *f,...) {
+    char b[384]; va_list v; va_start(v,f); vsnprintf(b,sizeof(b),f,v); va_end(v);
+#ifdef PROX_NATIVE_INSTALL_PREVIEW
+    if(strstr(b,"NO-FLASH INSTALL PREVIEW: synthetic offer")) ++queries;
+#endif
+    prox_native_log_line(b);
+}
 int prox_transport_new_query(void) { assert(!borrowed); return 0; }
 int prox_network_borrow(void) { assert(!borrowed); borrowed=1; return 0; }
 int prox_network_end(void) { assert(borrowed); borrowed=0; return 0; }
@@ -67,6 +94,27 @@ int prox_launch_job(const ProxJob *job)
     assert(!strcmp(job->source_version,PROX_PRODUCT_VERSION) && job->manifest_sha256[0]=='a'); ++launches;
     return -1; /* Failed loader must not report installation or reboot success. */
 }
+#ifdef PROX_NATIVE_INSTALL_PREVIEW
+int prox_install_preview_download(const char *directory,ProxNativeProgress progress)
+{
+    assert(!strcmp(directory,"ms0:/PSP/GAME/PROXUPDATE") && !borrowed);
+    /* Independent regression: the old preview branch reached this function
+     * with zero power checks and must fail this fixture. */
+    assert(power_calls>0 && mode!=4);
+    ++downloads;
+    assert(!progress(32768,1024u*1024u,NULL));
+    if(mode==1) { prox_nq_cancel(&state); return -1; }
+    if(mode==2) return -1;
+    assert(!progress(1024u*1024u,1024u*1024u,NULL));
+    return 0;
+}
+int prox_install_preview_launch(const char *directory)
+{
+    assert(!strcmp(directory,"ms0:/PSP/GAME/PROXUPDATE"));
+    assert(!borrowed && !report_open && !state.cancel && state.phase==PROX_NQ_HANDOFF);
+    ++launches; return -1;
+}
+#endif
 int sceKernelDelayThread(unsigned int us)
 {
     assert(us==50000);
@@ -100,6 +148,9 @@ int main(void)
     char *args[]={"ms0:/PSP/GAME/PROXUPDATE/EBOOT.PBP","--prox-native-query-v3","0000004d"};
     sscanf(PROX_PRODUCT_VERSION,"%u.%u.%u",expected_running,expected_running+1,expected_running+2);
     for(mode=0;mode<13;++mode) {
+#ifdef PROX_NATIVE_INSTALL_PREVIEW
+        if(mode!=0 && mode!=1 && mode!=2 && mode!=3 && mode!=4 && mode!=8) continue;
+#endif
         ProxNativeQueryMessage m={0}; opened=queries=downloads=launches=removes=borrowed=report_open=steps=power_calls=0;
         prox_nq_reset(&state,77); assert(!prox_nq_open(&state));
         m.protocol=PROX_NQ_PROTOCOL; m.lease=77;
@@ -109,7 +160,15 @@ int main(void)
         if(mode==9 || mode==12) assert(opened==2 && !downloads && !launches && !power_calls);
         else if(mode==5 || mode==7 || mode==10 || mode==11) assert(opened==1 && !downloads && !launches && !power_calls);
         else { assert(opened==2); assert(downloads==(mode==4?0:1)); assert(launches==(mode==0?1:0)); }
+#ifdef PROX_NATIVE_INSTALL_PREVIEW
+        assert(!removes); /* No real stage exists in the preview. */
+#else
         assert(removes==(mode==3?1:0));
+#endif
     }
+#ifdef PROX_NATIVE_INSTALL_PREVIEW
+    puts("PASS: actual preview worker rejects missing AC before any progress/download, retains late power recheck, cancellation and returned-launch failure; no stage/network/flash");
+#else
     puts("PASS: actual resident worker retains exact offer/generation, owns private stage, borrows/releases networking, cancels/cleans up and gates target LoadExec; returned launch never succeeds");
+#endif
 }

@@ -20,6 +20,12 @@ done
 exec /usr/local/pspdev/bin/psp-gcc "$@"
 EOF
 chmod +x /tmp/pro-x-bin/psp-gcc
+# Keep the inherited signer within the existing compressed template's bounds.
+# Only header selection changes; use the retained source and original crypto.
+cc -O2 \
+    /work/firmware/contrib/PrxEncrypter/main.c \
+    /work/firmware/contrib/PrxEncrypter/kirk_engine.c \
+    /work/firmware/contrib/PrxEncrypter/crypto.c -lz -o /tmp/pro-x-bin/PrxEncrypter
 export PATH="/tmp/pro-x-bin:$PATH"
 make CONFIG_661=1 build_lib
 if [ -d Updater ]; then
@@ -40,6 +46,21 @@ if [ -d Updater ]; then
     # The installer shares storage/JSON/SHA-256 sources, not its private bridge.
     # Recompile the client objects with its own flags and build identity.
     rm -f Updater/*.o
+    case "${PROX_NATIVE_UPDATE_FLAGS:-}" in
+        *-DPROX_NATIVE_BACKGROUND=1*)
+            python3 /work/scripts/native_signed_templates.py contrib/PrxEncrypter/main.c Updater/native_signed_templates.h
+            make -C tools/nativeinstaller
+            python3 /work/scripts/generate-native-engine.py tools/nativeinstaller/native_installer.prx Updater/native_engine.h
+            ;;
+        *-DPROX_NATIVE_INSTALL_PREVIEW=1*)
+            make -C tools/nativeinstallpreview
+            python3 /work/scripts/generate-native-preview-hashes.py \
+                tools/nativeinstallpreview/native_install_preview.prx Rebootex/Rebootex.prx Updater/native_preview_hashes.h
+            mkdir -p "$output_dir/PSP/GAME/PROXUPDATE"
+            cp tools/nativeinstallpreview/native_install_preview.prx "$output_dir/PSP/GAME/PROXUPDATE/native-install-preview.prx"
+            cp Rebootex/Rebootex.prx "$output_dir/PSP/GAME/PROXUPDATE/native-preview-reboot.prx"
+            ;;
+    esac
     sh /work/scripts/compile-updater.sh "$build_dir/Updater" "$(basename "$output_dir")"
     mkdir -p "$output_dir/PSP/GAME/PROXUPDATE"
     cp Updater/EBOOT.PBP Updater/cacert.pem "$output_dir/PSP/GAME/PROXUPDATE/"

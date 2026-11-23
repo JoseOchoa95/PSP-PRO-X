@@ -91,6 +91,35 @@ def main():
              'produced_assets':'Production native parser verified and staged all eight generated payload files, including real PBP/SFO/executable headers',
              'produced_installer':'PASS: actual product header, real eight payloads, preflight/storage commit and preserved plugin/report markers in an isolated fixture; NO FLASH INSTALLATION',
              'fixture_limit':'Locally constructed release/older source parameter; no PSP loader or flash capability; not an official stable update'}
+    actual=json.loads((ROOT/'artifacts/pro-x-build.json').read_text())
+    if actual.get('native_background'):
+        if actual['build_id']!=build['build_id']:raise RuntimeError('Signed consumer compiled build differs')
+        signed=ROOT/'artifacts/phase3/signed-native';signed.mkdir(exist_ok=True)
+        from native_signed_templates import render
+        (signed/'native_signed_templates.h').write_bytes(render((ROOT/'firmware/contrib/PrxEncrypter/main.c').read_bytes()))
+        executable=signed/'signed-package-test'
+        command=['cc','-std=c99','-O2','-I'+str(ROOT/'firmware/Common'),'-I'+str(ROOT/'firmware/Updater'),'-I'+str(signed),
+                 str(ROOT/'tests/native/test_native_signed_package.c')]
+        command += [str(ROOT/'firmware/Updater'/n) for n in ('native_signed.c','native_payload.c','native_kirk.c','native_crypto.c')]
+        command += ['-lz','-o',str(executable)]
+        subprocess.run(command,check=True,capture_output=True)
+        names=['SystemControl/systemctrl.prx','Vshctrl/vshctrl.prx','ISODrivers/Galaxy/galaxy.prx','Stargate/stargate.prx',
+               'ISODrivers/March33/march33_660.prx','ISODrivers/Inferno/inferno.prx','usbdevice/usbdevice.prx','Popcorn/popcorn.prx',
+               'Satelite/satelite.prx','Recovery/recovery.prx','Rebootex/Rebootex.prx']
+        with tempfile.TemporaryDirectory(dir=signed) as temporary:
+            output=Path(temporary)
+            result=subprocess.run([str(executable),str(ROOT/actual['output']/'PSP/GAME/PROUPDATE/EBOOT.PBP'),str(output)],
+                                  capture_output=True,text=True,timeout=30)
+            (ROOT/'artifacts/phase3/produced-signed-native.log').write_text(result.stdout+result.stderr)
+            if result.returncode:raise RuntimeError('Actual signed package rejected by data decoder: '+result.stdout+result.stderr)
+            decoded={}
+            for i,name in enumerate(names):
+                part=(output/('%02u.prx'%i)).read_bytes()
+                if part!=(ROOT/actual['output']/'build-tree'/name).read_bytes():raise RuntimeError('Decoded target module differs: '+name)
+                decoded[name]={'size':len(part),'sha256':digest(part)}
+            if len(list(output.iterdir()))!=11:raise RuntimeError('Unexpected signed decode output')
+        summary.update(signed_payload_consumer='PASS: actual signed produced PBP, checked CMAC/decrypt/GZIP/ELF and eleven exact compiled target images; no PSP module loading/flash',
+                       decoded_target_parts=decoded)
     if args.catalog:
         catalog=args.catalog.resolve()
         with tempfile.TemporaryDirectory(dir=work) as directory:
