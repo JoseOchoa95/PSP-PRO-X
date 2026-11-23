@@ -180,8 +180,9 @@ int load_elf(char *elff)
 
 	fseek(fp, 0, SEEK_END);
 	int size = ftell(fp);
+	if (size <= 0 || size > sizeof(elf)) { fclose(fp); return -1; }
 	fseek(fp, 0, SEEK_SET);
-	fread(elf, 1, size, fp);
+	if (fread(elf, 1, size, fp) != size) { fclose(fp); return -1; }
 	fclose(fp);
 
 	return size;
@@ -278,7 +279,7 @@ int gzip_compress(u8 *dst, const u8 *src, int size)
 
 	ret = deflate(&strm, Z_FINISH);
 
-	if(ret == Z_STREAM_ERROR) {
+	if(ret != Z_STREAM_END) {
 		deflateEnd(&strm);
 		printf("%s: compress error\n", __func__);
 		free(elf_compress);
@@ -290,7 +291,34 @@ int gzip_compress(u8 *dst, const u8 *src, int size)
 	deflateEnd(&strm);
 	free(elf_compress);
 
-	return 0;
+	return (int)strm.total_out;
+}
+
+/* Signed compressed templates bound the compressed payload and declared
+ * decompressed extent separately. Do not select the multi-megabyte raw
+ * template merely because the uncompressed PRX crosses a smaller slot. */
+static int fit_header(Header_List *header,int *size)
+{
+		int capacity=get_kirk_size(header->kirkHeader)-0x110;
+		if (is_compressed(header->pspHeader)) {
+			int extent=get_elf_size(header->pspHeader),compressed;
+			if (extent < *size || extent > sizeof(elf)) return 0;
+			compressed=gzip_compress(in_buffer,elf,extent);
+			/* The existing CMAC adjustment owns the final padding block. */
+			if (compressed <= 0 || compressed > capacity-16) return 0;
+			memcpy(elf,in_buffer,compressed);*size=compressed;return 1;
+		}
+		return *size <= capacity-16;
+}
+static Header_List *select_header(int *size)
+{
+	Header_List *legacy=get_header_list(*size);int i;
+	/* Preserve the usual compressed-template choice where it already fits. */
+	if (legacy && is_compressed(legacy->pspHeader) && fit_header(legacy,size)) return legacy;
+	for (i=sizeof(header_list)/sizeof(header_list[0])-1;i>=0;--i)
+		if (is_compressed(header_list[i].pspHeader) && fit_header(&header_list[i],size)) return &header_list[i];
+	if (legacy && fit_header(legacy,size)) return legacy;
+	return NULL;
 }
 
 int main(int argc, char **argv)
@@ -320,7 +348,7 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	Header_List *target_header = get_header_list( elfSize );
+	Header_List *target_header = select_header(&elfSize);
 
 	if( target_header == NULL ) {
 		printf("PRX SIGNER: Elf is to big\n");
@@ -331,11 +359,6 @@ int main(int argc, char **argv)
 	u8 *kirkHeader	= target_header->kirkHeader;
 	u8 *pspHeader	= target_header->pspHeader;
 	int krawSize = get_kirk_size(kirkHeader);
-
-	if (is_compressed(pspHeader)) {
-		elfSize = get_elf_size(pspHeader);
-		gzip_compress(elf, elf, elfSize);
-	}
 
 	memcpy(kirk_raw, kirkHeader, 0x110);
 	memcpy(rawkheaderBk, kirk_raw, sizeof(rawkheaderBk));
@@ -362,5 +385,5 @@ int main(int argc, char **argv)
 	memcpy(out_buffer, pspHeader, 0x150);
 	memcpy(out_buffer+0x150, kirk_enc+0x110, krawSize-0x110);
 
-	return dumpFile("./data.psp", out_buffer, (krawSize-0x110)+0x150);
+	return dumpFile(argc > 2 ? argv[2] : "./data.psp", out_buffer, (krawSize-0x110)+0x150);
 }

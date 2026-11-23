@@ -45,13 +45,17 @@ def main():
             sources[directory + '/' + name] = (ROOT / directory / name).read_bytes()
     for name in ['README.md', 'AGENTS.md', 'LICENSE', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', '.gitattributes', '.gitignore']:
         sources[name] = (ROOT / name).read_bytes()
+    background=bool(build.get('native_background'))
+    completion = {
+        'path':'PSP/GAME/PROXUPDATE/native-completion.rco','bytes':377448,
+        'sha256':'714c0af3c51f61a895311ee1e58e719d8ed7fc5d3e5e441de38d67133617c265',
+        'included_in_package':False,
+    } if background else None
     source_note = (
         f'PRO-X v{VERSION} / 6.61: original native System Update frontend and verified GitHub updater.\n'
-        'The owner reports successful missing-AC/missing-storage checks after a real offer and a complete 0.3.0 -> 0.3.1 update using the matching temporary-version variant.\n'
         'See the exact-build owner-report scope in manifest.json; do not infer universal model/router or Infinity validation.\n'
-        'The existing target installer retains its text screen and X confirmations.\n\n'
-        'This archive contains the exact inputs needed to build Installer and Fast Recovery,\n'
-        'including inherited libraries/March33, scripts, notices and documentation.\n'
+        + ('Native OTA uses a matched background writer; see the exact-build owner-reported validation scope in manifest.json. The separate owner-supplied original completion resource is required at runtime and is not included.\n\n' if background else 'The existing target installer retains its text screen and X confirmations.\n\n') +
+        'This archive contains the exact inputs needed to build Installer and Fast Recovery, including inherited libraries/March33, scripts, notices and documentation.\n'
         'Inherited source tools are preserved; compilation and the binary package omit IPL/permanent/dumping programs. No Sony firmware or Infinity is included.\n'
         'See docs/upstream.md for upstream SHA, authorship and inherited binary limitations.\n'
         'Build: docker build -t pro-x-toolchain:phase1 -f scripts/Dockerfile scripts\n'
@@ -106,8 +110,9 @@ def main():
         'status': 'native-update-release-candidate', 'hardware': native_status, 'infinity': 'NOT RUN',
         'native_update_hardware_report': native_report,
         'baseline_hardware_report': HARDWARE_REPORT,
-        'phase3': {'milestone': 'native GitHub checking, verified download and existing-installer handoff',
+        'phase3': {'milestone': 'native GitHub checking, verified download and '+('background installation' if background else 'existing-installer handoff'),
                    'native_frontend': True, 'native_ota': True,
+                   'native_background':background,'completion_resource':completion,
                    'online_installation_implemented': True, 'physical_validation': native_status,
                    'transport_baseline': {'build_id': 'pro-x-c41ee2ff7b5e', 'status': 'USER_SUPPLIED_REPORTS_PASS',
                                           'reports': ['report-006', 'report-007', 'report-008']},
@@ -122,6 +127,7 @@ def main():
         'build_repository_head': build['repository_head'],
         'source_tree_sha256': build['source_tree_sha256'], 'source_files': build['source_files'],
         'compile_script_sha256': build['compile_script_sha256'],
+        'host_signer_source_files': {n:h for n,h in build['source_files'].items() if n.startswith('contrib/PrxEncrypter/')},
         'dockerfile_sha256': build['dockerfile_sha256'], 'toolchain_image': build['toolchain_image'],
         'toolchain_base': 'ghcr.io/pspdev/pspdev-docker@sha256:c4888f62d5b1d2ff905b14bab664c346af4d72e71e4bb13e815dafa3219eb18a',
         'reference_source_sha256': reference['source_tree_sha256'],
@@ -133,6 +139,10 @@ def main():
         'files': {name: sha(data) for name, data in sorted(files.items())},
         'hash_convention': 'files excludes manifest.json and SHA256SUMS; SHA256SUMS covers manifest and all payload files except itself; ZIP hashes are external',
     }
+    if completion:
+        for name,data in {**files,**sources}.items():
+            require(not name.lower().endswith('.rco') and sha(data)!=completion['sha256'],
+                    'Original completion resource must remain outside distributable packages')
     files['manifest.json'] = (json.dumps(manifest, indent=2) + '\n').encode()
     files['SHA256SUMS'] = ''.join(sha(data) + '  ' + name + '\n' for name, data in sorted(files.items())).encode()
     binary_zip = OUTPUT_DIR / (NAME + '.zip')
@@ -148,6 +158,7 @@ def main():
         'source_identity': 'working tree identified by hashes; HEAD alone is not this build',
         'toolchain_image': build['toolchain_image'],
         'compile_script_sha256': build['compile_script_sha256'],
+        'host_signer_source_files': manifest['host_signer_source_files'],
         'updater_compile_script_sha256': sha((ROOT / 'scripts/compile-updater.sh').read_bytes()),
         'packages': {p.name: sha(p.read_bytes()) for p in [binary_zip, source_zip, update_zip, update_json]},
         'detailed_manifest_sha256': sha(files['manifest.json']),

@@ -1,5 +1,6 @@
-/* Incomplete, virtual-only progress stream. Caller serializes state access.
- * Never permits the original download to reach completion. GPL-3.0-or-later. */
+/* Virtual-only progress stream. Caller serializes state access. Normal reads
+ * withhold completion; explicit diagnostic finish requires a guarded caller.
+ * GPL-3.0-or-later. */
 #include "native_preview_stream.h"
 #include <string.h>
 void prox_preview_stream_reset(ProxPreviewStream *s)
@@ -49,3 +50,10 @@ int prox_preview_stream_close(ProxPreviewStream *s,int owner,int fd)
     return 0; /* Never pass a stale synthetic descriptor to the real kernel. */
 }
 void prox_preview_stream_abort(ProxPreviewStream *s) { s->cancelled=1; }
+int prox_preview_stream_finish(ProxPreviewStream *s,int owner,unsigned int capacity,unsigned int serial,int ready)
+{
+    if(ready!=1 || !s->opened || s->cancelled || s->owner!=owner || owner<=0 || s->serial!=serial ||
+       s->pending || s->written!=s->read || s->total<PROX_PREVIEW_CHUNK ||
+       s->read!=s->total-PROX_PREVIEW_CHUNK || capacity<PROX_PREVIEW_CHUNK) return -1;
+    s->read+=PROX_PREVIEW_CHUNK;s->pending=PROX_PREVIEW_CHUNK;return PROX_PREVIEW_CHUNK;
+}

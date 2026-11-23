@@ -19,6 +19,15 @@
 #include "catalog.h"
 #include "native_download.h"
 #include "stage.h"
+#ifdef PROX_NATIVE_BACKGROUND
+#include "native_background.h"
+static ProxNativeInstallJob native_job;
+static int have_native;
+#endif
+#ifdef PROX_NATIVE_INSTALL_PREVIEW
+#include "prox_install_preview.h"
+#include "native_install_preview.h"
+#endif
 const char prox_native_service_marker[]="PROX-NATIVE-QUERY-V3";
 static unsigned int lease_id,generation;
 static int report_fd=-1,report_failed,report_required;
@@ -30,11 +39,34 @@ static int have_offer,have_stage;
 static unsigned int failure;
 static void packet(ProxNativeQueryMessage *m)
 { memset(m,0,sizeof(*m)); m->protocol=PROX_NQ_PROTOCOL; m->lease=lease_id; m->generation=generation; }
+int prox_native_install_exchange(int action,ProxNativeInstallMessage *message)
+{
+#ifdef PROX_NATIVE_BACKGROUND
+    message->protocol=PROX_NI_PROTOCOL;message->lease=lease_id;message->generation=generation;
+    return proxNativeInstallService(action,message,sizeof(*message));
+#else
+    (void)action;(void)message;return -1;
+#endif
+}
+int prox_native_completion_prepare(const unsigned short *text,unsigned int count)
+{
+    ProxNativeQueryMessage m;
+    if(!prox_native_mode || !text || count<2 || count>120) return -1;
+    packet(&m);m.downloaded=count;memcpy(m.summary,text,count*sizeof(*text));
+    return proxNativeQueryService(PROX_NQ_NOTICE_ARM,&m,sizeof(m));
+}
 void prox_native_log_line(const char *line)
 {
     unsigned int length=(unsigned int)strlen(line);
     if(report_fd<0 || sceIoWrite(report_fd,line,length)!=(int)length || sceIoWrite(report_fd,"\n",1)!=1)
         report_failed=1;
+}
+int prox_native_completion_pending(void)
+{
+    ProxNativeQueryMessage m;
+    if(!prox_native_mode) return -1;
+    packet(&m);
+    return proxNativeQueryService(PROX_NQ_NOTICE_STATUS,&m,sizeof(m))<0?-1:m.result;
 }
 int prox_native_is_cancelled(void)
 {
@@ -80,6 +112,13 @@ static int query(ProxCatalogOffer *offer)
     prox_log("Running product=%u.%u.%u model_id=%d",running[0],running[1],running[2],proxUpdateGetState(5));
     now=time(NULL); prox_log("RTC epoch=%ld",(long)now);
     if(now<1735689600) { prox_log("Correct PSP date/time before authenticated HTTPS"); goto done; }
+#ifdef PROX_NATIVE_INSTALL_PREVIEW
+    prox_log("NO-FLASH INSTALL PREVIEW: synthetic offer, no GitHub query, no downloaded update");
+    strcpy(offer->manifest.version,PROX_PRODUCT_VERSION);
+    strcpy(offer->manifest.summary,"NO-FLASH background lifecycle diagnostic; not an available update");
+    offer->manifest.package_size=PROX_INSTALL_PREVIEW_BYTES;
+    result=1; goto done;
+#endif
     if(prox_transport_new_query()) goto done;
     if(prox_network_borrow()) goto done;
     borrowed=1;
@@ -103,7 +142,13 @@ static int progress(unsigned int received,unsigned int total,void *context)
 }
 static void discard_stage(void)
 {
+#ifdef PROX_NATIVE_BACKGROUND
+    if(have_native)prox_native_background_discard(job.root);
+    have_native=0;memset(&native_job,0,sizeof(native_job));
+#endif
+#ifndef PROX_NATIVE_INSTALL_PREVIEW
     if(have_stage) prox_stage_remove(job.root);
+#endif
     memset(&job,0,sizeof(job)); have_stage=0;
 }
 static int download(void)
@@ -113,11 +158,18 @@ static int download(void)
     report_required=1;
     if(open_report("download")) { failure=PROX_NQ_CAUSE_STORAGE; return -1; }
     prox_log("PRO-X v" PROX_PRODUCT_VERSION " native REAL download build " PROX_BUILD_ID);
-    prox_log("Consented generation=%u target=%s build=%s package=%u; legacy target installer handoff",
+    prox_log("Consented generation=%u target=%s build=%s package=%u; verified installation handoff",
              generation,retained.manifest.version,retained.manifest.build_id,retained.manifest.package_size);
     if(report_failed) { failure=PROX_NQ_CAUSE_STORAGE; goto done; }
     if(!have_offer || offer_generation!=generation) goto done;
+    /* The explicit diagnostic must obey the same pre-progress readiness
+     * boundary as the real downloader. Recheck again before handoff. */
     if(!prox_power_ready()) { failure=PROX_NQ_CAUSE_POWER; goto done; }
+#ifdef PROX_NATIVE_INSTALL_PREVIEW
+    result=prox_install_preview_download(directory,progress);
+    if(!result) have_stage=1;
+    goto done;
+#endif
     if(prox_native_is_cancelled() ||
        time(NULL)<1735689600 || prox_transport_new_query() || prox_network_borrow()) goto done;
     borrowed=1;
@@ -125,6 +177,13 @@ static int download(void)
     if(!result) have_stage=1;
 done:
     if(borrowed && prox_network_end()) result=-1;
+#ifdef PROX_NATIVE_BACKGROUND
+    if(!result) {
+        if(prox_native_background_prepare(&job,&retained.manifest,model,&native_job)) {
+            result=-1;failure=PROX_NQ_CAUSE_CLIENT;
+        } else have_native=1;
+    }
+#endif
     if(report_failed || prox_native_is_cancelled()) result=-1;
     if(result && failure==PROX_NQ_CAUSE_NONE) {
         SceIoStat stat;
@@ -141,6 +200,8 @@ static void close_report(void)
     if(report_fd>=0 && sceIoClose(report_fd)<0) report_failed=1;
     report_fd=-1;
 }
+int prox_native_handoff_close(void)
+{ close_report();return report_failed?-1:0; }
 void prox_native_worker(int argc,char **argv)
 {
     ProxNativeQueryMessage m; unsigned int i; int valid=1;
@@ -190,15 +251,35 @@ void prox_native_worker(int argc,char **argv)
             failure=PROX_NQ_CAUSE_CLIENT;
             if(have_offer && have_stage && m.generation==offer_generation && !prox_native_is_cancelled()) {
               if(!prox_power_ready()) failure=PROX_NQ_CAUSE_POWER;
-              else if(!prox_stage_check(job.root,&retained.manifest)) {
+              else
+#ifdef PROX_NATIVE_INSTALL_PREVIEW
+              {
+                prox_log("NO-FLASH preview: keep original progress visible; module load and CFW restart only");
+                close_report();
+                if(!report_failed && !prox_native_is_cancelled()) rc=prox_install_preview_launch(directory);
+              }
+#else
+#ifdef PROX_NATIVE_BACKGROUND
+              if(have_native && !prox_stage_check(job.root,&retained.manifest)) {
+                rc=prox_native_background_launch(directory,&native_job);
+                close_report();
+                if(!rc)rc=prox_native_background_wait();
+              }
+#else
+              if(!prox_stage_check(job.root,&retained.manifest)) {
                 prox_log("Verified native handoff to target installer %s; legacy --prox-ota-v1; settings/plugins preserved",retained.manifest.version);
                 close_report();
                 if(!report_failed && !prox_native_is_cancelled()) rc=prox_launch_job(&job);
               }
+#endif
+#endif
             }
             /* Successful LoadExec does not return. Preserve stage on a returned
              * launch for diagnosis; never report installation/reboot success. */
             (void)rc; close_report(); have_offer=0; have_stage=0;
+#ifdef PROX_NATIVE_BACKGROUND
+            have_native=0; /* Retain an attempted install's stage for recovery. */
+#endif
             packet(&m); m.result=-1; m.failure=failure;
             if(proxNativeQueryService(PROX_NQ_RESULT,&m,sizeof(m))<0) prox_native_resident_fault();
         } else if(m.cancel && have_stage) {

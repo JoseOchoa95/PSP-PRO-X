@@ -15,5 +15,6 @@ int prox_preview_stream_read(ProxPreviewStream *,int owner,unsigned int serial,u
 int prox_preview_stream_write(ProxPreviewStream *,int owner,int fd,unsigned int size);
 int prox_preview_stream_close(ProxPreviewStream *,int owner,int fd);
 void prox_preview_stream_abort(ProxPreviewStream *);
+int prox_preview_stream_finish(ProxPreviewStream *,int owner,unsigned int capacity,unsigned int serial,int ready);
 int prox_preview_stream_fd(int fd);
 #endif

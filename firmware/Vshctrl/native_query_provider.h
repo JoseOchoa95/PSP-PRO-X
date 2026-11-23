@@ -9,4 +9,12 @@ void prox_native_query_load_failed_reason(unsigned int);
 const char *proxNativeQueryTextKey(const char *);
 int prox_native_ota_begin(int owner,unsigned int total);
 int prox_native_ota_wait(int owner,unsigned int received,unsigned int wanted);
+#if defined(PROX_NATIVE_INSTALL_PREVIEW) || defined(PROX_NATIVE_BACKGROUND)
+int prox_native_install_preview_locked(void);
+unsigned int prox_native_completion_generation(void);
+#endif
+#ifdef PROX_NATIVE_BACKGROUND
+int prox_native_install_critical(void);
+int prox_native_install_completion_owner(int,unsigned int);
+#endif
 #endif

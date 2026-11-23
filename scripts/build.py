@@ -54,16 +54,18 @@ def prepare_reference(destination):
 
 
 def configure_native_mode(args):
-    """Normal PRO-X builds use the accepted real native flow; previews stay opt-in."""
-    selected=sum(bool(getattr(args,name)) for name in
-                 ('native_query','native_offer_preview','native_progress_preview','native_ota'))
+    """Normal PRO-X builds use the real native flow; previews stay opt-in."""
+    selected=sum(bool(getattr(args,name,False)) for name in
+                 ('native_query','native_offer_preview','native_progress_preview','native_ota','native_install_preview'))
     if selected>1 or (selected and args.mode!='pro-x'):
         raise ValueError('select one native mode for pro-x only')
     if args.mode=='pro-x' and not selected:
         args.native_ota=True
+    if getattr(args,'native_install_preview',False): args.native_ota=True
     if args.native_ota: args.native_query=True
     if args.native_progress_preview: args.native_offer_preview=True
     if args.native_offer_preview: args.native_query=True
+    args.native_background=args.native_ota and not getattr(args,'native_install_preview',False)
 
 
 def main():
@@ -72,7 +74,8 @@ def main():
     parser.add_argument('--native-query',action='store_true',help='real catalog query in original UI; native installation blocked')
     parser.add_argument('--native-offer-preview',action='store_true',help='simulated positive native UI after real query; all native writes blocked')
     parser.add_argument('--native-progress-preview',action='store_true',help='synthetic incomplete progress through a virtual file; no real update writes')
-    parser.add_argument('--native-ota',action='store_true',help='real native download/staging and existing target installer (the PRO-X default)')
+    parser.add_argument('--native-ota',action='store_true',help='real native download/staging and background installation (the PRO-X default)')
+    parser.add_argument('--native-install-preview',action='store_true',help='NO-FLASH synthetic original-UI background module/restart diagnostic; no Internet update')
     args = parser.parse_args()
     try: configure_native_mode(args)
     except ValueError as error: parser.error(str(error))
@@ -99,6 +102,8 @@ def main():
         if args.native_offer_preview: flags+=' -DPROX_NATIVE_OFFER_PREVIEW=1'
         if args.native_progress_preview: flags+=' -DPROX_NATIVE_PROGRESS_PREVIEW=1'
         if args.native_ota: flags+=' -DPROX_NATIVE_OTA=1'
+        if args.native_install_preview: flags+=' -DPROX_NATIVE_INSTALL_PREVIEW=1'
+        if args.native_background: flags+=' -DPROX_NATIVE_BACKGROUND=1'
         command[command.index(image):command.index(image)]=['--env','PROX_NATIVE_UPDATE_FLAGS='+flags]
     with log.open('wb') as stream:
         result = subprocess.run(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT)
@@ -112,6 +117,8 @@ def main():
         'native_offer_preview':args.native_offer_preview,
         'native_progress_preview':args.native_progress_preview,
         'native_ota':args.native_ota,
+        'native_install_preview':args.native_install_preview,
+        'native_background':args.native_background,
         'product_version': VERSION if args.mode == 'pro-x' else None,
         'build_id': identifier,
         'repository_head': repository_head(),

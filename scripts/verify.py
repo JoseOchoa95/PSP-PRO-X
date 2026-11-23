@@ -1,11 +1,13 @@
 """Offline checks of source scope, PBP titles and embedded module provenance."""
 from pathlib import Path
 import gzip
+import hashlib
 import json
 import re
 import struct
 from build import ROOT, inventory, digest, sha
 from product import VERSION, WPA2_VARIANT
+from native_signed_templates import render as render_signed_templates
 
 REPLACEMENTS = {
     'Installer/main.c': [(b'#define VERSION_STR "PRO-C"', b'#define VERSION_STR "PRO-X"'),
@@ -25,13 +27,61 @@ PHASE2_ADDED = {'Common/prox_network.c', 'Common/prox_network.h',
                 'tools/wpa2diag/Makefile', 'tools/wpa2diag/main.c'}
 
 PHASE3_MODIFIED = {'Installer/main.c', 'Installer/Makefile', 'PXE/Launcher/main.c', 'SystemControl/Makefile', 'SystemControl/exports.exp',
+                   'contrib/PrxEncrypter/main.c',
                    'Vshctrl/custom_update.c', 'Vshctrl/exports.exp', 'Vshctrl/vshpatch.c',
-                   'PXE/Launcher/Makefile', 'FastRecovery/Makefile', 'Vshctrl/Makefile'}
+                   'PXE/Launcher/Makefile', 'FastRecovery/Makefile', 'Vshctrl/Makefile', 'Vshctrl/vshmenu.c'}
 
 
 def require(condition, message):
     if not condition:
         raise RuntimeError(message)
+
+
+def elf_u32_symbol(data, name):
+    """Read an initialized ELF32 symbol from the compiled PSP artifact."""
+    require(data[:6] == b'\x7fELF\x01\x01', 'Expected little-endian ELF32')
+    start = struct.unpack_from('<I', data, 32)[0]
+    width, count = struct.unpack_from('<HH', data, 46)
+    require(width == 40 and start + width * count <= len(data), 'Invalid ELF sections')
+    sections = [struct.unpack_from('<10I', data, start+i*width) for i in range(count)]
+    found = []
+    for section in sections:
+        if section[1] != 2:
+            continue
+        require(section[9] == 16 and section[6] < count, 'Invalid ELF symbol table')
+        strings = sections[section[6]]
+        names = data[strings[4]:strings[4]+strings[5]]
+        for offset in range(section[4], section[4]+section[5], 16):
+            label, address, size, _, _, index = struct.unpack_from('<IIIBBH', data, offset)
+            if names[label:].split(b'\0', 1)[0] != name.encode():
+                continue
+            require(0 < index < count and size == 4, 'Invalid scalar symbol')
+            target = sections[index]
+            position = address-target[3]
+            require(target[1] != 8 and 0 <= position <= target[5]-4, 'Uninitialized scalar symbol')
+            found.append(struct.unpack_from('<I', data, target[4]+position)[0])
+    require(len(found) == 1, 'Missing/ambiguous compiled symbol: '+name)
+    return found[0]
+
+
+def elf_function_frames(data,name):
+    """Bound the actual MIPS syscall-entry frame, not its user thread stack."""
+    require(data[:6]==b'\x7fELF\x01\x01','Expected ELF32')
+    start=struct.unpack_from('<I',data,32)[0];width,count=struct.unpack_from('<HH',data,46)
+    require(width==40,'Invalid ELF sections')
+    sections=[struct.unpack_from('<10I',data,start+i*width) for i in range(count)];found=[]
+    for section in sections:
+        if section[1]!=2:continue
+        names=sections[section[6]];strings=data[names[4]:names[4]+names[5]]
+        for at in range(section[4],section[4]+section[5],16):
+            label,address,size,_,_,index=struct.unpack_from('<IIIBBH',data,at)
+            if strings[label:].split(b'\0',1)[0]!=name.encode():continue
+            require(0<index<count and size and not size%4,'Invalid function symbol')
+            target=sections[index];offset=target[4]+address-target[3]
+            words=struct.unpack_from('<'+str(size//4)+'I',data,offset)
+            found.append([0x10000-(word&0xffff) for word in words if word&0xffff0000==0x27bd0000 and word&0x8000])
+    require(len(found)==1 and found[0],'Missing compiled entry/frame: '+name)
+    return found[0]
 
 
 def verify_source(reference):
@@ -188,6 +238,45 @@ def verify_build(metadata):
         require((output / 'PSP/GAME/PROXUPDATE/cacert.pem').read_bytes() ==
                 (ROOT / deps['ca_bundle']['path']).read_bytes(), 'Packaged CA bundle changed')
         info['PROXUPDATE'] = client
+        if metadata.get('native_background'):
+            generated=(tree/'Updater/native_signed_templates.h').read_bytes()
+            signer_source=(ROOT/'firmware/contrib/PrxEncrypter/main.c').read_bytes()
+            require(generated==render_signed_templates(signer_source),'Signed decoder templates differ from retained source')
+            client_elf=(tree/'Updater/prox_updater.elf').read_bytes()
+            require(b'PROX-NATIVE-DATA-ONLY-V1' in client_elf and sha(signer_source).encode() in client_elf,
+                    'Data-only decoder/template binding missing')
+            require(b'kuKernelLoadModuleWithApitype2' not in client_elf and
+                    b'sceUtilsBufferCopyWithRange' not in client_elf,
+                    'Target device loader or replacement PSP crypto service linked')
+            engine=(tree/'tools/nativeinstaller/native_installer.prx').read_bytes()
+            require(header_bytes(tree/'Updater/native_engine.h')==engine,'Background writer header differs')
+            require((tree/'Updater/prox_updater.elf').read_bytes().count(engine)==1,'Matching background writer absent/duplicated')
+            require(sha(engine).encode() in (tree/'Updater/prox_updater.elf').read_bytes(),'Background writer hash binding absent')
+            require(b'PROX-NATIVE-INSTALL-WRITER-V1' in engine,'Background writer identity absent')
+            for symbol in (b'proxNativeInstallService',b'proxNativeCompletionControl'):
+                require(hashlib.sha1(symbol).digest()[:4] in engine,'Background writer private import absent')
+            engine_elf=(tree/'tools/nativeinstaller/native_installer.elf').read_bytes()
+            require(elf_u32_symbol(engine_elf,'sce_newlib_attribute')==0xc0004000,
+                    'Background writer must create its main thread in VSH API class with VFPU')
+            require(b'kuKernelGetUserLevel' in engine_elf and b'VSH API expected level=4' in engine_elf,
+                    'Background writer effective VSH-level guard absent')
+            for forbidden in (b'sceIoAssign\0',b'sceIoUnassign\0',b'kuKernelCall\0',b'kuKernelPokew\0'):
+                require(forbidden not in engine_elf,'Background engine has an unsafe live-mount capability')
+            require(b'Background access BEGIN' in engine_elf and b'Background access END' in engine_elf and
+                    b'resident access revision mismatch' in engine_elf,'Missing access lease or resident capability guard')
+            require(all(marker in engine_elf for marker in (b'TRANSACTION stage=firmware-prepare',b'TRANSACTION stage=firmware-replace',
+                    b'TRANSACTION stage=firmware-sync',b'TRANSACTION stage=application-commit',b'FLASH_FAIL operation=',
+                    b'FLASH_ROLLBACK result=',b'STORAGE_MOVE operation=',b'FLASH_BACKUP verified',
+                    b'TRANSACTION stage=backup-flush',b'original flashfat rename unsupported')),'Missing checked-copy backup/flush or exact transaction failure evidence')
+            provider=(tree/'Vshctrl/native_query_provider.o').read_bytes()
+            require(max(elf_function_frames(provider,'proxNativeInstallService'))<=128 and
+                    b'sceKernelExtendKernelStack' in provider,'Access RPC regressed to a large syscall stack')
+            vsh=(tree/'Vshctrl/vshctrl.elf').read_bytes()
+            require(all(symbol in vsh for symbol in (b'prox_native_mount_begin',b'prox_native_mount_end',b'prox_mount_lease_end')),
+                    'Matching mounted-access kernel implementation missing')
+            for forbidden in (b'pspDebugScreen',b'sceDisplaySetFrameBuf',b'sceKernelLoadExec',b'sceGuInit'):
+                require(forbidden not in engine_elf,'Background engine UI/LoadExec not allowed')
+            embedded['tools/nativeinstaller/native_installer.prx']=sha(engine)
     return {'pbp': info, 'embedded_modules': embedded}
 
 
