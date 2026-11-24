@@ -13,5 +13,9 @@ int prox_ota_cleanup_modules(void);
 int prox_ota_native_begin(const ProxNativeInstallJob *,unsigned int,unsigned int);
 int prox_ota_storage_commit(void);
 int prox_ota_mark_committed(void);
+#ifdef PROX_NATIVE_DEDICATED_OTA
+int prox_ota_dedicated_trace(const ProxDedicatedJob *job);
+int prox_ota_dedicated_lock(void);
+#endif
 #endif
 #endif

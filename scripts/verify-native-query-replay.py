@@ -21,7 +21,10 @@ def main():
     ota=build.get('native_ota',False)
     install_preview=build.get('native_install_preview',False)
     background=build.get('native_background',False)
-    source = ROOT/'builds'/('pro-x-'+VERSION+'-661-'+('native-install-preview' if install_preview else 'native-ota-test' if ota else 'native-progress-preview' if progress else 'native-offer-preview' if preview else 'native-github-query')+'-source.zip')
+    resident=build.get('resident_query',False)
+    dedicated_preview=build.get('resident_dedicated_preview',False)
+    dedicated_ota=build.get('resident_dedicated_ota',False)
+    source = ROOT/'builds'/('pro-x-'+VERSION+'-661-'+('resident-dedicated-ota' if dedicated_ota else 'resident-dedicated-preview' if dedicated_preview else 'resident-query' if resident else 'native-install-preview' if install_preview else 'native-ota-test' if ota else 'native-progress-preview' if progress else 'native-offer-preview' if preview else 'native-github-query')+'-source.zip')
     if args.source: source=args.source.resolve()
     source_bytes=source.read_bytes(); source_sha=sha(source_bytes)
     base = ROOT/'artifacts/phase3'/('query-replay-'+source_sha[:12])
@@ -41,7 +44,10 @@ def main():
                'PROX_NATIVE_UPDATE_FLAGS=-DPROX_NATIVE_UI_QUERY=1'+(' -DPROX_NATIVE_OFFER_PREVIEW=1' if preview else '')+
                (' -DPROX_NATIVE_PROGRESS_PREVIEW=1' if progress else '')+(' -DPROX_NATIVE_OTA=1' if ota else '')+
                (' -DPROX_NATIVE_INSTALL_PREVIEW=1' if install_preview else '')+
-               (' -DPROX_NATIVE_BACKGROUND=1' if background else ''), build['toolchain_image'],
+               (' -DPROX_NATIVE_BACKGROUND=1' if background else '')+
+               (' -DPROX_NATIVE_RESIDENT_QUERY=1' if resident else '')+
+               (' -DPROX_NATIVE_DEDICATED_OTA=1' if dedicated_ota else '')+
+               (' -DPROX_NATIVE_OTA=1 -DPROX_NATIVE_DEDICATED_PREVIEW=1' if dedicated_preview else ''), build['toolchain_image'],
                'sh', '/work/scripts/compile.sh', '/work/firmware',
                '/work/artifacts/work/'+build['build_id']]
     with log.open('wb') as stream:
@@ -49,11 +55,22 @@ def main():
     require(not result.returncode, 'Replay failed; see '+str(log))
     require(inventory(output/'PSP') == build['artifacts'], 'Replayed executable or CA bytes differ')
     require(inventory(output/'modules') == build['modules'], 'Replayed embedded module bytes differ')
+    if resident:
+        local_worker = ROOT/build['output']/'build-tree/Updater/prox_updater.prx'
+        require(sha((output/'build-tree/Updater/prox_updater.prx').read_bytes()) == sha(local_worker.read_bytes()),
+                'Replayed resident worker differs')
+        data_dir = 'dedicated-fixture' if dedicated_preview else 'dedicated-update'
+        require(inventory(output/data_dir) == inventory(ROOT/build['output']/data_dir) and
+                inventory(output/'diagnostics') == build['diagnostics'],
+                'Replayed dedicated EBOOT or diagnostic differs')
     require(sha(source.read_bytes())==source_sha,'Source ZIP changed during replay')
     proof = dict(status='PASS', build_id=build['build_id'], source_zip_sha256=source_sha,
                  artifacts=build['artifacts'], embedded_modules='PASS', network='none')
+    if resident:
+        proof['resident_worker_sha256'] = sha(local_worker.read_bytes())
+        proof['dedicated_update'] = inventory(output/data_dir)
     (ROOT/'artifacts/phase3/native-query-source-replay.json').write_text(json.dumps(proof, indent=2)+'\n')
-    print('PASS: source ZIP rebuilt offline; all three executables, CA and embedded modules match')
+    print('PASS: source ZIP rebuilt offline; installed executables and embedded modules match')
 
 
 if __name__ == '__main__':

@@ -1,15 +1,20 @@
 /* Actual worker preparation with isolated decoder/crypto adapters and host files.
  * The real checked cryptographic/parser pipeline has its own separate suite. */
+#define _GNU_SOURCE
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include "native_target_shim.h"
 #include "native_background.h"
+#include "native_completion_store.h"
 #include "native_signed.h"
+#include "prox_completion_preview.h"
 static unsigned char original[40+0x150];
 static int scenario,decodes,stages,stops;
+static int notice, internal_reads, external_reads, armed;
 int prox_stopping(void) { return scenario==3 && ++stops>3; }
 int mbedtls_sha256(const unsigned char *p,size_t n,unsigned char *out,int mode)
 { assert(p && n && !mode);memset(out,0xab,32);return 0; } /* Adapter only. */
@@ -18,6 +23,11 @@ int prox_stage_check(const char *root,const ProxManifest *m)
 { assert(root && m);++stages;return scenario==4 && stages==2?-1:0; }
 int prox_file_check(const char *path,unsigned int n,const char *hash,int pbp)
 {
+    if(notice) {
+        assert(notice==3 && !strcmp(path,"card/native-completion.rco") && !pbp);
+        assert(n==PROX_COMPLETION_RCO_SIZE && !strcmp(hash,PROX_COMPLETION_RCO_SHA256));
+        return 0;
+    }
     unsigned char data[2];FILE *f;size_t count;
     assert(!pbp && hash[0]=='a' && strstr(path,"/native/") && !strstr(path,"launcher"));
     f=fopen(path,"rb");assert(f);count=fread(data,1,sizeof(data),f);assert(!ferror(f) && !fclose(f));
@@ -38,10 +48,18 @@ int prox_native_signed_scan(ProxNativePayloadScan *s,const unsigned char *p,size
     s->found=0x7ff;s->containers=3;return 0;
 }
 int prox_native_payload_done(const ProxNativePayloadScan *s) { assert(s->found==0x7ff && s->containers==3);return 0; }
-int sceUtilityGetSystemParamInt(int i,int *l) { (void)i;(void)l;assert(0);return -1; }
+int sceUtilityGetSystemParamInt(int i,int *l)
+{ assert(notice && i==PSP_SYSTEMPARAM_ID_INT_LANGUAGE);*l=3;return 0; }
 int prox_completion_read_text(FILE *f,unsigned int l,unsigned short *o,unsigned int c)
-{ (void)f;(void)l;(void)o;(void)c;assert(0);return -1; }
-int prox_native_completion_prepare(const unsigned short *p,unsigned int n) { (void)p;(void)n;assert(0);return -1; }
+{ assert(notice==3 && f && l==3 && c==PROX_COMPLETION_UNITS);++external_reads;o[0]=42;o[1]=0;return 2; }
+int prox_completion_read_store(FILE *f,unsigned int l,unsigned short *o,unsigned int c)
+{
+    assert((notice==1 || notice==2) && f && l==3 && c==PROX_COMPLETION_UNITS);++internal_reads;
+    if(notice==2)return -1;
+    o[0]=42;o[1]=0;return 2;
+}
+int prox_native_completion_prepare(const unsigned short *p,unsigned int n)
+{ assert((notice==1 || notice==3) && n==2 && p[0]==42 && !p[1]);++armed;return -1; }
 int prox_native_handoff_close(void) { assert(0);return -1; }
 int prox_native_install_exchange(int a,ProxNativeInstallMessage *m) { (void)a;(void)m;assert(0);return -1; }
 int sceKernelStartModule(int i,unsigned int n,void *p,int *s,void *o)
@@ -70,5 +88,17 @@ int main(void)
         snprintf(path,sizeof(path),"%s/native",job.root);assert(access(path,F_OK)!=0);
     }
     puts("PASS: actual worker pins PBP before data-only extraction; every target loader/start forbidden; partial output, cancel, revalidation, digest/header and storage errors clean up before flash");
+    char temp[]="/tmp/prox-background-completion-XXXXXX";
+    assert(mkdtemp(temp) && !chdir(temp));
+    assert(!mkdir("flash0:",0700) && !mkdir("flash0:/kd",0700) && !mkdir("card",0700));
+    FILE *packed=fopen(PROX_COMPLETION_STORE_PATH,"wb"), *fallback=fopen("card/native-completion.rco","wb");
+    assert(packed && fallback && !fclose(packed) && !fclose(fallback));
+    for(notice=1;notice<=3;++notice) {
+        internal_reads=external_reads=armed=0;
+        if(notice==3)assert(!unlink(PROX_COMPLETION_STORE_PATH));
+        assert(prox_native_background_launch("card",&result)<0);
+        assert(internal_reads==(notice!=3) && external_reads==(notice==3) && armed==(notice!=2));
+    }
+    puts("PASS: actual background launch selects the installed completion store, fails on corrupt internal data, and supports the legacy RCO when absent");
     return 0;
 }

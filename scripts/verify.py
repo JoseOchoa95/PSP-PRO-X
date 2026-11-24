@@ -5,8 +5,10 @@ import hashlib
 import json
 import re
 import struct
+import zlib
 from build import ROOT, inventory, digest, sha
 from product import VERSION, WPA2_VARIANT
+from dedicated_update import release_manifest, render as render_dedicated, render_fixture, verifier_pin
 from native_signed_templates import render as render_signed_templates
 
 REPLACEMENTS = {
@@ -225,9 +227,8 @@ def verify_build(metadata):
         require(bool(metadata['diagnostics']), 'Diagnostic not built')
         diagnostic = pbp_info((output / 'diagnostics/PSP/GAME/WPA2DIAG/EBOOT.PBP').read_bytes(), allow_plain=True)
         require(diagnostic['title'] == 'PRO-X WPA2 identification (read only)', 'Wrong diagnostic title')
-        client = pbp_info((output / 'PSP/GAME/PROXUPDATE/EBOOT.PBP').read_bytes(), allow_plain=True)
-        require(client['title'] == 'PRO-X v'+VERSION+' System Update', 'Wrong updater product title')
-        require(metadata['build_id'].encode() in (tree / 'Updater/prox_updater.elf').read_bytes(), 'Updater build ID missing')
+        updater_elf = (tree / 'Updater/prox_updater.elf').read_bytes()
+        require(metadata['build_id'].encode() in updater_elf, 'Updater build ID missing')
         require(b'ProxUpdateForUser' not in (tree / 'Installer/installer.elf').read_bytes(),
                 'Manual installer must not require the private updater bridge')
         require(b'ProxUpdateForUser' in (tree / 'SystemControl/systemctrl.elf').read_bytes(), 'Private bridge missing')
@@ -235,16 +236,95 @@ def verify_build(metadata):
         for dependency in ['mbedtls', 'ca_bundle']:
             require(sha((ROOT / deps[dependency]['path']).read_bytes()) == deps[dependency]['sha256'],
                     'Pinned updater dependency changed: '+dependency)
-        require((output / 'PSP/GAME/PROXUPDATE/cacert.pem').read_bytes() ==
-                (ROOT / deps['ca_bundle']['path']).read_bytes(), 'Packaged CA bundle changed')
-        info['PROXUPDATE'] = client
+        ca_bundle = (ROOT / deps['ca_bundle']['path']).read_bytes()
+        dedicated_ota = metadata.get('resident_dedicated_ota',False)
+        if metadata.get('resident_query'):
+            installer_elf = (tree / 'Installer/installer.elf').read_bytes()
+            require(all(marker in installer_elf for marker in (b'flash0:/kd/_proxc661.bin',
+                    b'prox_resident_completion_prepare', b'prox_completion_store_valid',
+                    b'4b47ddf778c8df121a7fe3ade8acaada307ffd3e96d17834f568e29240557ba7')),
+                    'Resident Installer must verify original compact completion data before provisioning')
+            require(set(metadata['artifacts']) == {'GAME/PROUPDATE/EBOOT.PBP', 'GAME/FastRecovery/EBOOT.PBP'},
+                    'Resident diagnostic must ship exactly the Installer and Fast Recovery applications')
+            if metadata.get('resident_dedicated_preview'):
+                fixture, identity = render_fixture()
+                require((output/'dedicated-fixture/PROX-DEDICATED-TEST.PBP').read_bytes() == fixture and
+                        identity['sha256'].encode() in updater_elf and b'prox_native_dedicated_stage' in updater_elf
+                        and b'Dedicated diagnostic stage removed; no firmware write attempted' in updater_elf and
+                        b'Dedicated Settings writer handoff:' in updater_elf and
+                        b'prox_dedicated_writer_check' in updater_elf and b'prox_dedicated_writer_prepare' not in updater_elf and
+                        b'prox_dedicated_record_commit' not in updater_elf and b'prox_dedicated_cleanup_committed' not in updater_elf and
+                        b'prox_native_background_launch' not in updater_elf,
+                        'Dedicated diagnostic must pin the synthetic PBP and restrict the handoff to read-only checks')
+            else:
+                dedicated = output / 'dedicated-update'
+                expected_pbp, expected_manifest = render_dedicated(tree, metadata['build_id'])
+                require((dedicated / 'EBOOT.PBP').read_bytes() == expected_pbp and
+                        json.loads((dedicated / 'dedicated-update.json').read_text()) == expected_manifest and
+                        json.loads((dedicated / 'pro-x-dedicated-update.json').read_text()) == release_manifest(expected_manifest),
+                        'Dedicated EBOOT must match the exact compiled source parts')
+                require((tree / 'tools/updateverify/expected_update.h').read_bytes() == verifier_pin(expected_manifest).encode('ascii'),
+                        'Dedicated EBOOT verifier pin differs from the generated data asset')
+                probe = (output / 'diagnostics/PSP/GAME/PROXEBOOT/EBOOT.PBP').read_bytes()
+                require(pbp_info(probe, allow_plain=True)['title'] == 'PRO-X Update File Check' and
+                        probe == (tree / 'tools/updateverify/EBOOT.PBP').read_bytes() and
+                        metadata['build_id'].encode() in probe and bytes.fromhex(expected_manifest['sha256']) in probe and
+                        b'PASS: dedicated EBOOT and %u parts verified.' in probe and b'flash0:/' not in probe,
+                        'Read-only verifier must pin the matching dedicated EBOOT')
+            capacity_dir = tree / 'Installer/flash_capacity'
+            capacity = (capacity_dir / 'flash_capacity.prx').read_bytes()
+            capacity_elf = (capacity_dir / 'flash_capacity.elf').read_bytes()
+            require(header_bytes(tree / 'Installer/flash_capacity_prx.h') == capacity and installer.count(capacity) == 1,
+                    'Installer must embed the exact built flash0 capacity helper')
+            require(b'\x00\x10\x00\x01ProxInstallerCapacity\0' in capacity and b'lflash0:0,0\0' in capacity and
+                    all(name in capacity_elf for name in (b'sceIoIoctl\0', b'sceIoRead\0', b'sceIoClose\0')) and
+                    not any(name in capacity_elf for name in (b'sceIoWrite\0', b'sceIoRemove\0', b'sceIoAssign\0',
+                                                             b'sceIoUnassign\0', b'sceIoDevctl\0', b'sceKernelExitGame\0')),
+                    'Capacity helper must be a read-only kernel module')
+            embedded['Installer/flash_capacity/flash_capacity.prx'] = sha(capacity)
+            worker = (tree / 'Updater/prox_updater.prx').read_bytes()
+            worker_sha = sha(worker)
+            path = 'flash0:/kd/_proxq-'+metadata['build_id'].removeprefix('pro-x-')+'.prx'
+            vsh = elf_data(tree / 'Vshctrl/vshctrl.prx')
+            archived = header_bytes(tree / 'Installer/resident_archive.h')
+            require(zlib.decompress(archived) == worker and installer.count(archived) == 1,
+                    'Installer resident archive differs from the compiled worker')
+            require(path.encode() in installer and path.encode() in vsh and
+                    worker_sha.encode() in installer and bytes.fromhex(worker_sha) in vsh,
+                    'Installer and loader must pin the same internal path and digest')
+            require(worker.count(ca_bundle + b'\0') == 1, 'Compiled resident trust differs from pinned CA')
+            require(b'PROX-RESIDENT-FLASH0-V1' in worker and b'Resident query worker source: flash0' in worker and
+                    b'PSP/GAME/PROXUPDATE' not in worker and (dedicated_ota or b'flash0:/' not in worker) and
+                    b'sceKernelLoadExec' not in updater_elf and b'prox_stage_archive' not in updater_elf,
+                    'Resident worker is not isolated to authenticated query and removable reports')
+            if dedicated_ota:
+                require(all(symbol in updater_elf for symbol in (b'prox_native_background_launch_dedicated',
+                        b'prox_dedicated_writer_check', b'prox_completion_read_store',
+                        b'prox_dedicated_cleanup_committed', b'Dedicated boot cleanup:')) and
+                        b'prox_dedicated_writer_prepare' not in updater_elf and
+                        b'DEDICATED PREVIEW:' not in updater_elf and b'PROX-DEDICATED-TEST.PBP' not in updater_elf,
+                        'Writable resident flow must use the bound local engine and exclude fixtures')
+                cleanup = (tree / 'Vshctrl/native_dedicated_cleanup.o').read_bytes()
+                require(b'prox_native_cleanup_flash' in cleanup and b'sceIoRemove' in cleanup and
+                        b'sceIoWrite' not in cleanup and b'prox_native_mount_end' in cleanup,
+                        'Dedicated post-boot cleanup must only retire verified sidecars and restore flash access')
+            require(b'PSP/GAME/PROXUPDATE/EBOOT.PBP' not in vsh and b'PROXUPDATE/.native-' not in vsh and
+                    b'resident flash0 image verified and loaded' in vsh,
+                    'Resident VSH must have no card-based updater fallback')
+            embedded['Updater/prox_updater.prx'] = worker_sha
+        else:
+            client = pbp_info((output / 'PSP/GAME/PROXUPDATE/EBOOT.PBP').read_bytes(), allow_plain=True)
+            require(client['title'] == 'PRO-X v'+VERSION+' System Update', 'Wrong updater product title')
+            require((output / 'PSP/GAME/PROXUPDATE/cacert.pem').read_bytes() == ca_bundle, 'Packaged CA bundle changed')
+            info['PROXUPDATE'] = client
         if metadata.get('native_background'):
-            generated=(tree/'Updater/native_signed_templates.h').read_bytes()
-            signer_source=(ROOT/'firmware/contrib/PrxEncrypter/main.c').read_bytes()
-            require(generated==render_signed_templates(signer_source),'Signed decoder templates differ from retained source')
             client_elf=(tree/'Updater/prox_updater.elf').read_bytes()
-            require(b'PROX-NATIVE-DATA-ONLY-V1' in client_elf and sha(signer_source).encode() in client_elf,
-                    'Data-only decoder/template binding missing')
+            if not dedicated_ota:
+                generated=(tree/'Updater/native_signed_templates.h').read_bytes()
+                signer_source=(ROOT/'firmware/contrib/PrxEncrypter/main.c').read_bytes()
+                require(generated==render_signed_templates(signer_source),'Signed decoder templates differ from retained source')
+                require(b'PROX-NATIVE-DATA-ONLY-V1' in client_elf and sha(signer_source).encode() in client_elf,
+                        'Data-only decoder/template binding missing')
             require(b'kuKernelLoadModuleWithApitype2' not in client_elf and
                     b'sceUtilsBufferCopyWithRange' not in client_elf,
                     'Target device loader or replacement PSP crypto service linked')
@@ -264,16 +344,22 @@ def verify_build(metadata):
                 require(forbidden not in engine_elf,'Background engine has an unsafe live-mount capability')
             require(b'Background access BEGIN' in engine_elf and b'Background access END' in engine_elf and
                     b'resident access revision mismatch' in engine_elf,'Missing access lease or resident capability guard')
+            commit_markers = ((b'TRANSACTION stage=dedicated-card-record', b'prox_dedicated_writer_prepare',
+                               b'--prox-native-install-v2') if dedicated_ota else
+                              (b'TRANSACTION stage=application-commit', b'STORAGE_MOVE operation='))
             require(all(marker in engine_elf for marker in (b'TRANSACTION stage=firmware-prepare',b'TRANSACTION stage=firmware-replace',
-                    b'TRANSACTION stage=firmware-sync',b'TRANSACTION stage=application-commit',b'FLASH_FAIL operation=',
-                    b'FLASH_ROLLBACK result=',b'STORAGE_MOVE operation=',b'FLASH_BACKUP verified',
-                    b'TRANSACTION stage=backup-flush',b'original flashfat rename unsupported')),'Missing checked-copy backup/flush or exact transaction failure evidence')
+                    b'TRANSACTION stage=firmware-sync',b'FLASH_FAIL operation=',
+                    b'FLASH_ROLLBACK result=',b'FLASH_BACKUP verified',
+                    b'TRANSACTION stage=backup-flush',b'original flashfat rename unsupported') + commit_markers),'Missing checked-copy backup/flush or exact transaction failure evidence')
             provider=(tree/'Vshctrl/native_query_provider.o').read_bytes()
             require(max(elf_function_frames(provider,'proxNativeInstallService'))<=128 and
                     b'sceKernelExtendKernelStack' in provider,'Access RPC regressed to a large syscall stack')
             vsh=(tree/'Vshctrl/vshctrl.elf').read_bytes()
             require(all(symbol in vsh for symbol in (b'prox_native_mount_begin',b'prox_native_mount_end',b'prox_mount_lease_end')),
                     'Matching mounted-access kernel implementation missing')
+            if dedicated_ota:
+                require(all(symbol in vsh for symbol in (b'prox_ni_arm_dedicated', b'prox_native_completion_armed',
+                        b'prox_native_flash_preflight_dedicated')), 'Dedicated writer ownership, notice or capacity gate missing')
             for forbidden in (b'pspDebugScreen',b'sceDisplaySetFrameBuf',b'sceKernelLoadExec',b'sceGuInit'):
                 require(forbidden not in engine_elf,'Background engine UI/LoadExec not allowed')
             embedded['tools/nativeinstaller/native_installer.prx']=sha(engine)

@@ -38,7 +38,7 @@
 #include "strsafe.h"
 #include "vshctrl_patch_offset.h"
 #include "version_display.h"
-#ifdef PROX_NATIVE_OTA
+#if defined(PROX_NATIVE_OTA) && !defined(PROX_NATIVE_RESIDENT_QUERY)
 #include "native_query_cache.h"
 #endif
 
@@ -595,7 +595,7 @@ int vshpatch_init(void)
 	hook_iso_file_io();
 	hook_iso_directory_io();
 
-#ifdef PROX_NATIVE_OTA
+#if defined(PROX_NATIVE_OTA) && !defined(PROX_NATIVE_RESIDENT_QUERY)
 	if(psp_fw_version == FW_661 && conf.useownupdate) prox_native_query_prepare();
 #endif
 

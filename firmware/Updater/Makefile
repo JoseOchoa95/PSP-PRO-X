@@ -3,12 +3,23 @@ OBJS = main.o transport.o policy.o bridge.o json.o contract.o stage.o update.o p
 INCDIR = ../Common ../include vendor/mbedtls/include .
 CFLAGS = -Os -G0 -Wall -Wextra -Werror -DPROX_BUILD_ID=\"$(BUILD_ID)\" -DMBEDTLS_CONFIG_FILE=\"prox_mbedtls_config.h\"
 CFLAGS += $(PROX_NATIVE_UPDATE_FLAGS)
+ifneq ($(findstring -DPROX_NATIVE_RESIDENT_QUERY=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+OBJS := $(filter-out main.o stage.o update.o platform.o storage_power.o native_download.o,$(OBJS)) resident_main.o
+endif
+ifneq ($(filter -DPROX_NATIVE_DEDICATED_PREVIEW=1 -DPROX_NATIVE_DEDICATED_OTA=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+OBJS += native_dedicated_stage.o dedicated_update.o dedicated_job.o dedicated_writer.o native_payload.o stage.o storage_power.o
+INCDIR += ../tools/nativeinstaller
+vpath dedicated_writer.c ../tools/nativeinstaller
+endif
 ifneq ($(findstring -DPROX_NATIVE_INSTALL_PREVIEW=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
 OBJS += native_install_preview.o native_completion_text.o
 LIBS_EXTRA = -lpspkubridge
 endif
-ifneq ($(findstring -DPROX_NATIVE_BACKGROUND=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
-OBJS += native_background.o native_payload.o native_completion_text.o native_signed.o native_kirk.o native_crypto.o
+ifneq ($(findstring -DPROX_NATIVE_DEDICATED_OTA=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+OBJS += native_background.o native_completion_text.o native_completion_store.o
+LIBS_EXTRA = -lpspkubridge
+else ifneq ($(findstring -DPROX_NATIVE_BACKGROUND=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+OBJS += native_background.o native_payload.o native_completion_text.o native_completion_store.o native_signed.o native_kirk.o native_crypto.o
 LIBS_EXTRA = -lpspkubridge
 endif
 BUILD_PRX = 1

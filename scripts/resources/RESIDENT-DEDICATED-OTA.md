@@ -1,0 +1,7 @@
+# PRO-X v@PRODUCT_VERSION@ resident dedicated update candidate
+
+This local PSP-2000 6.61 kit contains matching PROUPDATE and FastRecovery applications. It only accepts a newer compatible stable dedicated release through the original System Update menu. No synthetic package can reach the writer. A first manual installation can provision the original completion text using the exact owner-supplied `PSP/GAME/PROUPDATE/native-completion.rco`. The kit contains no Sony resource. A normal Internet update requires the verified internal text, adequate power, card storage, and flash0 capacity.
+
+After the original completion screen restarts into the installed target, open System Update and check over the Internet with the same Memory Stick and installation power available. Following an authenticated catalog check, the resident worker verifies the committed record and installed files. It retires the update's verified flash0 sidecars before removing its temporary EBOOT and stage from the card. A later authenticated check can retry deferred cleanup.
+
+This candidate is for local integration verification. Physical writable installation, restart observation and post-restart cleanup require further validation. Preserve the known working manual kit and the existing PSP installation until a complete hardware test is planned. The included dedicated EBOOT is a data package. The separate file-check app can verify it without applying an update.

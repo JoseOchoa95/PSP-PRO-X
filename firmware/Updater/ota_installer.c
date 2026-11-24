@@ -17,15 +17,19 @@
 #include "stage.h"
 #include "policy.h"
 #include "prox_product.h"
+#ifndef PROX_NATIVE_DEDICATED_OTA
 #include "prox_ota_args.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <errno.h>
 
+#ifndef PROX_NATIVE_DEDICATED_OTA
 static char root[192],game[32];
 static ProxManifest manifest;
+#endif
 static FILE *trace;
 static int locked,trace_failed;
 int prox_stopping(void)
@@ -50,13 +54,34 @@ void prox_log(const char *format,...)
 #endif
     if (trace && (fprintf(trace,"%s\n",b) < 0 || fflush(trace))) trace_failed=1;
 }
-static int trace_open(void)
+static int trace_open_path(const char *name)
 {
-    char name[96]; FILE *f; long size;
-    snprintf(name,sizeof(name),"%s/PROXUPDATE/install.txt",game);
+    FILE *f; long size;
     f=fopen(name,"rb");
     if (f) { if (fseek(f,0,SEEK_END) || (size=ftell(f)) < 0 || size > 60000) { fclose(f); return -1; } fclose(f); }
     trace=fopen(name,"ab"); return trace ? 0 : -1;
+}
+#ifdef PROX_NATIVE_DEDICATED_OTA
+int prox_ota_dedicated_trace(const ProxDedicatedJob *job)
+{
+    char name[96];
+    snprintf(name,sizeof(name),"%.4s/PROXDIAG/native-install-%s.txt",job->install.root,job->install.build_id);
+    return trace_open_path(name);
+}
+int prox_ota_dedicated_lock(void)
+{
+    extern int prox_native_engine_write_gate(void);
+    if(trace_failed || prox_stopping() || !prox_power_ready() || scePowerLock(0)<0)return -1;
+    locked=1;
+    if(prox_native_engine_write_gate()) { prox_ota_close();return -1; }
+    return 0;
+}
+#else
+static int trace_open(void)
+{
+    char name[96];
+    snprintf(name,sizeof(name),"%s/PROXUPDATE/install.txt",game);
+    return trace_open_path(name);
 }
 static int pending(int committed)
 {
@@ -182,6 +207,7 @@ int prox_ota_cleanup_modules(void)
     snprintf(path,sizeof(path),"%s/PROUPDATE/Rebootex.prx",root); sceIoRemove(path);
     return 1;
 }
+#endif
 void prox_ota_close(void)
 {
     if (locked) { scePowerUnlock(0); locked=0; }

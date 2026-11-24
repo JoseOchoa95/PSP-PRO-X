@@ -4,6 +4,8 @@
 #include "native_offer_preview.h"
 #include "native_preview_stream.h"
 static int owner=7,locked,opens,closes,cancel_after,delays;
+static int capacity_calls,capacity_result;
+int prox_native_flash_capacity_preview(void) { assert(!locked); ++capacity_calls; return capacity_result; }
 int prox_preview_test_bytes(const void *p,unsigned int n) { return p && n && n<=32768; }
 int sceKernelGetThreadId(void) { assert(!locked); return owner; }
 unsigned int pspSdkDisableInterrupts(void) { assert(!locked); locked=1; return 12; }
@@ -27,6 +29,11 @@ int main(void)
     unsigned char buffer[32770]; unsigned int total=0; int fd,old,n;
     prox_native_preview_reset(); prox_native_preview_offer(1024*1024);
     assert(open("ms0:/PSP/GAME/OTHER/EBOOT.PBP",0x602,0777)<0);
+    assert(!capacity_calls);
+    capacity_result=-4;
+    assert(open("ms0:/PSP/GAME/_UPDATE/EBOOT.PBP",0x602,0777)<0 && capacity_calls==1 && !opens);
+    capacity_result=0;
+    prox_native_preview_reset(); prox_native_preview_offer(1024*1024);
     fd=open("ms0:/PSP/GAME/_UPDATE/EBOOT.PBP",0x602,0777); assert(fd>0 && !opens && !noop());
     assert(prox_native_preview_read(buffer,1)<0 && prox_native_preview_read(buffer,32767)<0);
     while(1) {

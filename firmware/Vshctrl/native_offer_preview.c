@@ -10,6 +10,9 @@
 #include <string.h>
 #include "native_offer_preview.h"
 #include "native_query_provider.h"
+#if defined(PROX_NATIVE_PROGRESS_PREVIEW) && !defined(PROX_NATIVE_OTA)
+#include "native_flash_preflight.h"
+#endif
 #if defined(PROX_NATIVE_PROGRESS_PREVIEW) || defined(PROX_NATIVE_OTA)
 #include "native_preview_stream.h"
 static ProxPreviewStream stream;
@@ -61,6 +64,7 @@ int proxNativePreviewOpen(const char *path,int flags,int mode)
             if(fd<0 || prox_native_ota_begin(owner,stream.total)) { prox_native_preview_abort(); return DENIED; }
             prox_native_query_event("native virtual progress opened; real package stays private",fd); return fd;
 #else
+            if(fd>=0 && prox_native_flash_capacity_preview()) { prox_native_preview_abort(); return DENIED; }
             prox_native_query_event("PREVIEW virtual update opened; no disk file",fd); return fd;
 #endif
         }

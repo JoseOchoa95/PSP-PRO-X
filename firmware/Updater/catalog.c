@@ -25,7 +25,8 @@ static int request(const char *url,const char *ca,Memory *m,ProxResponse *respon
     }
     return 0;
 }
-int prox_catalog_query(const char *ca,const unsigned int running[3],unsigned int model,ProxCatalogOffer *offer)
+int prox_catalog_query_format(const char *ca,const unsigned int running[3],unsigned int model,
+                              unsigned int format,ProxCatalogOffer *offer)
 {
     Memory memory={0}; Pj json; PjToken *tokens=NULL; ProxRelease *releases=NULL;
     ProxResponse response; unsigned int client[3];
@@ -47,7 +48,7 @@ int prox_catalog_query(const char *ca,const unsigned int running[3],unsigned int
         ++offer->pages;
         for(i=1;i<json.tokens[0].next;i=json.tokens[i].next) {
             ProxRelease candidate;
-            int rc=prox_release(&json,i,running,&candidate);
+            int rc=prox_release_format(&json,i,running,format,&candidate);
             if(rc<0) { prox_log("Native catalog invalid/ambiguous release metadata"); goto done; }
             if(rc==1) {
                 if(count==50) goto done;
@@ -89,3 +90,5 @@ int prox_catalog_query(const char *ca,const unsigned int running[3],unsigned int
 done:
     free(tokens); free(releases); free(memory.data); return result;
 }
+int prox_catalog_query(const char *ca,const unsigned int running[3],unsigned int model,ProxCatalogOffer *offer)
+{ return prox_catalog_query_format(ca,running,model,PROX_RELEASE_ZIP,offer); }

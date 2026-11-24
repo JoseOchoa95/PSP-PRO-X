@@ -53,6 +53,13 @@
 #include "recovery.h"
 #include "config.h"
 #include "../Updater/ota_installer.h"
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+#include <stdint.h>
+#include "resident_completion.h"
+int prox_provision_resident_image(void);
+int prox_resident_capacity_ready(const char *installer_path, const uint32_t *module_sizes,
+				 unsigned int module_count);
+#endif
 
 #include "../Permanent/ppatch_config.h"
 
@@ -145,13 +152,11 @@ int write_file(const char *path, unsigned char *buf, int size)
 
 	ret = sceIoWrite(fd, buf, size);
 
-	if (ret < 0) {
+	if (ret != size) {
 		goto error;
 	}
 
-	sceIoClose(fd);
-
-	return 0;
+	return sceIoClose(fd) < 0 ? -1 : 0;
 error:
 	if (fd >= 0)
 		sceIoClose(fd);
@@ -231,17 +236,9 @@ static const char *g_old_cfw_files[] = {
 	"flash0:/vsh/module/satelite.prx",
 };
 
-int install_cfw(void)
+int install_cfw(const char *installer_path)
 {
 	int ret, i;
-
-	if(disable_smart) {
-		sceIoRemove("flash1:/config.se");
-	}
-
-	for(i=0; i<NELEMS(g_old_cfw_files); ++i) {
-		sceIoRemove(g_old_cfw_files[i]);
-	}
 
 #if defined(CONFIG_660) || defined(CONFIG_661)
 	if((psp_fw_version == FW_660) || (psp_fw_version == FW_661)) {
@@ -270,6 +267,42 @@ int install_cfw(void)
 		g_file_lists[4].size = &size_march33_620;
 	}
 #endif
+
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+	unsigned char completion[PROX_COMPLETION_STORE_BYTES];
+	int provision_completion = prox_resident_completion_prepare(installer_path, completion);
+	if (provision_completion < 0) {
+		printf("Original completion resource verification failed. No firmware write started.\n");
+		return -1;
+	}
+	uint32_t module_sizes[NELEMS(g_file_lists) + 1];
+	for (i = 0; i < NELEMS(g_file_lists); ++i)
+		module_sizes[i] = *g_file_lists[i].size;
+	module_sizes[NELEMS(g_file_lists)] = PROX_COMPLETION_STORE_BYTES;
+	if (prox_resident_capacity_ready(installer_path, module_sizes, NELEMS(g_file_lists) + provision_completion) < 0)
+		return -1;
+	init_flash();
+	if (provision_completion && prox_resident_completion_install(completion) < 0) {
+		printf("Original completion resource could not be stored. CFW modules were not written.\n");
+		return -1;
+	}
+	if (provision_completion)
+		printf("Original completion resource verified and stored.\n");
+	if (prox_provision_resident_image() < 0) {
+		printf("Resident worker verification failed. CFW modules were not written.\n");
+		return -1;
+	}
+#else
+	(void)installer_path;
+#endif
+
+	if(disable_smart) {
+		sceIoRemove("flash1:/config.se");
+	}
+
+	for(i=0; i<NELEMS(g_old_cfw_files); ++i) {
+		sceIoRemove(g_old_cfw_files[i]);
+	}
 
 	for(i=0; i<NELEMS(g_file_lists); ++i) {
 		ret = smart_write_file(g_file_lists[i].dst, g_file_lists[i].buf, *g_file_lists[i].size);
@@ -595,10 +628,20 @@ int main(int argc, char *argv[])
 	
 version_OK:
 	psp_model = kuKernelGetModel();
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+	if (psp_fw_version != FW_661 || psp_model != 1 ||
+		prox_ota_begin(argc, argv, psp_fw_version, psp_model) != 0) {
+		printf("Use the manual resident diagnostic on a supported 6.61 PSP-2000.\n");
+		goto exit;
+	}
+#else
 	ota_mode=prox_ota_begin(argc,argv,psp_fw_version,psp_model);
 	if (ota_mode < 0) goto exit;
+#endif
 	scePowerSetClockFrequency(333, 333, 166);
+#ifndef PROX_NATIVE_RESIDENT_QUERY
 	init_flash();
+#endif
 	usage();
 
 	printf("Press X to launch CFW.\n");
@@ -670,7 +713,7 @@ version_OK:
 		if (ota_mode && prox_ota_before_write() < 0) {
 			printf("OTA preflight failed. No firmware write started.\n"); goto exit;
 		}
-		ret = install_cfw();
+		ret = install_cfw(argc > 0 ? argv[0] : NULL);
 		if (ota_mode) prox_ota_result(ret);
 
 		if (ret == 0) {
@@ -694,6 +737,9 @@ version_OK:
 			start_reboot(1);
 		}
 	} else if (key & PSP_CTRL_TRIANGLE) {
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+		init_flash();
+#endif
 		ret = uninstall_cfw();
 		printf("Now reboot to OFW :)\n");
 		sceKernelDelayThread(1000000);

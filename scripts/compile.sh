@@ -31,6 +31,28 @@ make CONFIG_661=1 build_lib
 if [ -d Updater ]; then
     sh /work/scripts/compile-updater.sh "$build_dir/Updater" "$(basename "$output_dir")" library-only
 fi
+resident_query=false
+dedicated_preview=false
+case "${PROX_NATIVE_UPDATE_FLAGS:-}" in
+    *-DPROX_NATIVE_RESIDENT_QUERY=1*)
+        resident_query=true
+        build_id=$(basename "$output_dir")
+        case "$PROX_NATIVE_UPDATE_FLAGS" in
+            *-DPROX_NATIVE_DEDICATED_PREVIEW=1*)
+                dedicated_preview=true
+                python3 /work/scripts/dedicated_update.py "$build_dir" "$build_id" "$output_dir/dedicated-fixture" --fixture
+                ;;
+            *-DPROX_NATIVE_DEDICATED_OTA=1*)
+                make -C tools/nativeinstaller
+                python3 /work/scripts/generate-native-engine.py tools/nativeinstaller/native_installer.prx Updater/native_engine.h
+                ;;
+        esac
+        make -C Updater BUILD_ID="$build_id"
+        python3 /work/scripts/generate-resident-image.py Updater/prox_updater.prx "$build_id" \
+            Common/prox_resident_image.h Installer/resident_archive.z
+        bin2c Installer/resident_archive.z Installer/resident_archive.h resident_archive
+        ;;
+esac
 # Same dependency order as upstream, deliberately excluding IPL/permanent tools.
 for component in CrossFW Rebootex_bin Rebootex Recovery Vshctrl usbdevice SystemControl ISODrivers/Galaxy ISODrivers/Inferno Stargate Satelite Popcorn Installer PXE/SystemControlPXE PXE/RebootexPXE; do
     if [ "$component" = Vshctrl ]; then
@@ -42,7 +64,7 @@ done
 cp PXE/RebootexPXE/rebootex.h PXE/Launcher/rebootex.h
 make -C PXE/Launcher CONFIG_661=1
 make -C FastRecovery CONFIG_661=1
-if [ -d Updater ]; then
+if [ -d Updater ] && ! "$resident_query"; then
     # The installer shares storage/JSON/SHA-256 sources, not its private bridge.
     # Recompile the client objects with its own flags and build identity.
     rm -f Updater/*.o
@@ -76,6 +98,26 @@ fi
 mkdir -p "$output_dir/PSP/GAME/PROUPDATE" "$output_dir/PSP/GAME/FastRecovery"
 cp PXE/Launcher/EBOOT.PBP "$output_dir/PSP/GAME/PROUPDATE/"
 cp FastRecovery/EBOOT.PBP "$output_dir/PSP/GAME/FastRecovery/"
+if "$resident_query" && ! "$dedicated_preview"; then
+    python3 /work/scripts/dedicated_update.py "$build_dir" "$build_id" "$output_dir/dedicated-update"
+    make -C tools/updateverify
+    mkdir -p "$output_dir/diagnostics/PSP/GAME/PROXEBOOT"
+    cp tools/updateverify/EBOOT.PBP "$output_dir/diagnostics/PSP/GAME/PROXEBOOT/"
+    cc -std=c99 -Wall -Wextra -Werror -DPROX_DEDICATED_GENERATED \
+        -I Common -I Updater -I tools/updateverify -I Updater/vendor/mbedtls/include \
+        /work/tests/native/test_dedicated_update.c Updater/dedicated_update.c Updater/native_payload.c \
+        Updater/policy.c Updater/vendor/mbedtls/library/sha256.c \
+        Updater/vendor/mbedtls/library/platform_util.c -lz -o /tmp/prox-dedicated-verify
+    /tmp/prox-dedicated-verify "$output_dir/dedicated-update/EBOOT.PBP"
+    cc -std=c99 -Wall -Wextra -Werror -DPROX_NATIVE_FLASH_TEST -DPROX_DEDICATED_GENERATED \
+        -I /work/tests/native/loader_sdk -I Common -I Updater -I tools/updateverify -I tools/nativeinstaller -I Updater/vendor/mbedtls/include \
+        /work/tests/native/test_native_flash.c Updater/native_flash.c \
+        tools/nativeinstaller/dedicated_writer.c Updater/dedicated_job.c Updater/dedicated_update.c Updater/native_payload.c \
+        Updater/contract.c Updater/json.c Updater/policy.c \
+        Updater/vendor/mbedtls/library/sha256.c Updater/vendor/mbedtls/library/platform_util.c \
+        -lz -o /tmp/prox-dedicated-flash
+    /tmp/prox-dedicated-flash "$output_dir/dedicated-update/EBOOT.PBP"
+fi
 # Keep build evidence separate from the installation payload.
 mkdir "$output_dir/modules"
 for module in Rebootex/Rebootex.prx Recovery/recovery.prx Vshctrl/vshctrl.prx usbdevice/usbdevice.prx SystemControl/systemctrl.prx ISODrivers/Galaxy/galaxy.prx ISODrivers/Inferno/inferno.prx Stargate/stargate.prx Satelite/satelite.prx Popcorn/popcorn.prx; do

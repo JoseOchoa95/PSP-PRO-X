@@ -6,24 +6,67 @@
 #include <pspsdk.h>
 #include <stdio.h>
 #include <string.h>
-#include "prox_pbp_payload.h"
 #include "prox_native_query.h"
 #include "native_query_provider.h"
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+#include "prox_resident_query.h"
+int prox_native_resident_load(void);
+#else
+#include "prox_pbp_payload.h"
+#endif
 #ifdef PROX_NATIVE_OTA
 #include "native_query_cache.h"
+#endif
+#if defined(PROX_NATIVE_UI_QUERY) && !defined(PROX_NATIVE_OTA) && !defined(PROX_NATIVE_OFFER_PREVIEW)
+#include <pspsysmem_kernel.h>
+
+static void report_loader_profile(const unsigned int *before, unsigned int elapsed)
+{
+    const unsigned int after[] = {
+        sceKernelPartitionTotalFreeMemSize(1),
+        sceKernelPartitionTotalFreeMemSize(2),
+        sceKernelPartitionMaxFreeMemSize(2)
+    };
+    prox_native_query_event("profile loader elapsed us", (int)elapsed);
+    prox_native_query_event("profile kernel free before bytes", (int)before[0]);
+    prox_native_query_event("profile kernel free after bytes", (int)after[0]);
+    prox_native_query_event("profile user free before bytes", (int)before[1]);
+    prox_native_query_event("profile user free after bytes", (int)after[1]);
+    prox_native_query_event("profile user largest before bytes", (int)before[2]);
+    prox_native_query_event("profile user largest after bytes", (int)after[2]);
+}
 #endif
 static volatile int loading;
 static unsigned int lease_id;
 int prox_native_query_is_loading(void) { return loading; }
 static int load_service(SceSize count,void *arg)
 {
+#ifndef PROX_NATIVE_RESIDENT_QUERY
     static const char marker[]="PROX-NATIVE-QUERY-V3";
     const char *paths[]={"ms0:/PSP/GAME/PROXUPDATE/EBOOT.PBP","ef0:/PSP/GAME/PROXUPDATE/EBOOT.PBP"};
-    unsigned char header[52],buffer[16384]; char temporary[100]={0},arguments[256],lease_text[16];
-    unsigned int offset,length,copied=0,matched=0,used,failure=PROX_NQ_CAUSE_CLIENT; int i=2,source=-1,target=-1,module=-1,status=-1,rc=-1;
+    unsigned char header[52],buffer[16384]; char temporary[100]={0};
+    unsigned int offset,length,copied=0,matched=0; int i=2,source=-1,target=-1;
+    int created=0,attempted_start=0,found=0; SceIoStat stat; SceKernelLMOption option;
+#endif
     const char *executable=NULL;
-    int created=0,started=0,attempted_start=0,found=0; SceIoStat stat; SceKernelLMOption option;
+    char arguments[256],lease_text[16];
+    unsigned int used,failure=PROX_NQ_CAUSE_CLIENT;
+    int module=-1,status=-1,rc=-1,started=0;
+#if defined(PROX_NATIVE_UI_QUERY) && !defined(PROX_NATIVE_OTA) && !defined(PROX_NATIVE_OFFER_PREVIEW)
+    const unsigned int before[] = {
+        sceKernelPartitionTotalFreeMemSize(1),
+        sceKernelPartitionTotalFreeMemSize(2),
+        sceKernelPartitionMaxFreeMemSize(2)
+    };
+    const unsigned int profile_start = sceKernelGetSystemTimeLow();
+#endif
     (void)count; (void)arg;
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+    executable=PROX_RESIDENT_WORKER_ARG;
+    module=prox_native_resident_load();
+    prox_native_query_event("resident flash0 image verified and loaded",module);
+    if(module<0) goto done;
+#else
 #ifdef PROX_NATIVE_OTA
     module=prox_native_query_cached_load(&executable);
     if(module>=0) goto start;
@@ -68,23 +111,37 @@ static int load_service(SceSize count,void *arg)
 #ifdef PROX_NATIVE_OTA
 start:
 #endif
+#endif
     used=strlen(executable)+1; memcpy(arguments,executable,used);
     memcpy(arguments+used,"--prox-native-query-v3",23); used+=23;
     sprintf(lease_text,"%08x",lease_id);
     memcpy(arguments+used,lease_text,9); used+=9;
+#ifndef PROX_NATIVE_RESIDENT_QUERY
     attempted_start=1;
+#endif
     rc=sceKernelStartModule(module,used,arguments,&status,NULL);
     prox_native_query_event("native service module start",rc);
     prox_native_query_event("native service module status",status);
     if(rc<0 || status<0) goto done;
     started=1;
 done:
+#ifndef PROX_NATIVE_RESIDENT_QUERY
     if(target>=0) sceIoClose(target);
     if(source>=0) sceIoClose(source);
     if(created) sceIoRemove(temporary);
+#endif
+#if defined(PROX_NATIVE_UI_QUERY) && !defined(PROX_NATIVE_OTA) && !defined(PROX_NATIVE_OFFER_PREVIEW)
+    report_loader_profile(before, sceKernelGetSystemTimeLow() - profile_start);
+#endif
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+    if(module>=0 && !started) sceKernelUnloadModule(module);
+#else
     if(module>=0 && !attempted_start) sceKernelUnloadModule(module);
+#endif
     if(!started) {
+#ifndef PROX_NATIVE_RESIDENT_QUERY
         if(i==0 && MScmIsMediumInserted()==0) failure=PROX_NQ_CAUSE_STORAGE;
+#endif
         prox_native_query_load_failed_reason(failure);
     }
     loading=0; sceKernelExitDeleteThread(0); return 0;

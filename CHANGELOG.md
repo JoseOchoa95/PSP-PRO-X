@@ -2,7 +2,27 @@
 
 ## Unreleased
 
-### v0.3.4 — native background installation (unreleased)
+### v0.4.0 — self-contained native update development
+
+- Add a local query-only PSP diagnostic that measures worker startup, free kernel and user memory before and after load, and authenticated query duration. It uses the current card-based worker and blocks installation from System Update.
+- Add a PSP-2000 6.61 resident query test kit with matching Installer and Fast Recovery. The Installer provisions a build-specific flash0 worker. System Update verifies that worker's SHA-256 and uses its embedded CA bundle without a PROXUPDATE folder.
+- Remove the charger and minimum battery charge requirements from the resident diagnostic's manual Installer.
+- Check actual flash0 free space before manual resident installation. Account for the worker, every target module and directory growth in allocation units, and stop before writing if space is insufficient or the measurement fails.
+- Check flash0 space for staged firmware, destination files and backups before the first write of a background Internet update. The calculation passed on one PSP-2000 using a simulated offer. A real Internet installation with the new check remains pending.
+- Generate a dedicated data-only update EBOOT from the same build as the manual Installer and Fast Recovery. The owner reported that the read-only PSP tool verified the package and all twelve components.
+- Add a resident System Update preview for the distinct dedicated EBOOT contract. Verification of the full staged package and removal of the temporary files passed on one PSP-2000 with a synthetic offer.
+- Add dedicated EBOOT writer support for the matching flash0 worker and its allocation costs. Isolated tests use the compiled EBOOT to check backup verification, rollback and cleanup gated on the target build. The PSP installation path remains pending.
+- Prepare all twelve dedicated EBOOT components as a private install job after consent. Reopen each extracted file and require its size and digest to match before handing off the job. The Settings preview cleans up the test stage after verification.
+- Recheck a dedicated job's EBOOT and all staged components at writer entry. Test persisting the committed card inventory and retrying exact file cleanup after observing the target build. Preserve changed or unrelated files and keep the installed worker.
+- Exercise the original Settings handoff with the resident EBOOT preview. Writer revalidation of the consented job and stage removal passed on one PSP-2000 with a synthetic offer.
+- Allow the resident test Installer to import the twelve original completion phrases from an exact owner-supplied 6.61 resource. Budget and verify the compact internal data before using it. The background completion path can read the installed phrases without the original file on the card. Physical provisioning and rendering remain pending.
+- Add a local writable dedicated-update candidate that binds the consented package and resident worker to the native install job. Require verified original completion data and flash0 capacity before replacement. Keep backups and the card stage available for restart verification.
+- After restarting into the verified target, use the first authenticated System Update check to retire the update's flash0 sidecars and remove the temporary EBOOT and stage from the Memory Stick. Preserve changed files and retry deferred cleanup on a later check. Physical validation remains pending.
+- Verified one physical authenticated query using the internal worker with the Memory Stick inserted and the PROXUPDATE folder absent. The owner reported the expected no-newer-version result on the first query without the Memory Stick. The original completion resource, legacy upgrade path and cleanup after restarting into the new firmware remain pending.
+- Add a standalone read-only flash0 capacity diagnostic that uses the USB driver's kernel-mode geometry query and counts free allocation units.
+- Return to the PSP menu from the kernel-mode capacity diagnostic when X is pressed or the inactivity timer expires.
+
+## v0.3.4 — native background installation
 
 - Install verified GitHub updates in the background after one acceptance on the original PSP update screen, preserving system language/theme and avoiding the target installer's text console and additional installation prompts.
 - Show original localized completion after verified firmware/storage success, hide Back on that page and wait for a fresh X to restart; no automatic restart timer.

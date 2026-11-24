@@ -19,10 +19,28 @@
 #include "catalog.h"
 #include "native_download.h"
 #include "stage.h"
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+#include "prox_resident_query.h"
+#endif
+#if defined(PROX_NATIVE_DEDICATED_PREVIEW) || defined(PROX_NATIVE_DEDICATED_OTA)
+#define PROX_NATIVE_DEDICATED_SETTINGS
+#include "dedicated_update.h"
+#ifdef PROX_NATIVE_DEDICATED_PREVIEW
+#include "dedicated_fixture.h"
+#endif
+#include "dedicated_writer.h"
+#include "native_dedicated_stage.h"
+#include "policy.h"
+static int fixture_offer, have_dedicated_offer;
+static ProxDedicatedJob dedicated_job;
+static int have_dedicated_stage;
+#endif
 #ifdef PROX_NATIVE_BACKGROUND
 #include "native_background.h"
+#ifndef PROX_NATIVE_RESIDENT_QUERY
 static ProxNativeInstallJob native_job;
 static int have_native;
+#endif
 #endif
 #ifdef PROX_NATIVE_INSTALL_PREVIEW
 #include "prox_install_preview.h"
@@ -31,11 +49,15 @@ static int have_native;
 const char prox_native_service_marker[]="PROX-NATIVE-QUERY-V3";
 static unsigned int lease_id,generation;
 static int report_fd=-1,report_failed,report_required;
-static char directory[80],ca_path[100];
+static char ca_path[100];
 static ProxCatalogOffer retained;
+#ifndef PROX_NATIVE_RESIDENT_QUERY
+static char directory[80];
 static ProxJob job;
-static unsigned int offer_generation,running[3],model;
+static unsigned int offer_generation;
 static int have_offer,have_stage;
+#endif
+static unsigned int running[3],model;
 static unsigned int failure;
 static void packet(ProxNativeQueryMessage *m)
 { memset(m,0,sizeof(*m)); m->protocol=PROX_NQ_PROTOCOL; m->lease=lease_id; m->generation=generation; }
@@ -89,6 +111,10 @@ static int open_report(const char *kind)
 {
     char path[128]; unsigned int i; SceIoStat stat;
     report_failed=0;
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+    const char *directory = prox_resident_report_directory();
+    if (!directory) return -1;
+#endif
     for(i=1;i<=999;++i) {
         snprintf(path,sizeof(path),"%s/native-%s-%03u.txt",directory,kind,i);
         if(sceIoGetstat(path,&stat)>=0) continue;
@@ -97,9 +123,46 @@ static int open_report(const char *kind)
     }
     return -1;
 }
+#ifdef PROX_NATIVE_DEDICATED_OTA
+static void cleanup_verified_boot(void)
+{
+    const char *directory=prox_resident_report_directory();
+    if(!directory)return;
+    int pending=prox_dedicated_pending(directory);
+    if(!pending)return;
+    ProxDedicatedJob job;
+    ProxNativeFlash transaction;
+    if(pending<0 || proxUpdateGetState(0)!=1 || proxUpdateGetState(4)!=0x06060110 ||
+       proxUpdateGetState(5)!=1 || proxUpdateGetState(1)!=PROX_PRODUCT_MAJOR ||
+       proxUpdateGetState(2)!=PROX_PRODUCT_MINOR || proxUpdateGetState(3)!=PROX_PRODUCT_PATCH ||
+       prox_dedicated_read_committed(directory,PROX_BUILD_ID,PROX_PRODUCT_VERSION,model,&job,&transaction)) {
+        prox_log("Dedicated boot cleanup deferred: target or committed record did not verify");
+        return;
+    }
+    if(!prox_power_ready()) {
+        prox_log("Dedicated boot cleanup deferred: installation power prerequisite");
+        return;
+    }
+    ProxNativeCleanupMessage request={.protocol=PROX_NI_CLEANUP_PROTOCOL,.lease=lease_id,
+        .generation=generation,.model=model,.prepared=transaction.prepared,.backups=transaction.backups,
+        .worker_prepared=(unsigned int)transaction.worker_prepared,.worker=job.worker};
+    memcpy(request.build_id,job.install.build_id,sizeof(request.build_id));
+    memcpy(request.installed,job.install.parts,sizeof(request.installed));
+    memcpy(request.before,transaction.before,sizeof(request.before));
+    int result=proxNativeInstallService(PROX_NI_CLEANUP_COMMITTED,(void *)&request,sizeof(request));
+    if(!result)
+        result=prox_dedicated_cleanup_committed(directory,PROX_BUILD_ID,PROX_PRODUCT_VERSION,model);
+    prox_log("Dedicated boot cleanup: %s (%d)",result?"deferred":"PASS; flash sidecars and card stage removed",result);
+}
+#endif
 static int query(ProxCatalogOffer *offer)
 {
     int i,result=-1,borrowed=0; time_t now;
+#if defined(PROX_NATIVE_UI_QUERY) && !defined(PROX_NATIVE_OTA) && !defined(PROX_NATIVE_OFFER_PREVIEW)
+    const unsigned int profile_start = sceKernelGetSystemTimeLow();
+    const unsigned int free_before = sceKernelTotalFreeMemSize();
+    const unsigned int largest_before = sceKernelMaxFreeMemSize();
+#endif
     failure=PROX_NQ_CAUSE_NONE;
     /* Checking is read-only and uses resident code/trust. An optional trace
      * cannot make absence of download storage a query prerequisite. */
@@ -107,6 +170,9 @@ static int query(ProxCatalogOffer *offer)
     (void)open_report("report");
     prox_log("PRO-X v" PROX_PRODUCT_VERSION " native REAL query build " PROX_BUILD_ID);
     prox_log("%s; original XMB UI; checking does not authorize package download",prox_native_service_marker);
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+    prox_log("Resident query worker source: flash0; removable storage is optional for reports");
+#endif
     if(proxUpdateGetState(0)!=1 || proxUpdateGetState(4)!=0x06060110) goto done;
     for(i=0;i<3;++i) running[i]=(unsigned int)proxUpdateGetState(i+1);
     prox_log("Running product=%u.%u.%u model_id=%d",running[0],running[1],running[2],proxUpdateGetState(5));
@@ -123,15 +189,46 @@ static int query(ProxCatalogOffer *offer)
     if(prox_network_borrow()) goto done;
     borrowed=1;
     model=(unsigned int)proxUpdateGetState(5);
+#ifdef PROX_NATIVE_DEDICATED_SETTINGS
+    result=prox_catalog_query_format(ca_path,running,model,PROX_RELEASE_DEDICATED,offer);
+#ifdef PROX_NATIVE_DEDICATED_PREVIEW
+    fixture_offer=0;
+    if(!result && model==1 && !prox_stopping()) {
+        offer->release.format=PROX_RELEASE_DEDICATED;
+        strcpy(offer->manifest.version, PROX_FIXTURE_VERSION);
+        strcpy(offer->manifest.build_id, PROX_FIXTURE_BUILD);
+        strcpy(offer->manifest.package_sha256, PROX_FIXTURE_SHA);
+        strcpy(offer->manifest_sha256, PROX_FIXTURE_MANIFEST_SHA);
+        strcpy(offer->manifest.summary, "Dedicated EBOOT diagnostic; synthetic data, no installation");
+        offer->manifest.package_size=PROX_FIXTURE_SIZE;
+        offer->manifest.minimum_engine_revision=PROX_DEDICATED_ENGINE_REVISION;
+        if(!prox_version(PROX_FIXTURE_VERSION,offer->manifest.numbers) &&
+           prox_compare(offer->manifest.numbers,running)>0) {
+            prox_log("DEDICATED PREVIEW: pinned synthetic offer after validated catalog");
+            fixture_offer=1;result=1;
+        }
+    }
+#endif
+#else
     result=prox_catalog_query(ca_path,running,model,offer);
+#endif
     if(result==1) prox_log("Authenticated compatible target %s retained for this generation; waiting for native consent",offer->manifest.version);
 done:
     if(borrowed && prox_network_end()) result=-1;
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(result>=0 && !prox_native_is_cancelled())cleanup_verified_boot();
+#endif
     if(prox_native_is_cancelled()) result=-1;
     prox_log("REAL native query completed result=%d pages=%u candidates=%u cause=%u",result,offer->pages,offer->candidates,failure);
+#if defined(PROX_NATIVE_UI_QUERY) && !defined(PROX_NATIVE_OTA) && !defined(PROX_NATIVE_OFFER_PREVIEW)
+    prox_log("Profile query elapsed_us=%u user_free_before=%u user_free_after=%u user_largest_before=%u user_largest_after=%u",
+        sceKernelGetSystemTimeLow() - profile_start, free_before, sceKernelTotalFreeMemSize(),
+        largest_before, sceKernelMaxFreeMemSize());
+#endif
     if(report_fd>=0) sceIoClose(report_fd);
     report_fd=-1; return result;
 }
+#if !defined(PROX_NATIVE_RESIDENT_QUERY) || defined(PROX_NATIVE_DEDICATED_SETTINGS)
 static int progress(unsigned int received,unsigned int total,void *context)
 {
     ProxNativeQueryMessage m;
@@ -140,6 +237,79 @@ static int progress(unsigned int received,unsigned int total,void *context)
     packet(&m); m.downloaded=received;
     return proxNativeQueryService(PROX_NQ_PROGRESS,&m,sizeof(m));
 }
+#endif
+#ifdef PROX_NATIVE_DEDICATED_SETTINGS
+static int dedicated_transfer(void)
+{
+    int result=-1,borrowed=0;
+    failure=PROX_NQ_CAUSE_NONE;
+    report_required=1;
+    if(open_report("download")) {
+        failure=PROX_NQ_CAUSE_STORAGE;
+        return -1;
+    }
+    prox_log("PRO-X v" PROX_PRODUCT_VERSION " dedicated EBOOT build " PROX_BUILD_ID);
+    if(!prox_power_ready()) {
+        failure=PROX_NQ_CAUSE_POWER;
+        goto done;
+    }
+    if(!fixture_offer) {
+        if(prox_transport_new_query() || prox_network_borrow())
+            goto done;
+        borrowed=1;
+    }
+    result=prox_native_dedicated_stage(prox_resident_report_directory(),ca_path,running,model,
+                                       &retained,fixture_offer,lease_id,generation,progress,&dedicated_job);
+    have_dedicated_stage=!result;
+    if(result==PROX_DEDICATED_STAGE_STORAGE)failure=PROX_NQ_CAUSE_STORAGE;
+    if(result==PROX_DEDICATED_STAGE_POWER)failure=PROX_NQ_CAUSE_POWER;
+done:
+    if(borrowed && prox_network_end())result=-1;
+    if(report_failed || prox_native_is_cancelled())result=-1;
+    prox_log("Dedicated transfer result=%d",result);
+    return result;
+}
+
+static int dedicated_handoff(void)
+{
+    if(!have_dedicated_stage || prox_native_is_cancelled())return -1;
+    if(!prox_power_ready()) {
+        failure=PROX_NQ_CAUSE_POWER;
+        return -1;
+    }
+    if(proxUpdateGetState(0)!=1 || proxUpdateGetState(4)!=0x06060110 ||
+       proxUpdateGetState(5)!=(int)model || strcmp(dedicated_job.install.source_version,PROX_PRODUCT_VERSION))
+        return -1;
+    for(unsigned int i=0;i<3;++i) {
+        if(proxUpdateGetState(i+1)!=(int)running[i])return -1;
+    }
+    int result=prox_dedicated_writer_check(&dedicated_job,lease_id,generation);
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(result || prox_native_background_launch_dedicated(&dedicated_job))return -1;
+    have_dedicated_stage=0; /* The writer has claimed the stage for recovery. */
+    return prox_native_background_wait();
+#else
+    prox_log("Dedicated Settings writer handoff: %s; read-only diagnostic",result?"FAIL":"PASS");
+    return result;
+#endif
+}
+
+static void dedicated_finish(void)
+{
+    if(have_dedicated_stage && prox_native_dedicated_discard(&dedicated_job))
+        failure=PROX_NQ_CAUSE_STORAGE;
+    have_dedicated_stage=0;
+    have_dedicated_offer=0;
+    memset(&dedicated_job,0,sizeof(dedicated_job));
+    if(report_fd>=0) sceIoClose(report_fd);
+    report_fd=-1;
+    ProxNativeQueryMessage m;
+    packet(&m);m.result=-1;m.failure=failure;
+    if(proxNativeQueryService(PROX_NQ_RESULT,&m,sizeof(m))<0)
+        prox_native_resident_fault();
+}
+#endif
+#ifndef PROX_NATIVE_RESIDENT_QUERY
 static void discard_stage(void)
 {
 #ifdef PROX_NATIVE_BACKGROUND
@@ -195,6 +365,8 @@ done:
     if(report_failed) { discard_stage(); result=-1; }
     return result;
 }
+#endif
+#if !defined(PROX_NATIVE_RESIDENT_QUERY) || defined(PROX_NATIVE_DEDICATED_OTA)
 static void close_report(void)
 {
     if(report_fd>=0 && sceIoClose(report_fd)<0) report_failed=1;
@@ -202,12 +374,17 @@ static void close_report(void)
 }
 int prox_native_handoff_close(void)
 { close_report();return report_failed?-1:0; }
+#endif
 void prox_native_worker(int argc,char **argv)
 {
     ProxNativeQueryMessage m; unsigned int i; int valid=1;
     if(argc!=3 || !argv || !argv[0] || !argv[2] || strlen(argv[2])!=8) valid=0;
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+    if(valid && strcmp(argv[0],PROX_RESIDENT_WORKER_ARG)) valid=0;
+#else
     if(valid && strcmp(argv[0],"ms0:/PSP/GAME/PROXUPDATE/EBOOT.PBP") &&
        strcmp(argv[0],"ef0:/PSP/GAME/PROXUPDATE/EBOOT.PBP")) valid=0;
+#endif
     for(i=0;valid && i<8;++i) {
         char c=argv[2][i]; unsigned int n;
         if(c>='0' && c<='9') n=(unsigned int)(c-'0');
@@ -216,8 +393,10 @@ void prox_native_worker(int argc,char **argv)
         lease_id=(lease_id<<4)|n;
     }
     if(!valid || !lease_id) { for(;;) sceKernelDelayThread(1000000); }
+#ifndef PROX_NATIVE_RESIDENT_QUERY
     strcpy(directory,argv[0]); *strrchr(directory,'/')=0;
     snprintf(ca_path,sizeof(ca_path),"%s/cacert.pem",directory);
+#endif
     /* The compiled immutable bundle survives card removal. Never replace TLS
      * validation with a cached catalog verdict or an unauthenticated query. */
     if(prox_native_trust()) { for(;;) sceKernelDelayThread(1000000); }
@@ -228,15 +407,39 @@ void prox_native_worker(int argc,char **argv)
         if(proxNativeQueryService(PROX_NQ_POLL,&m,sizeof(m))<0) prox_native_resident_fault();
         if(m.command==PROX_NQ_CHECK) {
             int result;
+#ifndef PROX_NATIVE_RESIDENT_QUERY
             discard_stage(); have_offer=0;
+#endif
             memset(&retained,0,sizeof(retained)); generation=m.generation;
             result=query(&retained);
+#ifdef PROX_NATIVE_DEDICATED_SETTINGS
+            have_dedicated_offer=result==1;
+#endif
+#ifndef PROX_NATIVE_RESIDENT_QUERY
             have_offer=result==1; offer_generation=generation;
+#endif
             packet(&m); m.result=result; m.failure=failure; m.pages=retained.pages; m.candidates=retained.candidates;
             m.package_size=retained.manifest.package_size;
             memcpy(m.version,retained.manifest.version,sizeof(m.version));
             memcpy(m.summary,retained.manifest.summary,sizeof(m.summary));
             if(proxNativeQueryService(PROX_NQ_RESULT,&m,sizeof(m))<0) prox_native_resident_fault();
+#ifdef PROX_NATIVE_DEDICATED_SETTINGS
+        } else if(m.command==PROX_NQ_DOWNLOAD) {
+            int result=-1;
+            if(have_dedicated_offer && m.generation==generation && !prox_native_is_cancelled())
+                result=dedicated_transfer();
+            have_dedicated_offer=0;
+            packet(&m);
+            if(result || proxNativeQueryService(PROX_NQ_STAGED,&m,sizeof(m))<0)
+                dedicated_finish();
+        } else if(m.command==PROX_NQ_INSTALL) {
+            if(m.generation==generation && dedicated_handoff() && !failure)
+                failure=PROX_NQ_CAUSE_CLIENT;
+            dedicated_finish();
+        } else if(m.cancel && have_dedicated_stage) {
+            dedicated_finish();
+#endif
+#ifndef PROX_NATIVE_RESIDENT_QUERY
         } else if(m.command==PROX_NQ_DOWNLOAD) {
             int rc=m.generation==offer_generation?download():-1;
             packet(&m); m.result=-1; m.failure=failure;
@@ -286,6 +489,7 @@ void prox_native_worker(int argc,char **argv)
             discard_stage(); have_offer=0; close_report();
             packet(&m); m.result=-1;
             if(proxNativeQueryService(PROX_NQ_RESULT,&m,sizeof(m))<0) prox_native_resident_fault();
+#endif
         }
         sceKernelDelayThread(50000);
     }
