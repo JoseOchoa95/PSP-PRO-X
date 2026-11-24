@@ -1,11 +1,11 @@
-"""Create an explicit experimental payload and companion build-source archive."""
+"""Stage checked firmware, OTA assets and their companion source archive."""
 from pathlib import Path
 import json
 import zipfile
 import subprocess
 import sys
 import tarfile
-from build import ROOT, inventory, digest, sha, repository_head
+from build import ROOT, inventory, sha, repository_head
 from verify import require
 from product import VERSION, WPA2_VARIANT, WPA2_REPORT_SHA256
 from hardware_report import REPORT as HARDWARE_REPORT
@@ -26,14 +26,27 @@ def archive(path, files):
             stream.writestr(entry, data)
 
 
+def dedicated_assets(output, destination):
+    """Copy the exact dedicated contract verified against the compiled parts."""
+    compiled=output/'dedicated-update'
+    assets=[]
+    for name in ('EBOOT.PBP','pro-x-dedicated-update.json'):
+        asset=destination/name
+        asset.write_bytes((compiled/name).read_bytes())
+        assets.append(asset)
+    return assets
+
+
 def main():
     subprocess.run([sys.executable, str(ROOT / 'scripts/verify.py')], check=True, cwd=ROOT)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     build = json.loads((ROOT / 'artifacts/pro-x-build.json').read_text())
     verify_native_release(ROOT,build)
     native_report=native_validation(build)
     native_status=native_report['status'] if native_report else 'NOT RUN'
     require(build.get('product_version') == VERSION, 'Product version differs from compiled build')
+    resident=build.get('resident_dedicated_ota',False)
+    destination=OUTPUT_DIR/('resident-release-'+build['build_id']) if resident else OUTPUT_DIR
+    destination.mkdir(parents=True,exist_ok=True)
     source_commit = repository_head()
     reference = json.loads((ROOT / 'artifacts/reference-build.json').read_text())
     verification = json.loads((ROOT / 'artifacts/verification.json').read_text())
@@ -51,15 +64,27 @@ def main():
         'sha256':'714c0af3c51f61a895311ee1e58e719d8ed7fc5d3e5e441de38d67133617c265',
         'included_in_package':False,
     } if background else None
+    if resident:
+        completion = {
+            'path':'flash0:/kd/_proxc661.bin','bytes':522,
+            'sha256':'4b47ddf778c8df121a7fe3ade8acaada307ffd3e96d17834f568e29240557ba7',
+            'import_path':'PSP/GAME/PROUPDATE/native-completion.rco',
+            'included_in_package':False,
+        }
+    completion_note = ('The manual Installer can provision the original completion phrases from an exact owner-supplied resource. The resource stays outside the package.\n\n'
+                       if resident else
+                       'Native OTA uses a matched background writer; see the exact-build owner-reported validation scope in manifest.json. The separate owner-supplied original completion resource is required at runtime and is not included.\n\n'
+                       if background else 'The existing target installer retains its text screen and X confirmations.\n\n')
+    build_mode=' --resident-dedicated-ota' if resident else ''
     source_note = (
         f'PRO-X v{VERSION} / 6.61: original native System Update frontend and verified GitHub updater.\n'
         'See the exact-build owner-report scope in manifest.json; do not infer universal model/router or Infinity validation.\n'
-        + ('Native OTA uses a matched background writer; see the exact-build owner-reported validation scope in manifest.json. The separate owner-supplied original completion resource is required at runtime and is not included.\n\n' if background else 'The existing target installer retains its text screen and X confirmations.\n\n') +
+        + completion_note +
         'This archive contains the exact inputs needed to build Installer and Fast Recovery, including inherited libraries/March33, scripts, notices and documentation.\n'
         'Inherited source tools are preserved; compilation and the binary package omit IPL/permanent/dumping programs. No Sony firmware or Infinity is included.\n'
         'See docs/upstream.md for upstream SHA, authorship and inherited binary limitations.\n'
         'Build: docker build -t pro-x-toolchain:phase1 -f scripts/Dockerfile scripts\n'
-        '       python scripts/build.py pro-x\n'
+        f'       python scripts/build.py pro-x{build_mode}\n'
         'Compare the resulting EBOOT files with the hashes in the binary package manifest.\n'
         'Full source-scope verification uses the complete repository checkout and reference build.\n'
     ).encode()
@@ -70,21 +95,24 @@ def main():
         'repository_head': source_commit, 'build_repository_head': build['repository_head'],
         'files': source_hashes, 'complete_build_inputs': True, 'complete_upstream_tree': True,
     }, indent=2) + '\n').encode()
-    source_zip = OUTPUT_DIR / (NAME + '-source.zip')
+    source_zip = destination / (NAME + '-source.zip')
     archive(source_zip, sources)
 
     files = {}
     output = ROOT / build['output']
-    for directory in ['PROUPDATE', 'FastRecovery', 'PROXUPDATE']:
+    executables=('PROUPDATE','FastRecovery') if resident else ('PROUPDATE','FastRecovery','PROXUPDATE')
+    for directory in executables:
         name = 'PSP/GAME/' + directory + '/EBOOT.PBP'
         files[name] = (output / name).read_bytes()
-        executable = OUTPUT_DIR / name
+        executable = destination / name
         executable.parent.mkdir(parents=True, exist_ok=True)
         executable.write_bytes(files[name])
-    name = 'PSP/GAME/PROXUPDATE/cacert.pem'
-    files[name] = (output / name).read_bytes()
-    (OUTPUT_DIR / name).write_bytes(files[name])
-    files['NATIVE-UPDATE.md'] = (ROOT / 'scripts/resources/NATIVE-UPDATE.md').read_bytes()
+    if not resident:
+        name = 'PSP/GAME/PROXUPDATE/cacert.pem'
+        files[name] = (output / name).read_bytes()
+        (destination / name).write_bytes(files[name])
+    guide='RESIDENT-DEDICATED-OTA.md' if resident else 'NATIVE-UPDATE.md'
+    files[guide]=(ROOT/'scripts/resources'/guide).read_bytes().replace(b'@PRODUCT_VERSION@',VERSION.encode('ascii'))
     with tarfile.open(ROOT / 'firmware/Updater/vendor/mbedtls-3.6.7.tar.bz2') as tls_source:
         for entry in tls_source:
             parts = Path(entry.name).parts[1:]
@@ -104,19 +132,20 @@ def main():
     files['credit.txt'] = (ROOT / 'firmware/credit.txt').read_bytes()
     files['SOURCE.md'] = source_note + ('\nCompanion: ' + source_zip.name + '\nSHA-256: ' + sha(source_zip.read_bytes()) + '\n').encode()
     files['toolchain.txt'] = (ROOT / 'docs/build-toolchain.txt').read_bytes()
-    update_zip, update_json = generate_update(OUTPUT_DIR, VERSION, build['build_id'], files)
+    update_assets=dedicated_assets(output,destination) if resident else generate_update(destination,VERSION,build['build_id'],files)
+    install_path='dedicated resident EBOOT' if resident else 'background installation' if background else 'existing-installer handoff'
     manifest = {
         'product': 'PRO-X', 'version': VERSION, 'firmware_target': '6.61',
         'status': 'native-update-release-candidate', 'hardware': native_status, 'infinity': 'NOT RUN',
         'native_update_hardware_report': native_report,
         'baseline_hardware_report': HARDWARE_REPORT,
-        'phase3': {'milestone': 'native GitHub checking, verified download and '+('background installation' if background else 'existing-installer handoff'),
+        'phase3': {'milestone': 'native GitHub checking, verified download and '+install_path,
                    'native_frontend': True, 'native_ota': True,
                    'native_background':background,'completion_resource':completion,
                    'online_installation_implemented': True, 'physical_validation': native_status,
                    'transport_baseline': {'build_id': 'pro-x-c41ee2ff7b5e', 'status': 'USER_SUPPLIED_REPORTS_PASS',
                                           'reports': ['report-006', 'report-007', 'report-008']},
-                   'update_assets': {p.name: sha(p.read_bytes()) for p in (update_zip,update_json)},
+                   'update_assets': {p.name: sha(p.read_bytes()) for p in update_assets},
                    'dependencies': json.loads((ROOT / 'scripts/updater-dependencies.json').read_text())},
         'build_id': build['build_id'],
         'wpa2': {'preference_enabled_by_default': True, 'verified_variants': 1,
@@ -143,13 +172,16 @@ def main():
         for name,data in {**files,**sources}.items():
             require(not name.lower().endswith('.rco') and sha(data)!=completion['sha256'],
                     'Original completion resource must remain outside distributable packages')
+    if resident:
+        manifest['ota_contract']='prox-dedicated-eboot-v1'
+        manifest['dedicated_update']=json.loads((output/'dedicated-update/dedicated-update.json').read_bytes())
     files['manifest.json'] = (json.dumps(manifest, indent=2) + '\n').encode()
     files['SHA256SUMS'] = ''.join(sha(data) + '  ' + name + '\n' for name, data in sorted(files.items())).encode()
-    binary_zip = OUTPUT_DIR / (NAME + '.zip')
+    binary_zip = destination / (NAME + '.zip')
     archive(binary_zip, files)
-    manifest_path = OUTPUT_DIR / (NAME + '-manifest.json')
+    manifest_path = destination / (NAME + '-manifest.json')
     manifest_path.write_bytes(files['manifest.json'])
-    compact_path = OUTPUT_DIR / (NAME + '-build.json')
+    compact_path = destination / (NAME + '-build.json')
     compact = {
         'product': 'PRO-X', 'version': VERSION, 'firmware_target': '6.61',
         'build_id': build['build_id'], 'status': 'native-update-release-candidate', 'hardware': native_status,
@@ -160,15 +192,18 @@ def main():
         'compile_script_sha256': build['compile_script_sha256'],
         'host_signer_source_files': manifest['host_signer_source_files'],
         'updater_compile_script_sha256': sha((ROOT / 'scripts/compile-updater.sh').read_bytes()),
-        'packages': {p.name: sha(p.read_bytes()) for p in [binary_zip, source_zip, update_zip, update_json]},
+        'packages': {p.name: sha(p.read_bytes()) for p in (binary_zip,source_zip,*update_assets)},
         'detailed_manifest_sha256': sha(files['manifest.json']),
         'executables': {n: {'size': len(d), 'sha256': sha(d)} for n, d in files.items() if n.endswith('/EBOOT.PBP')},
     }
     compact_path.write_text(json.dumps(compact, indent=2)+'\n', encoding='utf-8')
     external = ''.join(sha(path.read_bytes()) + '  ' + path.name + '\n'
-                       for path in [binary_zip, source_zip, update_zip, update_json, manifest_path, compact_path])
+                       for path in (binary_zip,source_zip,*update_assets,manifest_path,compact_path))
     external += ''.join(sha(data)+'  '+name+'\n' for name, data in sorted(files.items()) if name.startswith('PSP/'))
-    (OUTPUT_DIR / (NAME + '.sha256')).write_text(external, encoding='ascii')
+    (destination / (NAME + '.sha256')).write_text(external, encoding='ascii')
+    if resident:
+        print(external,end='')
+        return
     # This opt-in tool is separate from the normal two-program installation ZIP.
     diagnostics = {name: (output / 'diagnostics' / name).read_bytes() for name in build['diagnostics']}
     diagnostics['docs/wpa2-support.md'] = (ROOT / 'docs/wpa2-support.md').read_bytes()
@@ -176,7 +211,7 @@ def main():
     diagnostics['THIRD_PARTY_NOTICES.md'] = (ROOT / 'THIRD_PARTY_NOTICES.md').read_bytes()
     diagnostics['source-reference.json'] = (json.dumps(manifest['source_archive'],indent=2)+'\n').encode()
     diagnostics['SHA256SUMS'] = ''.join(sha(data)+'  '+name+'\n' for name,data in sorted(diagnostics.items())).encode()
-    diagnostic_zip = OUTPUT_DIR / (NAME + '-diagnostic.zip')
+    diagnostic_zip = destination / (NAME + '-diagnostic.zip')
     archive(diagnostic_zip,diagnostics)
     diagnostic_zip.with_suffix('.sha256').write_text(sha(diagnostic_zip.read_bytes())+'  '+diagnostic_zip.name+'\n',encoding='ascii')
     print(external, end='')
