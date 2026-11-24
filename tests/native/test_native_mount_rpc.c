@@ -15,7 +15,30 @@ int prox_native_flash_preflight(const ProxNativePart *parts)
     return capacity_result;
 }
 #ifdef PROX_NATIVE_DEDICATED_OTA
-static int cleanup_result;
+static int cleanup_result, loader_calls, loader_failure, startup_waits;
+static const int resident_module;
+void prox_native_query_event(const char *name,int result) { (void)name;(void)result; }
+void prox_native_completion_reset(void) { assert(!irq && !k1); }
+int prox_native_query_start(unsigned int lease)
+{
+    assert(!irq && lease==state.lease);
+    ++loader_calls;
+    return loader_failure;
+}
+int prox_native_query_is_loading(void) { return 0; }
+void *sceKernelFindModuleByName(const char *name)
+{
+    assert(!irq && !strcmp(name,"ProxUpdater"));
+    return (void *)&resident_module;
+}
+int sceKernelDelayThread(unsigned int delay)
+{
+    assert(!irq && !k1 && delay==10000 && state.command==PROX_NQ_BOOT_CLEANUP && !startup_waits);
+    ProxNativeQueryMessage message={.protocol=PROX_NQ_PROTOCOL,.lease=state.lease,.generation=state.generation};
+    assert(!prox_nq_exchange(&state,4,PROX_NQ_RESULT,&message));
+    ++startup_waits;
+    return 0;
+}
 int prox_native_completion_armed(unsigned int generation) { assert(generation==45);return 0; }
 int prox_native_flash_preflight_dedicated(const ProxNativePart *parts,const ProxNativePart *worker)
 {
@@ -65,7 +88,7 @@ int prox_native_mount_end(ProxMountReport *r)
 #ifdef PROX_NATIVE_DEDICATED_OTA
 int main(void)
 {
-    for(int case_id=0;case_id<=12;++case_id) {
+    for(int case_id=0;case_id<=14;++case_id) {
         ProxNativeCleanupMessage m={.protocol=PROX_NI_CLEANUP_PROTOCOL,.lease=31,.generation=45};
         unsigned int size=sizeof(m);
         memset(&state,0,sizeof(state));
@@ -86,13 +109,30 @@ int main(void)
         case 10:invalid=1;break;
         case 11:allocation_fail=1;break;
         case 12:++m.protocol;break;
+        case 13:state.command=PROX_NQ_BOOT_CLEANUP;break;
+        case 14:state.command=PROX_NQ_IDLE;break;
         }
         int result=proxNativeInstallService(PROX_NI_CLEANUP_COMMITTED,(void *)&m,size);
-        assert(called==(case_id==0 || case_id==9));
-        assert(case_id==0 ? !result : result<0);
+        assert(called==(case_id==0 || case_id==9 || case_id==13));
+        assert(case_id==0 || case_id==13 ? !result : result<0);
         assert(state.fault==(case_id==9) && !access_busy && !extended && !irq && k1==0x1234);
     }
     puts("PASS: production cleanup RPC requires the current query owner and generation, rejects an active writer, and faults on flash restore failure");
+    memset(&state,0,sizeof(state));
+    assert(!prox_native_query_request_boot_cleanup());
+    assert(loader_calls==1 && state.active && state.command==PROX_NQ_BOOT_CLEANUP);
+    assert(prox_native_query_request_boot_cleanup()<0 && loader_calls==1);
+    assert(!proxNativeQueryAbort() && !state.cancel);
+    ProxNativeQueryMessage message={.protocol=PROX_NQ_PROTOCOL,.lease=state.lease};
+    assert(!prox_nq_exchange(&state,4,PROX_NQ_REGISTER,&message));
+    assert(!proxNativeQueryInitEx(&message,&message) && startup_waits==1 && loader_calls==2);
+    assert(state.ready && !state.active && !state.cancel && !state.done && state.generation==2 && k1==0x1234);
+    assert(prox_native_query_request_boot_cleanup()<0 && loader_calls==2);
+    memset(&state,0,sizeof(state));
+    loader_failure=-1;
+    assert(prox_native_query_request_boot_cleanup()<0 && loader_calls==3);
+    assert(state.fault && !state.active && state.command==PROX_NQ_IDLE);
+    puts("PASS: startup request cannot replace a Settings session; early InitEx waits without cancelling cleanup; loader failure releases its reservation");
 }
 #else
 int main(void)

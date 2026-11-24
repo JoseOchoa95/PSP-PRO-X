@@ -26,10 +26,12 @@ static unsigned int expected_running[3];
 #include "native_background.h"
 #ifdef PROX_NATIVE_DEDICATED_OTA
 #include "dedicated_job.h"
-static int writer_starts, cleanup_case, cleanup_requests, cleanup_card;
+static int writer_starts, cleanup_case, cleanup_requests, cleanup_card, startup_cleanup;
 int prox_dedicated_pending(const char *directory)
 {
-    assert(!strcmp(directory,PROX_RESIDENT_MS_REPORTS) && !borrowed);
+    assert(!borrowed);
+    if(!strcmp(directory,PROX_RESIDENT_EF_REPORTS))return 0;
+    assert(!strcmp(directory,PROX_RESIDENT_MS_REPORTS));
     return mode==5 && cleanup_case!=0;
 }
 int prox_dedicated_read_committed(const char *directory,const char *build,const char *version,
@@ -54,6 +56,7 @@ int proxNativeInstallService(int action,ProxNativeInstallMessage *m,unsigned int
     const ProxNativeCleanupMessage *request=(const void *)m;
     assert(action==PROX_NI_CLEANUP_COMMITTED && size==sizeof(*request));
     assert(mode==5 && !borrowed && state.phase==PROX_NQ_QUERY && report_open);
+    assert(state.command==(startup_cleanup ? PROX_NQ_BOOT_CLEANUP : PROX_NQ_CHECK));
     assert(request->protocol==PROX_NI_CLEANUP_PROTOCOL && request->lease==77 && request->generation==state.generation);
     assert(request->model==1 && !strcmp(request->build_id,PROX_BUILD_ID));
     ++cleanup_requests;
@@ -99,6 +102,9 @@ int sceIoOpen(const char *p,int f,int m)
 {
 #ifdef TEST_DEDICATED_SETTINGS
     assert(strstr(p,"ms0:/PROXDIAG/native-") && f==(2|0x200|0x800) && m==0600 && !report_open);
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(startup_cleanup)assert(strstr(p,"native-cleanup-"));
+#endif
 #else
     assert(strstr(p,"ms0:/PSP/GAME/PROXUPDATE/native-") && f==(2|0x200|0x800) && m==0600 && !report_open);
 #endif
@@ -234,6 +240,13 @@ int sceKernelDelayThread(unsigned int us)
 {
     assert(us==50000);
     assert(++steps<100); /* A broken lifecycle must fail instead of hanging CI. */
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(startup_cleanup) {
+        assert(!state.active && !state.done && !state.fault && state.command==PROX_NQ_IDLE);
+        assert(state.ready && state.owner==2 && !state.answer.package_size && !queries && !borrowed && !report_open);
+        longjmp(finished,1);
+    }
+#endif
     if(state.command==PROX_NQ_IDLE && state.done && state.phase==PROX_NQ_QUERY) {
         assert(queries==1 && !borrowed && !report_open);
         if(mode==5 || mode==7 || mode==10 || mode==11) {
@@ -334,6 +347,20 @@ int main(void)
         assert(power_calls==(cleanup_case!=2));
     }
     puts("PASS: authenticated resident query retires card stage only after exact committed record, power readiness and kernel cleanup");
+    startup_cleanup=1;
+    for(cleanup_case=0;cleanup_case<=4;++cleanup_case) {
+        opened=queries=downloads=launches=removes=borrowed=report_open=steps=power_calls=0;
+        cleanup_requests=cleanup_card=0;
+        prox_nq_reset(&state,77);
+        assert(!prox_nq_start_boot_cleanup(&state));
+        assert(prox_nq_start_boot_cleanup(&state)<0 && prox_nq_open(&state)<0);
+        if(!setjmp(finished)) prox_native_worker(3,args);
+        assert(!queries && !borrowed && !report_open && !downloads && !launches);
+        assert(opened==(cleanup_case!=0) && power_calls==(cleanup_case!=0 && cleanup_case!=2));
+        assert(cleanup_requests==(cleanup_case==1 || cleanup_case==3) && cleanup_card==(cleanup_case==1));
+        assert(!prox_nq_open(&state) && !prox_nq_submit(&state));
+    }
+    puts("PASS: startup worker performs the same verified cleanup offline, leaves deferred work intact and returns ownership to normal System Update");
     puts("PASS: writable Settings worker requires actual offer and exact resident writer handoff, retains writer-owned stage and releases borrowed networking");
 #elif defined(PROX_NATIVE_DEDICATED_PREVIEW)
     puts("PASS: dedicated resident worker holds the stage until the native consumer handoff, rechecks readiness, rejects failed writer input and cleans its stage on cancellation or return");

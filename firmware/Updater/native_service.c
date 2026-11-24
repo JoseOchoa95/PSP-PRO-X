@@ -107,14 +107,11 @@ void prox_native_resident_fault(void)
      * let the original UI show failure; never exit VSH or unload that code. */
     for(;;) sceKernelDelayThread(1000000);
 }
-static int open_report(const char *kind)
+static int open_report_at(const char *directory,const char *kind)
 {
     char path[128]; unsigned int i; SceIoStat stat;
     report_failed=0;
-#ifdef PROX_NATIVE_RESIDENT_QUERY
-    const char *directory = prox_resident_report_directory();
-    if (!directory) return -1;
-#endif
+    if(!directory)return -1;
     for(i=1;i<=999;++i) {
         snprintf(path,sizeof(path),"%s/native-%s-%03u.txt",directory,kind,i);
         if(sceIoGetstat(path,&stat)>=0) continue;
@@ -123,25 +120,45 @@ static int open_report(const char *kind)
     }
     return -1;
 }
-#ifdef PROX_NATIVE_DEDICATED_OTA
-static void cleanup_verified_boot(void)
+static int open_report(const char *kind)
 {
-    const char *directory=prox_resident_report_directory();
-    if(!directory)return;
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+    return open_report_at(prox_resident_report_directory(),kind);
+#else
+    return open_report_at(directory,kind);
+#endif
+}
+#ifdef PROX_NATIVE_DEDICATED_OTA
+static void cleanup_verified_boot(int startup)
+{
+    const char *directory=PROX_RESIDENT_MS_REPORTS;
     int pending=prox_dedicated_pending(directory);
+    if(pending<=0) {
+        int internal=prox_dedicated_pending(PROX_RESIDENT_EF_REPORTS);
+        if(internal>0) {
+            directory=PROX_RESIDENT_EF_REPORTS;
+            pending=internal;
+        }
+    }
     if(!pending)return;
+    if(startup) {
+        report_required=0;
+        (void)open_report_at(directory,"cleanup");
+        prox_log("PRO-X v" PROX_PRODUCT_VERSION " startup cleanup build " PROX_BUILD_ID);
+    }
     ProxDedicatedJob job;
     ProxNativeFlash transaction;
+    const unsigned int model=(unsigned int)proxUpdateGetState(5);
     if(pending<0 || proxUpdateGetState(0)!=1 || proxUpdateGetState(4)!=0x06060110 ||
        proxUpdateGetState(5)!=1 || proxUpdateGetState(1)!=PROX_PRODUCT_MAJOR ||
        proxUpdateGetState(2)!=PROX_PRODUCT_MINOR || proxUpdateGetState(3)!=PROX_PRODUCT_PATCH ||
        prox_dedicated_read_committed(directory,PROX_BUILD_ID,PROX_PRODUCT_VERSION,model,&job,&transaction)) {
         prox_log("Dedicated boot cleanup deferred: target or committed record did not verify");
-        return;
+        goto done;
     }
     if(!prox_power_ready()) {
         prox_log("Dedicated boot cleanup deferred: installation power prerequisite");
-        return;
+        goto done;
     }
     ProxNativeCleanupMessage request={.protocol=PROX_NI_CLEANUP_PROTOCOL,.lease=lease_id,
         .generation=generation,.model=model,.prepared=transaction.prepared,.backups=transaction.backups,
@@ -149,10 +166,16 @@ static void cleanup_verified_boot(void)
     memcpy(request.build_id,job.install.build_id,sizeof(request.build_id));
     memcpy(request.installed,job.install.parts,sizeof(request.installed));
     memcpy(request.before,transaction.before,sizeof(request.before));
-    int result=proxNativeInstallService(PROX_NI_CLEANUP_COMMITTED,(void *)&request,sizeof(request));
+    int result=prox_native_is_cancelled() ? -1 :
+        proxNativeInstallService(PROX_NI_CLEANUP_COMMITTED,(void *)&request,sizeof(request));
     if(!result)
         result=prox_dedicated_cleanup_committed(directory,PROX_BUILD_ID,PROX_PRODUCT_VERSION,model);
     prox_log("Dedicated boot cleanup: %s (%d)",result?"deferred":"PASS; flash sidecars and card stage removed",result);
+done:
+    if(startup && report_fd>=0) {
+        sceIoClose(report_fd);
+        report_fd=-1;
+    }
 }
 #endif
 static int query(ProxCatalogOffer *offer)
@@ -216,7 +239,7 @@ static int query(ProxCatalogOffer *offer)
 done:
     if(borrowed && prox_network_end()) result=-1;
 #ifdef PROX_NATIVE_DEDICATED_OTA
-    if(result>=0 && !prox_native_is_cancelled())cleanup_verified_boot();
+    if(result>=0 && !prox_native_is_cancelled())cleanup_verified_boot(0);
 #endif
     if(prox_native_is_cancelled()) result=-1;
     prox_log("REAL native query completed result=%d pages=%u candidates=%u cause=%u",result,offer->pages,offer->candidates,failure);
@@ -399,12 +422,27 @@ void prox_native_worker(int argc,char **argv)
 #endif
     /* The compiled immutable bundle survives card removal. Never replace TLS
      * validation with a cached catalog verdict or an unauthenticated query. */
-    if(prox_native_trust()) { for(;;) sceKernelDelayThread(1000000); }
+    int trust_error=prox_native_trust();
+#ifndef PROX_NATIVE_DEDICATED_OTA
+    if(trust_error) { for(;;) sceKernelDelayThread(1000000); }
+#endif
     packet(&m);
     if(proxNativeQueryService(PROX_NQ_REGISTER,&m,sizeof(m))<0) { for(;;) sceKernelDelayThread(1000000); }
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(trust_error)prox_native_resident_fault();
+#endif
     for(;;) {
         packet(&m);
         if(proxNativeQueryService(PROX_NQ_POLL,&m,sizeof(m))<0) prox_native_resident_fault();
+#ifdef PROX_NATIVE_DEDICATED_OTA
+        if(m.command==PROX_NQ_BOOT_CLEANUP) {
+            generation=m.generation;
+            cleanup_verified_boot(1);
+            packet(&m);
+            if(proxNativeQueryService(PROX_NQ_RESULT,&m,sizeof(m))<0)prox_native_resident_fault();
+            continue;
+        }
+#endif
         if(m.command==PROX_NQ_CHECK) {
             int result;
 #ifndef PROX_NATIVE_RESIDENT_QUERY

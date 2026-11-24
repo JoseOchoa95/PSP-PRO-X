@@ -305,6 +305,10 @@ def verify_build(metadata):
                         b'DEDICATED PREVIEW:' not in updater_elf and b'PROX-DEDICATED-TEST.PBP' not in updater_elf,
                         'Writable resident flow must use the bound local engine and exclude fixtures')
                 cleanup = (tree / 'Vshctrl/native_dedicated_cleanup.o').read_bytes()
+                require(b'prox_native_schedule_boot_cleanup' in (tree / 'Vshctrl/vshpatch.o').read_bytes() and
+                        b'prox_native_query_request_boot_cleanup' in (tree / 'Vshctrl/native_query_loader.o').read_bytes() and
+                        b'startup cleanup build' in updater_elf,
+                        'Dedicated cleanup is not wired to XMB startup')
                 require(b'prox_native_cleanup_flash' in cleanup and b'sceIoRemove' in cleanup and
                         b'sceIoWrite' not in cleanup and b'prox_native_mount_end' in cleanup,
                         'Dedicated post-boot cleanup must only retire verified sidecars and restore flash access')

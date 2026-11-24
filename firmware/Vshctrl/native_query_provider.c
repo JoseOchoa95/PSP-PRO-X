@@ -60,6 +60,9 @@ static ProxNativeInstallState install_state;
 int prox_native_install_critical(void)
 {
     unsigned int mask=pspSdkDisableInterrupts();int locked=prox_ni_locked(&install_state);
+#if defined(PROX_NATIVE_MOUNT_ACCESS) && defined(PROX_NATIVE_DEDICATED_OTA)
+    locked=locked || access_busy;
+#endif
     pspSdkEnableInterrupts(mask);return locked;
 }
 int prox_native_install_completion_owner(int thread,unsigned int generation)
@@ -184,7 +187,8 @@ static int cleanup_service(const void *packet)
     unsigned int mask=pspSdkDisableInterrupts();
     int admitted=cleanup.protocol==PROX_NI_CLEANUP_PROTOCOL && cleanup.lease==state.lease &&
         cleanup.generation==state.generation && thread>0 && thread==state.owner &&
-        state.active && state.phase==PROX_NQ_QUERY && state.command==PROX_NQ_CHECK && !state.fault && !state.cancel &&
+        state.active && state.phase==PROX_NQ_QUERY &&
+        (state.command==PROX_NQ_CHECK || state.command==PROX_NQ_BOOT_CLEANUP) && !state.fault && !state.cancel &&
         !access_busy && !prox_ni_locked(&install_state) && !prox_native_mount_active();
     if(admitted)access_busy=1;
     pspSdkEnableInterrupts(mask);
@@ -286,10 +290,31 @@ void prox_native_query_load_failed(void)
 void prox_native_query_load_failed_reason(unsigned int failure)
 {
     unsigned int mask=pspSdkDisableInterrupts();
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if (state.command==PROX_NQ_BOOT_CLEANUP) {
+        state.active=0;
+        state.command=PROX_NQ_IDLE;
+    }
+#endif
     state.fault=1; state.cancel=1; state.done=1; state.answer.result=-1;
     state.answer.failure=failure<=PROX_NQ_CAUSE_CLIENT?failure:PROX_NQ_CAUSE_CLIENT;
     pspSdkEnableInterrupts(mask);
 }
+#ifdef PROX_NATIVE_DEDICATED_OTA
+int prox_native_query_request_boot_cleanup(void)
+{
+    unsigned int seed=sceKernelGetSystemTimeLow()|1u;
+    unsigned int mask=pspSdkDisableInterrupts();
+    if (!state.lease)prox_nq_reset(&state,seed);
+    int result=prox_nq_start_boot_cleanup(&state);
+    unsigned int lease=state.lease;
+    pspSdkEnableInterrupts(mask);
+    if (result)return result;
+    result=prox_native_query_start(lease);
+    if (result<0)prox_native_query_load_failed();
+    return result;
+}
+#endif
 const char *proxNativeQueryTextKey(const char *key)
 {
 #ifdef PROX_NATIVE_OTA
@@ -302,17 +327,39 @@ const char *proxNativeQueryTextKey(const char *key)
 }
 int proxNativeQueryInitEx(const void *allocate,const void *release)
 {
-    unsigned int mask,lease,seed; int rc,k1,loaded,loading;
+    unsigned int mask,lease,start; int rc,k1,loaded,loading;
     if(!allocate || !release) return NATIVE_ARGUMENT;
-#ifdef PROX_NATIVE_MOUNT_ACCESS
+#if defined(PROX_NATIVE_MOUNT_ACCESS) && !defined(PROX_NATIVE_DEDICATED_OTA)
     /* Preserve the old owner's restoration token after a failed cleanup. */
     if(prox_native_mount_active())return NATIVE_STATE;
 #endif
     k1=pspSdkSetK1(0);
-    seed=sceKernelGetSystemTimeLow()|1u;
+    start=sceKernelGetSystemTimeLow();
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    /* An early Settings request can share the resident worker after the
+     * startup operation has released it. It cannot cancel the cleanup. */
+    for (;;) {
+        loaded=sceKernelFindModuleByName("ProxUpdater")!=NULL;
+        loading=prox_native_query_is_loading();
+        mask=pspSdkDisableInterrupts();
+        if (state.command!=PROX_NQ_BOOT_CLEANUP)break;
+        pspSdkEnableInterrupts(mask);
+        if ((unsigned int)(sceKernelGetSystemTimeLow()-start)>10000000u) {
+            pspSdkSetK1(k1);
+            return NATIVE_STATE;
+        }
+        sceKernelDelayThread(10000);
+    }
+    if (prox_native_mount_active()) {
+        pspSdkEnableInterrupts(mask);
+        pspSdkSetK1(k1);
+        return NATIVE_STATE;
+    }
+#else
     loaded=sceKernelFindModuleByName("ProxUpdater")!=NULL; loading=prox_native_query_is_loading();
     mask=pspSdkDisableInterrupts();
-    if(!state.lease || (!loaded && !loading && !state.active)) prox_nq_reset(&state,seed);
+#endif
+    if(!state.lease || (!loaded && !loading && !state.active)) prox_nq_reset(&state,start|1u);
     rc=prox_nq_open(&state); lease=state.lease;
     pspSdkEnableInterrupts(mask);
     if(!rc) rc=prox_native_query_start(lease);
@@ -335,7 +382,14 @@ int proxNativeQueryAbort(void)
 #if defined(PROX_NATIVE_INSTALL_PREVIEW) || defined(PROX_NATIVE_BACKGROUND)
     if(prox_native_install_preview_locked()) return 0;
 #endif
-    unsigned int mask=pspSdkDisableInterrupts(); prox_nq_cancel(&state); pspSdkEnableInterrupts(mask);
+    unsigned int mask=pspSdkDisableInterrupts();
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(state.command==PROX_NQ_BOOT_CLEANUP) {
+        pspSdkEnableInterrupts(mask);
+        return 0;
+    }
+#endif
+    prox_nq_cancel(&state); pspSdkEnableInterrupts(mask);
 #if defined(PROX_NATIVE_OFFER_PREVIEW) || defined(PROX_NATIVE_OTA)
     prox_native_preview_abort();
 #endif

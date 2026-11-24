@@ -8,6 +8,9 @@
 #include <string.h>
 #include "prox_native_query.h"
 #include "native_query_provider.h"
+#ifdef PROX_NATIVE_DEDICATED_OTA
+#include "prox_native_install.h"
+#endif
 #ifdef PROX_NATIVE_RESIDENT_QUERY
 #include "prox_resident_query.h"
 int prox_native_resident_load(void);
@@ -157,3 +160,39 @@ int prox_native_query_start(unsigned int lease)
     if(sceKernelStartThread(thread,0,NULL)<0) { sceKernelDeleteThread(thread); loading=0; return -1; }
     return 0;
 }
+#ifdef PROX_NATIVE_DEDICATED_OTA
+static int boot_cleanup_thread(SceSize count,void *arg)
+{
+    (void)count;
+    (void)arg;
+    /* Give removable storage time to mount after the XMB module starts. */
+    for (unsigned int attempt=0;attempt<10;++attempt) {
+        SceIoStat stat;
+        sceKernelDelayThread(1000000);
+        if ((sceIoGetstat(PROX_RESIDENT_MS_REPORTS "/" PROX_DEDICATED_COMMITTED_NAME,&stat)>=0 &&
+             FIO_S_ISREG(stat.st_mode)) ||
+            (sceIoGetstat(PROX_RESIDENT_EF_REPORTS "/" PROX_DEDICATED_COMMITTED_NAME,&stat)>=0 &&
+             FIO_S_ISREG(stat.st_mode))) {
+            prox_native_query_request_boot_cleanup();
+            break;
+        }
+    }
+    sceKernelExitDeleteThread(0);
+    return 0;
+}
+
+void prox_native_schedule_boot_cleanup(void)
+{
+    static int scheduled;
+    unsigned int mask=pspSdkDisableInterrupts();
+    if (scheduled) {
+        pspSdkEnableInterrupts(mask);
+        return;
+    }
+    scheduled=1;
+    pspSdkEnableInterrupts(mask);
+    SceUID thread=sceKernelCreateThread("PRO-X startup cleanup",boot_cleanup_thread,0x30,4096,0,NULL);
+    if (thread>=0 && sceKernelStartThread(thread,0,NULL)<0)
+        sceKernelDeleteThread(thread);
+}
+#endif

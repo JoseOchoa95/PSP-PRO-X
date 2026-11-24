@@ -97,7 +97,7 @@ static int read_exact(const char *path, void *bytes, size_t size)
 }
 
 #ifndef PROX_NATIVE_DEDICATED_PREVIEW
-#define COMMITTED_NAME ".dedicated-committed"
+#define COMMITTED_NAME PROX_DEDICATED_COMMITTED_NAME
 typedef struct {
     char magic[8];
     ProxDedicatedJob job;

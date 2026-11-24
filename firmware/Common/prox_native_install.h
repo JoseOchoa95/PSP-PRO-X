@@ -5,6 +5,7 @@
 #define PROX_NI_PARTS 11u
 #define PROX_NI_FLASH_PARTS 10u
 #define PROX_NI_MODULE "ProxNativeInstaller"
+#define PROX_DEDICATED_COMMITTED_NAME ".dedicated-committed"
 #ifdef PROX_NATIVE_DEDICATED_OTA
 #define PROX_NI_PROTOCOL 2u
 #define PROX_NI_ARGUMENT "--prox-native-install-v2"

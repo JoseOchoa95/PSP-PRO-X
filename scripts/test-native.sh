@@ -229,6 +229,11 @@ cc -std=c99 -Wall -Wextra -Werror -DPROX_ERROR_TEXT_NATIVE -I firmware/Common -I
 cc -std=c99 -Wall -Wextra -Werror -DPROX_NATIVE_OTA -I tests/native/loader_sdk -I firmware/Common -I firmware/Vshctrl \
     tests/native/test_native_query_loader.c firmware/Vshctrl/native_query_loader.c -o /tmp/test-native-query-loader
 /tmp/test-native-query-loader
+cc -std=c99 -Wall -Wextra -Werror -ffunction-sections -fdata-sections -Wl,--gc-sections \
+    -DPROX_NATIVE_RESIDENT_QUERY -DPROX_NATIVE_DEDICATED_OTA \
+    -I tests/native/loader_sdk -I firmware/Common -I firmware/Vshctrl \
+    tests/native/test_native_boot_cleanup.c firmware/Vshctrl/native_query_loader.c -o /tmp/test-native-boot-cleanup
+for scenario in none directory card internal; do /tmp/test-native-boot-cleanup "$scenario"; done
 cc -std=c99 -Wall -Wextra -Werror -DPROX_CACHE_TEST -I tests/native -I tests/native/loader_sdk -I firmware/Common -I firmware/Vshctrl \
     tests/native/test_native_query_cache.c firmware/Vshctrl/native_query_cache.c -o /tmp/test-native-query-cache
 /tmp/test-native-query-cache
