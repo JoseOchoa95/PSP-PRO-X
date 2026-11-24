@@ -10,6 +10,7 @@
 #include <string.h>
 #ifndef PROX_NATIVE_DEDICATED_PREVIEW
 #include "prox_native_flash_paths.h"
+#include <dirent.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <mbedtls/sha256.h>
@@ -164,6 +165,163 @@ static int sync_card(const char *directory)
     char device[] = {directory[0], directory[1], directory[2], ':', 0};
     return sceIoSync(device, 0) < 0 ? -1 : 0;
 }
+/* The downloader owns this stage until the writer durably removes the
+ * marker before opening flash0 for writes. An unmarked extracted stage can
+ * belong to a failed installation from this or an earlier release. */
+static const char download_marker[] = "PROX-DOWNLOAD-1";
+#define DOWNLOAD_MARKER ".downloading"
+
+static int file_type(const char *path)
+{
+    struct stat info;
+    if (stat(path, &info))
+        return errno == ENOENT ? 0 : -1;
+    if (S_ISREG(info.st_mode)) return 1;
+    if (S_ISDIR(info.st_mode)) return 2;
+    return -1;
+}
+
+int prox_dedicated_mark_download(const char *root)
+{
+    char path[256];
+    if (!root || !valid_root(root))
+        return -1;
+    snprintf(path, sizeof(path), "%s/" DOWNLOAD_MARKER, root);
+    SceUID file = sceIoOpen(path, PSP_O_WRONLY | PSP_O_EXCL | PSP_O_CREAT, 0600);
+    if (file < 0)
+        return -1;
+    int count = sceIoWrite(file, download_marker, sizeof(download_marker));
+    if (sceIoClose(file) < 0 || count != (int)sizeof(download_marker) || sync_card(root)) {
+        (void)sceIoRemove(path);
+        return -1;
+    }
+    return 0;
+}
+
+int prox_dedicated_begin_write(const ProxDedicatedJob *job)
+{
+    char path[256], marker[sizeof(download_marker)];
+    if (!valid_job(job))
+        return -1;
+    snprintf(path, sizeof(path), "%s/" DOWNLOAD_MARKER, job->install.root);
+    if (file_type(path) != 1 || read_exact(path, marker, sizeof(marker)) ||
+        memcmp(marker, download_marker, sizeof(marker)) || sceIoRemove(path) < 0)
+        return -1;
+    return sync_card(job->install.root);
+}
+
+static int remove_regular(const char *path)
+{
+    int type = file_type(path);
+    return type == 0 ? 0 : type != 1 || sceIoRemove(path) < 0 ? -1 : 0;
+}
+
+/* Return 1 for a recovery stage. The caller must not erase it. */
+static int discard_download(const char *root)
+{
+    char path[256], marker_path[256], marker[sizeof(download_marker)];
+    if (!valid_root(root) || file_type(root) != 2)
+        return 1;
+    snprintf(marker_path, sizeof(marker_path), "%s/" DOWNLOAD_MARKER, root);
+    int marker_type = file_type(marker_path);
+    snprintf(path, sizeof(path), "%s/native", root);
+    int native_type = file_type(path);
+    if (marker_type == 0) {
+        /* A legacy partial EBOOT could not reach the writer without native/. */
+        if (native_type != 0)
+            return 1;
+    } else if (marker_type != 1 || read_exact(marker_path, marker, sizeof(marker)) ||
+               memcmp(marker, download_marker, sizeof(marker))) {
+        return 1;
+    }
+    if (native_type == 2) {
+        for (unsigned int part = 0; part < PROX_DEDICATED_PARTS; ++part) {
+            part_path(path, root, part);
+            if (remove_regular(path))
+                return -1;
+        }
+        snprintf(path, sizeof(path), "%s/native/engine.prx", root);
+        if (remove_regular(path))
+            return -1;
+        snprintf(path, sizeof(path), "%s/native", root);
+        if (remove_empty(path))
+            return -1;
+    } else if (native_type != 0) {
+        return 1;
+    }
+    snprintf(path, sizeof(path), "%s/EBOOT.PBP", root);
+    if (remove_regular(path) || remove_regular(marker_path) || remove_empty(root))
+        return -1;
+    return 0;
+}
+
+static int is_report(const char *name)
+{
+    static const char *const prefixes[] = {"native-report-", "native-download-", "native-cleanup-"};
+    if (!strcmp(name, "dispatch.txt"))
+        return 1;
+    if (!strncmp(name, "native-install-pro-x-", 21)) {
+        const char *suffix = name + 21;
+        return strspn(suffix, "0123456789abcdef") == 12 && !strcmp(suffix + 12, ".txt");
+    }
+    for (unsigned int i = 0; i < sizeof(prefixes) / sizeof(prefixes[0]); ++i) {
+        size_t length = strlen(prefixes[i]);
+        if (!strncmp(name, prefixes[i], length)) {
+            const char *suffix = name + length;
+            return strspn(suffix, "0123456789") == 3 && !strcmp(suffix + 3, ".txt");
+        }
+    }
+    return 0;
+}
+
+static int purge_workspace(const char *directory, int before_download)
+{
+    int result = 0;
+    /* Check for remaining recovery stages before removing any reports. */
+    for (int reports = 0; reports < 2 && !result; ++reports) {
+        DIR *entries = opendir(directory);
+        if (!entries)
+            return -1;
+        for (;;) {
+            errno = 0;
+            struct dirent *entry = readdir(entries);
+            if (!entry) {
+                if (errno) result = -1;
+                break;
+            }
+            char path[256];
+            int length = snprintf(path, sizeof(path), "%s/%s", directory, entry->d_name);
+            if (length < 0 || length >= (int)sizeof(path))
+                continue;
+            if (!reports && valid_root(path)) {
+                int stage = discard_download(path);
+                if (stage < 0 || (stage > 0 && before_download)) {
+                    result = -1;
+                    break;
+                }
+            } else if (reports && is_report(entry->d_name) && remove_regular(path)) {
+                result = -1;
+                break;
+            }
+        }
+        if (closedir(entries))
+            return -1;
+    }
+    return result ? -1 : sync_card(directory);
+}
+
+int prox_dedicated_reset_download(const char *directory)
+{
+    if (prox_dedicated_pending(directory) != 0)
+        return -1;
+    return purge_workspace(directory, 1);
+}
+
+int prox_dedicated_discard_download(const char *root)
+{
+    return discard_download(root) == 0 ? 0 : -1;
+}
+
 int prox_dedicated_record_available(const ProxDedicatedJob *job)
 {
     if(!valid_job(job))return -1;
@@ -232,54 +390,40 @@ static int read_committed(const char *directory, const char *active_build, const
         memcmp(record->digest, digest, sizeof(digest)) || !valid_job(&record->job) || !valid_sidecars(record) ||
         strncmp(directory, record->job.install.root, strlen(directory)) ||
         strcmp(record->job.install.build_id, active_build) || strcmp(record->job.install.target_version, active_version) ||
-        record->job.install.model != model || installed(&record->job))
+        record->job.install.model != model)
         return -1;
     return 0;
 }
 
 int prox_dedicated_read_committed(const char *directory, const char *active_build, const char *active_version,
-                                  unsigned int model, ProxDedicatedJob *job, ProxNativeFlash *transaction)
+                                  unsigned int model, ProxDedicatedJob *job, ProxNativeFlash *transaction,
+                                  unsigned char digest[32])
 {
     CommittedJob record;
-    if(!job || !transaction || read_committed(directory,active_build,active_version,model,&record))return -1;
+    if(!job || !transaction || !digest || read_committed(directory,active_build,active_version,model,&record))return -1;
     ProxNativeFlash saved={0};
     if(prox_resident_slot(active_build,saved.worker_path))return -1;
     saved.prepared=record.prepared;saved.backups=record.backups;saved.originals=record.backups;
     saved.worker=record.job.worker;saved.worker_prepared=(int)record.worker_prepared;saved.worker_cleanup=1;
     memcpy(saved.before,record.before,sizeof(saved.before));
+    memcpy(digest, record.digest, sizeof(record.digest));
     *job=record.job;*transaction=saved;
     return 0;
 }
 
-static int sidecars_clean(const CommittedJob *record)
-{
-    char path[256],worker[PROX_RESIDENT_SLOT_BYTES];
-    struct stat observed;
-    for(unsigned int i=0;i<PROX_NATIVE_FLASH_FILES;++i) {
-        if(record->prepared & (1u<<i)) {
-            snprintf(path,sizeof(path),"%s.prox-new",prox_native_flash_paths[i]);
-            if(!stat(path,&observed) || errno!=ENOENT)return 0;
-        }
-        if(record->backups & (1u<<i)) {
-            snprintf(path,sizeof(path),"%s.prox-old",prox_native_flash_paths[i]);
-            if(!stat(path,&observed) || errno!=ENOENT)return 0;
-        }
-    }
-    if(!record->worker_prepared)return 1;
-    if(prox_resident_slot(record->job.install.build_id,worker))return 0;
-    snprintf(path,sizeof(path),"%s.prox-new",worker);
-    return stat(path,&observed) && errno==ENOENT;
-}
-
 int prox_dedicated_cleanup_committed(const char *directory, const char *active_build, const char *active_version,
-                                     unsigned int model)
+                                     unsigned int model, const unsigned char digest[32])
 {
     CommittedJob record;
     char path[96];
-    if(read_committed(directory,active_build,active_version,model,&record) ||
-       !sidecars_clean(&record) || cleanup_card_files(&record.job))return -1;
+    if(!digest || read_committed(directory,active_build,active_version,model,&record) ||
+       memcmp(digest, record.digest, sizeof(record.digest)) || cleanup_card_files(&record.job) ||
+       purge_workspace(directory, 0))return -1;
     snprintf(path,sizeof(path),"%s/" COMMITTED_NAME,directory);
-    return sync_card(directory) || sceIoRemove(path)<0 || sync_card(directory) ? -1 : 0;
+    if(sync_card(directory) || sceIoRemove(path)<0 || sync_card(directory))return -1;
+    /* Leave unfamiliar files in place. All updater reports were removed. */
+    (void)sceIoRmdir(directory);
+    return 0;
 }
 #endif
 

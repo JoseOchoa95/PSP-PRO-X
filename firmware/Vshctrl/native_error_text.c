@@ -70,7 +70,15 @@ int prox_native_back_code(unsigned int *out,size_t count,uintptr_t original,unsi
 #include "systemctrl.h"
 #include "native_query_provider.h"
 #include "native_completion_preview.h"
-typedef struct { unsigned int code[34],back_code[14]; char storage[32],generic[32]; unsigned short notice[PROX_COMPLETION_UNITS]; } UserBridge;
+#include "prox_dedicated_storage.h"
+typedef struct {
+    unsigned int code[34],back_code[14];
+    char storage[32],generic[32];
+    unsigned short notice[PROX_COMPLETION_UNITS];
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    unsigned short offer[PROX_OFFER_TEXT_UNITS];
+#endif
+} UserBridge;
 static UserBridge *user;
 static int block_id=-1;
 static unsigned int paf_original;
@@ -136,6 +144,9 @@ unsigned int prox_native_error_prepare(void)
     back_original=back;
 #endif
     prox_native_completion_buffer(candidate->notice);
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    prox_native_offer_buffer(candidate->offer);
+#endif
     sceKernelDcacheWritebackInvalidateAll(); sceKernelIcacheInvalidateAll();
     pspSdkSetK1(k1); prox_native_query_event("native error bridge ready",0); return (unsigned int)user->code;
 }

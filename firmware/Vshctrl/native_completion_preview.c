@@ -6,9 +6,14 @@
 #include "native_query_provider.h"
 #include "prox_install_preview.h"
 #include "prox_native_install.h"
+#include <string.h>
 #if defined(PROX_NATIVE_INSTALL_PREVIEW) || defined(PROX_NATIVE_BACKGROUND)
 static ProxCompletionState notice;
 static unsigned short *user_text;
+#ifdef PROX_NATIVE_DEDICATED_OTA
+static unsigned short *user_offer;
+void prox_native_offer_buffer(unsigned short *buffer) { user_offer=buffer; }
+#endif
 static int guarded;
 void prox_native_completion_buffer(unsigned short *buffer) { user_text=buffer; }
 void prox_native_completion_reset(void) { memset(&notice,0,sizeof(notice)); }
@@ -50,9 +55,20 @@ const unsigned short *proxNativeCompletionText(const char *key)
 {
     unsigned int mask,generation,address=(unsigned int)key,i;int k1;const unsigned short *result=NULL;
     if(!key || address<0x08800000u || address>0x0c000000u-64) return NULL;
-    generation=prox_native_completion_generation(); if(!generation) return NULL;
     k1=pspSdkSetK1(0);
     for(i=0;i<64;++i) if(!key[i]) break;
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(i<64 && guarded && user_offer && !strcmp(key,"msgupdate_new_found") &&
+       prox_native_offer_storage_text(user_offer)) {
+        pspSdkSetK1(k1);
+        return user_offer;
+    }
+#endif
+    generation=prox_native_completion_generation();
+    if(!generation) {
+        pspSdkSetK1(k1);
+        return NULL;
+    }
     mask=pspSdkDisableInterrupts();
     if(i<64 && guarded && user_text && prox_completion_select(&notice,generation,key)) result=user_text;
     pspSdkEnableInterrupts(mask);pspSdkSetK1(k1);return result;

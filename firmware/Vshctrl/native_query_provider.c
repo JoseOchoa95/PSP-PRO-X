@@ -12,6 +12,7 @@
 #include "native_query_state.h"
 #include "prox_native_install.h"
 #include "prox_product.h"
+#include "prox_dedicated_storage.h"
 #ifdef PROX_NATIVE_MOUNT_ACCESS
 #include "native_mount_access.h"
 #include "native_flash_preflight.h"
@@ -478,6 +479,24 @@ int proxNativeQueryRead(void *buffer,unsigned int capacity,unsigned int *detail)
 }
 #ifdef PROX_NATIVE_OTA
 #if defined(PROX_NATIVE_INSTALL_PREVIEW) || defined(PROX_NATIVE_BACKGROUND)
+#ifdef PROX_NATIVE_DEDICATED_OTA
+int prox_native_offer_storage_text(unsigned short *destination)
+{
+    unsigned int mask=pspSdkDisableInterrupts();
+    unsigned int count=state.answer.downloaded;
+    int ready=state.done && state.answer.result==1 && state.generation && !state.active &&
+        !state.cancel && !state.fault && state.phase==PROX_NQ_QUERY &&
+        count>=2 && count<=PROX_OFFER_TEXT_UNITS;
+    if(ready) {
+        unsigned int last=(count-1)*sizeof(*destination);
+        ready=state.answer.summary[0] && !state.answer.summary[last] && !state.answer.summary[last+1];
+        if(ready)
+            memcpy(destination,state.answer.summary,count*sizeof(*destination));
+    }
+    pspSdkEnableInterrupts(mask);
+    return ready;
+}
+#endif
 unsigned int prox_native_completion_generation(void)
 {
     unsigned int mask=pspSdkDisableInterrupts(),generation=0;

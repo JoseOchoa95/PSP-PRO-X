@@ -12,4 +12,6 @@ int sceIoOpen(const char *,int,int);
 int sceIoWrite(int,const void *,unsigned int);
 int sceIoClose(int);
 int sceKernelDelayThread(unsigned int);
+#define PSP_SYSTEMPARAM_ID_INT_LANGUAGE 8
+int sceUtilityGetSystemParamInt(int,int *);
 #endif

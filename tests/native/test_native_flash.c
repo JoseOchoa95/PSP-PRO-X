@@ -23,6 +23,7 @@ static int mode,phase,writes,destructive,failures;
 static FILE *output;
 static char destination[256],logs[65536];static size_t used;
 #ifdef PROX_DEDICATED_GENERATED
+static int deny_user_flash_reads;
 static const char *trial_worker;
 static const ProxNativePart *trial_part;
 #endif
@@ -72,6 +73,10 @@ static void hash_bytes(const unsigned char *data,size_t n,char out[65])
 {unsigned char digest[32];unsigned int i;assert(!mbedtls_sha256(data,n,digest,0));for(i=0;i<32;++i)snprintf(out+2*i,3,"%02x",digest[i]);}
 int prox_file_check(const char *p,unsigned int size,const char *hash,int pbp)
 {
+#ifdef PROX_DEDICATED_GENERATED
+    if (deny_user_flash_reads && !strncmp(p, "flash0:/", 8))
+        return -1;
+#endif
     FILE *file = fopen(p, "rb");
     unsigned char buffer[4096], digest[32];
     char actual[65];
@@ -138,6 +143,24 @@ static void verify_generated_transaction(const char *path)
     assert(!prox_resident_slot(fixture.build_id, worker_path) && strcmp(previous, worker_path));
     assert(snprintf(witness, sizeof(witness), "%s.prox-old", prox_native_flash_path(1)) > 0);
     assert(snprintf(worker_temporary, sizeof(worker_temporary), "%s.prox-new", worker_path) > 0);
+
+    const char retry_root[] = "ms0:/PROXDIAG/.dedicated-00000001-00000003";
+    const char legacy_partial[] = "ms0:/PROXDIAG/.dedicated-00000001-00000004/EBOOT.PBP";
+    const char recovery_file[] = "ms0:/PROXDIAG/.dedicated-00000001-00000005/native/00.prx";
+    const char report[] = "ms0:/PROXDIAG/native-download-001.txt";
+    fill("ms0:/PROXDIAG/.dedicated-00000001-00000003/native/00.prx", 127, 32);
+    fill(legacy_partial, 127, 32);
+    fill(recovery_file, 127, 32);
+    fill(report, 127, 32);
+    assert(!prox_dedicated_mark_download(retry_root));
+    assert(prox_dedicated_reset_download("ms0:/PROXDIAG") < 0);
+    old_file(recovery_file);
+    old_file(report);
+    assert(!unlink(recovery_file));
+    assert(!rmdir("ms0:/PROXDIAG/.dedicated-00000001-00000005/native"));
+    assert(!prox_dedicated_reset_download("ms0:/PROXDIAG"));
+    assert(access(retry_root, F_OK) && access(legacy_partial, F_OK) && access(report, F_OK));
+    assert(!rmdir("ms0:/PROXDIAG") && !rmdir("ms0:"));
 
     for (mode = 11; mode <= 18; ++mode) {
         const char directory[] = "ms0:/PROXDIAG";
@@ -213,17 +236,22 @@ static void verify_generated_transaction(const char *path)
                 assert(!prox_file_check(worker_path, worker.size, worker.sha256, 0));
                 assert(!prox_dedicated_record_commit(&prepared, &state));
                 assert(prox_dedicated_record_commit(&prepared, &state) < 0 && !access(marker, F_OK));
+                assert(prox_dedicated_reset_download(directory) < 0 && !access(eboot, F_OK));
                 assert(prox_native_flash_finalize(&job, &state) < 0);
                 assert(prox_dedicated_writer_finalize(&prepared, &state, previous_build) < 0);
-                assert(prox_dedicated_cleanup_committed(directory, previous_build, job.target_version, 1) < 0);
-                assert(prox_dedicated_cleanup_committed(directory, fixture.build_id, job.source_version, 1) < 0);
-                assert(prox_dedicated_cleanup_committed(directory, fixture.build_id, job.target_version, 0) < 0);
-                assert(prox_dedicated_cleanup_committed(directory, fixture.build_id, job.target_version, 1) < 0);
-                old_file(witness);
-                assert(!access(eboot, F_OK));
+                unsigned char digest[32], wrong_digest[32] = {0};
                 ProxNativeFlash cleanup_start;
                 ProxDedicatedJob restored;
-                assert(!prox_dedicated_read_committed(directory, fixture.build_id, job.target_version, 1, &restored, &cleanup_start));
+                deny_user_flash_reads = 1;
+                assert(!prox_dedicated_read_committed(directory, fixture.build_id, job.target_version, 1,
+                                                      &restored, &cleanup_start, digest));
+                assert(prox_dedicated_cleanup_committed(directory, fixture.build_id, job.target_version, 1, wrong_digest) < 0);
+                deny_user_flash_reads = 0;
+                assert(prox_dedicated_cleanup_committed(directory, previous_build, job.target_version, 1, digest) < 0);
+                assert(prox_dedicated_cleanup_committed(directory, fixture.build_id, job.source_version, 1, digest) < 0);
+                assert(prox_dedicated_cleanup_committed(directory, fixture.build_id, job.target_version, 0, digest) < 0);
+                old_file(witness);
+                assert(!access(eboot, F_OK));
                 assert(!strcmp(restored.install.build_id, job.build_id) && cleanup_start.prepared == state.prepared);
                 assert(cleanup_start.backups == state.backups && !strcmp(cleanup_start.before[1].sha256, state.before[1].sha256));
                 state=cleanup_start;
@@ -233,7 +261,7 @@ static void verify_generated_transaction(const char *path)
                     int original = fgetc(record);
                     assert(original != EOF && !fseek(record, 8, SEEK_SET));
                     assert(fputc(original ^ 1, record) != EOF && !fflush(record));
-                    assert(prox_dedicated_cleanup_committed(directory, fixture.build_id, job.target_version, 1) < 0);
+                    assert(prox_dedicated_cleanup_committed(directory, fixture.build_id, job.target_version, 1, digest) < 0);
                     assert(!access(eboot, F_OK) && !fseek(record, 8, SEEK_SET));
                     assert(fputc(original, record) != EOF && !fclose(record));
                     fill(witness, 99, 32);
@@ -251,20 +279,38 @@ static void verify_generated_transaction(const char *path)
                 if (mode == 11) {
                     assert(snprintf(staged, sizeof(staged), "%s/native/keep.txt", root) > 0);
                     fill(staged, 127, 32);
-                    assert(prox_dedicated_cleanup_committed(directory, fixture.build_id, job.target_version, 1) < 0);
+                    assert(prox_dedicated_cleanup_committed(directory, fixture.build_id, job.target_version, 1, digest) < 0);
                     assert(!access(eboot, F_OK) && !access(marker, F_OK));
                     old_file(staged);
                     assert(!unlink(staged));
                 }
                 if (mode == 14) {
                     fill(eboot, 127, 32);
-                    assert(prox_dedicated_cleanup_committed(directory, fixture.build_id, job.target_version, 1) < 0);
+                    assert(prox_dedicated_cleanup_committed(directory, fixture.build_id, job.target_version, 1, digest) < 0);
                     assert(!access(marker, F_OK));
                     old_file(eboot);
                     write_part(eboot, data, fixture.size);
                 }
-                assert(!prox_dedicated_cleanup_committed(directory, fixture.build_id, job.target_version, 1));
+                fill("ms0:/PROXDIAG/dispatch.txt", 127, 32);
+                fill("ms0:/PROXDIAG/native-report-009.txt", 127, 32);
+                fill("ms0:/PROXDIAG/native-download-901.txt", 127, 32);
+                fill("ms0:/PROXDIAG/native-cleanup-001.txt", 127, 32);
+                fill("ms0:/PROXDIAG/native-install-pro-x-123456789abc.txt", 127, 32);
+                const char *foreign = "ms0:/PROXDIAG/keep.txt";
+                if (mode == 14)
+                    fill(foreign, 127, 32);
+                deny_user_flash_reads = 1;
+                assert(!prox_dedicated_cleanup_committed(directory, fixture.build_id, job.target_version, 1, digest));
+                deny_user_flash_reads = 0;
                 assert(access(eboot, F_OK) && access(marker, F_OK) && access(root, F_OK));
+                if (mode == 14) {
+                    old_file(foreign);
+                    assert(access("ms0:/PROXDIAG/dispatch.txt", F_OK) &&
+                           access("ms0:/PROXDIAG/native-install-pro-x-123456789abc.txt", F_OK));
+                    assert(!unlink(foreign));
+                } else {
+                    assert(access(directory, F_OK) && errno == ENOENT);
+                }
             }
             trial_worker = NULL;
         }

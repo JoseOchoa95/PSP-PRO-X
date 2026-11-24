@@ -16,7 +16,7 @@ Published v0.3.4 adds a matched background writer for Internet updates after the
 
 PRO-X v0.4.0 adds a resident updater for PSP-2000 on 6.61. Its manual Installer measures internal free space before writing and provisions a verified internal worker. The manual Installer can run without an AC or minimum battery charge requirement. System Update uses the original screens for authenticated catalog queries. A previous diagnostic on one PSP-2000 authenticated to GitHub with the Memory Stick inserted and the PROXUPDATE folder absent. The Internet update writer checks space for staged firmware and backups before opening flash0 for writing. Full Internet installation on the v0.4.0 build remains pending on PSP.
 
-PRO-X v0.4.1 includes completion messages for the twelve PSP system languages in the resident updater. The manual ZIP supplies the files for first installation and Internet updates. After activation, the user can remove PROUPDATE and keep Fast Recovery on the Memory Stick. The owner confirmed the `6.61 PRO-X 0.4.1` label on physical hardware. Fast Recovery reactivation and a complete Internet update remain pending.
+PRO-X v0.4.1 includes completion messages for the twelve PSP system languages in the resident updater. The manual ZIP supplies the files for first installation and Internet updates. After activation, the user can remove PROUPDATE and keep Fast Recovery on the Memory Stick. The owner confirmed the `6.61 PRO-X 0.4.1` label on physical hardware. An Internet update from the temporary v0.4.0 test build installed v0.4.1 and booted the target on the owner's PSP. Automatic cleanup deferred on that startup. The v0.4.2 candidate verifies and cleans temporary flash files through the kernel, removes updater reports after success and starts retries with a fresh download. Recovery files are kept until verification succeeds.
 
 ## Validation and compatibility
 
@@ -31,7 +31,7 @@ The existing WPA2 integration has a limited owner-reported connection result on 
 ## Install and activate
 
 1. Use a PSP already running system software **6.61**. Download the matching manual binary ZIP and verify its SHA-256. See [Releases](https://github.com/JoseOchoa95/PSP-PRO-X/releases) for published downloads.
-2. Extract the ZIP's `PSP` folder to the Memory Stick root. The v0.4.1 manual kit supplies `PROUPDATE` and `FastRecovery`.
+2. For v0.4.2 and later manual kits, copy `PSP` from inside the ZIP's `release/` directory to the Memory Stick root. The matching PROUPDATE and Fast Recovery are in that folder. Copy `SEPLUGINS` from `release/` if you want the optional menu translations and fonts. The v0.4.1 ZIP contains `PSP` at its root.
 3. Open PROUPDATE from Games. Press X to install, wait for completion and press X to start PRO-X. Check **Settings -> System Settings -> System Information** for the installed version, such as `6.61 PRO-X 0.4.1`. After activating v0.4.1, you can remove `PSP/GAME/PROUPDATE`.
 4. After a full shutdown, use the matching Fast Recovery to activate PRO-X. For an Internet update, use System Update with a Memory Stick and meet the displayed storage and power prerequisites.
 

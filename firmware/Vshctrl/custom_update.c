@@ -34,7 +34,12 @@ static void dispatch_log(const char *event, int result)
 {
     char line[128];
     int fd, n;
-#ifdef PROX_NATIVE_RESIDENT_QUERY
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    /* Existing traces can be appended during migration. Never recreate them. */
+    fd = sceIoOpen(PROX_RESIDENT_MS_REPORTS "/dispatch.txt", PSP_O_WRONLY|PSP_O_APPEND, 0666);
+    if (fd < 0)
+        fd = sceIoOpen(PROX_RESIDENT_EF_REPORTS "/dispatch.txt", PSP_O_WRONLY|PSP_O_APPEND, 0666);
+#elif defined(PROX_NATIVE_RESIDENT_QUERY)
     char path[48];
     const char *directory = prox_resident_report_directory();
     if (!directory) return;

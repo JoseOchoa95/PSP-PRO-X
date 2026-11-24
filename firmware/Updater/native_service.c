@@ -6,6 +6,9 @@
 #else
 #include <pspkernel.h>
 #include <pspiofilemgr.h>
+#ifdef PROX_NATIVE_DEDICATED_OTA
+#include <psputility.h>
+#endif
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -13,6 +16,7 @@
 #include "native_service.h"
 #include "prox_native_query.h"
 #include "prox_product.h"
+#include "prox_dedicated_storage.h"
 #include "bridge.h"
 #include "transport.h"
 #include "network_session.h"
@@ -120,6 +124,7 @@ static int open_report_at(const char *directory,const char *kind)
     }
     return -1;
 }
+#ifndef PROX_NATIVE_DEDICATED_OTA
 static int open_report(const char *kind)
 {
 #ifdef PROX_NATIVE_RESIDENT_QUERY
@@ -128,8 +133,47 @@ static int open_report(const char *kind)
     return open_report_at(directory,kind);
 #endif
 }
+#endif
 #ifdef PROX_NATIVE_DEDICATED_OTA
-static void cleanup_verified_boot(int startup)
+static unsigned int write_storage_offer(char *destination, unsigned int package_size)
+{
+    /* Use the installed PSP language and keep the original page and controls. */
+    static const unsigned short *const messages[] = {
+        u"アップデートがあります。\nダウンロードにはメモリースティックに # MB 以上の空き容量が必要です。",
+        u"An update is available.\nTo download it, free at least # MB on the Memory Stick.",
+        u"Une mise à jour est disponible.\nPour la télécharger, libérez au moins # Mo sur le Memory Stick.",
+        u"Hay una actualización disponible.\nPara descargarla, deja al menos # MB libres en la Memory Stick.",
+        u"Ein Update ist verfügbar.\nFür den Download sind mindestens # MB auf dem Memory Stick erforderlich.",
+        u"È disponibile un aggiornamento.\nPer scaricarlo, libera almeno # MB sulla Memory Stick.",
+        u"Er is een update beschikbaar.\nMaak minstens # MB vrij op de Memory Stick om te downloaden.",
+        u"Há uma atualização disponível.\nPara baixá-la, libere pelo menos # MB no Memory Stick.",
+        u"Доступно обновление.\nДля загрузки требуется не менее # МБ на карте Memory Stick.",
+        u"업데이트가 있습니다.\n다운로드하려면 Memory Stick에 # MB 이상을 확보하세요.",
+        u"有可用更新。\n下載前請在 Memory Stick 保留至少 # MB 可用空間。",
+        u"有可用更新。\n下载前请在 Memory Stick 上保留至少 # MB 可用空间。",
+    };
+    unsigned short text[PROX_OFFER_TEXT_UNITS];
+    char number[12];
+    int language;
+    if (sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_LANGUAGE, &language) < 0 ||
+        language < 0 || language >= (int)(sizeof(messages) / sizeof(messages[0])))
+        language = 1;
+    snprintf(number, sizeof(number), "%u", prox_dedicated_card_mb(package_size));
+    unsigned int used = 0;
+    for (const unsigned short *cursor = messages[language]; *cursor; ++cursor) {
+        if (*cursor == '#') {
+            for (const char *digit = number; *digit && used < PROX_OFFER_TEXT_UNITS-1; ++digit)
+                text[used++] = (unsigned short)*digit;
+        } else if (used < PROX_OFFER_TEXT_UNITS-1) {
+            text[used++] = *cursor;
+        }
+    }
+    text[used++] = 0;
+    memcpy(destination, text, used * sizeof(*text));
+    return used;
+}
+
+static void cleanup_verified_boot(void)
 {
     const char *directory=PROX_RESIDENT_MS_REPORTS;
     int pending=prox_dedicated_pending(directory);
@@ -141,19 +185,22 @@ static void cleanup_verified_boot(int startup)
         }
     }
     if(!pending)return;
-    if(startup) {
-        report_required=0;
-        (void)open_report_at(directory,"cleanup");
-        prox_log("PRO-X v" PROX_PRODUCT_VERSION " startup cleanup build " PROX_BUILD_ID);
-    }
+    report_required=0;
+    (void)open_report_at(directory,"cleanup");
+    prox_log("PRO-X v" PROX_PRODUCT_VERSION " cleanup build " PROX_BUILD_ID);
     ProxDedicatedJob job;
     ProxNativeFlash transaction;
+    unsigned char record_digest[32];
     const unsigned int model=(unsigned int)proxUpdateGetState(5);
-    if(pending<0 || proxUpdateGetState(0)!=1 || proxUpdateGetState(4)!=0x06060110 ||
-       proxUpdateGetState(5)!=1 || proxUpdateGetState(1)!=PROX_PRODUCT_MAJOR ||
-       proxUpdateGetState(2)!=PROX_PRODUCT_MINOR || proxUpdateGetState(3)!=PROX_PRODUCT_PATCH ||
-       prox_dedicated_read_committed(directory,PROX_BUILD_ID,PROX_PRODUCT_VERSION,model,&job,&transaction)) {
-        prox_log("Dedicated boot cleanup deferred: target or committed record did not verify");
+    if(proxUpdateGetState(0)!=1 || proxUpdateGetState(4)!=0x06060110 ||
+       model!=1 || proxUpdateGetState(1)!=PROX_PRODUCT_MAJOR ||
+       proxUpdateGetState(2)!=PROX_PRODUCT_MINOR || proxUpdateGetState(3)!=PROX_PRODUCT_PATCH) {
+        prox_log("Dedicated boot cleanup deferred: active target did not verify");
+        goto done;
+    }
+    if(pending<0 || prox_dedicated_read_committed(directory,PROX_BUILD_ID,PROX_PRODUCT_VERSION,model,
+                                                 &job,&transaction,record_digest)) {
+        prox_log("Dedicated boot cleanup deferred: committed card record did not verify");
         goto done;
     }
     if(!prox_power_ready()) {
@@ -168,11 +215,22 @@ static void cleanup_verified_boot(int startup)
     memcpy(request.before,transaction.before,sizeof(request.before));
     int result=prox_native_is_cancelled() ? -1 :
         proxNativeInstallService(PROX_NI_CLEANUP_COMMITTED,(void *)&request,sizeof(request));
-    if(!result)
-        result=prox_dedicated_cleanup_committed(directory,PROX_BUILD_ID,PROX_PRODUCT_VERSION,model);
-    prox_log("Dedicated boot cleanup: %s (%d)",result?"deferred":"PASS; flash sidecars and card stage removed",result);
+    if(result) {
+        prox_log("Dedicated boot cleanup deferred: kernel flash verification or cleanup failed (%d)",result);
+        goto done;
+    }
+    /* The card finalizer removes the reports, including the current one. */
+    if(report_fd>=0) {
+        sceIoClose(report_fd);
+        report_fd=-1;
+    }
+    result=prox_dedicated_cleanup_committed(directory,PROX_BUILD_ID,PROX_PRODUCT_VERSION,model,record_digest);
+    if(result) {
+        (void)open_report_at(directory,"cleanup");
+        prox_log("Dedicated boot cleanup: deferred (%d)",result);
+    }
 done:
-    if(startup && report_fd>=0) {
+    if(report_fd>=0) {
         sceIoClose(report_fd);
         report_fd=-1;
     }
@@ -190,7 +248,9 @@ static int query(ProxCatalogOffer *offer)
     /* Checking is read-only and uses resident code/trust. An optional trace
      * cannot make absence of download storage a query prerequisite. */
     report_required=0;
+#ifndef PROX_NATIVE_DEDICATED_OTA
     (void)open_report("report");
+#endif
     prox_log("PRO-X v" PROX_PRODUCT_VERSION " native REAL query build " PROX_BUILD_ID);
     prox_log("%s; original XMB UI; checking does not authorize package download",prox_native_service_marker);
 #ifdef PROX_NATIVE_RESIDENT_QUERY
@@ -239,7 +299,7 @@ static int query(ProxCatalogOffer *offer)
 done:
     if(borrowed && prox_network_end()) result=-1;
 #ifdef PROX_NATIVE_DEDICATED_OTA
-    if(result>=0 && !prox_native_is_cancelled())cleanup_verified_boot(0);
+    if(result>=0 && !prox_native_is_cancelled())cleanup_verified_boot();
 #endif
     if(prox_native_is_cancelled()) result=-1;
     prox_log("REAL native query completed result=%d pages=%u candidates=%u cause=%u",result,offer->pages,offer->candidates,failure);
@@ -267,7 +327,14 @@ static int dedicated_transfer(void)
     int result=-1,borrowed=0;
     failure=PROX_NQ_CAUSE_NONE;
     report_required=1;
-    if(open_report("download")) {
+    const char *storage = prox_resident_report_directory();
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(storage && prox_dedicated_reset_download(storage)) {
+        failure=PROX_NQ_CAUSE_CLIENT;
+        return -1;
+    }
+#endif
+    if(open_report_at(storage,"download")) {
         failure=PROX_NQ_CAUSE_STORAGE;
         return -1;
     }
@@ -281,7 +348,7 @@ static int dedicated_transfer(void)
             goto done;
         borrowed=1;
     }
-    result=prox_native_dedicated_stage(prox_resident_report_directory(),ca_path,running,model,
+    result=prox_native_dedicated_stage(storage,ca_path,running,model,
                                        &retained,fixture_offer,lease_id,generation,progress,&dedicated_job);
     have_dedicated_stage=!result;
     if(result==PROX_DEDICATED_STAGE_STORAGE)failure=PROX_NQ_CAUSE_STORAGE;
@@ -437,7 +504,7 @@ void prox_native_worker(int argc,char **argv)
 #ifdef PROX_NATIVE_DEDICATED_OTA
         if(m.command==PROX_NQ_BOOT_CLEANUP) {
             generation=m.generation;
-            cleanup_verified_boot(1);
+            cleanup_verified_boot();
             packet(&m);
             if(proxNativeQueryService(PROX_NQ_RESULT,&m,sizeof(m))<0)prox_native_resident_fault();
             continue;
@@ -460,6 +527,10 @@ void prox_native_worker(int argc,char **argv)
             m.package_size=retained.manifest.package_size;
             memcpy(m.version,retained.manifest.version,sizeof(m.version));
             memcpy(m.summary,retained.manifest.summary,sizeof(m.summary));
+#ifdef PROX_NATIVE_DEDICATED_OTA
+            if(result==1)
+                m.downloaded=write_storage_offer(m.summary,m.package_size);
+#endif
             if(proxNativeQueryService(PROX_NQ_RESULT,&m,sizeof(m))<0) prox_native_resident_fault();
 #ifdef PROX_NATIVE_DEDICATED_SETTINGS
         } else if(m.command==PROX_NQ_DOWNLOAD) {

@@ -98,6 +98,9 @@ int main(int argc,char **argv)
     char path[256];unsigned int module_number,i;int reboot=-1,status=-1,rc=-1,mounted=0,finalizing=0,committed=0,level;
     ProxNativeFlash transaction={0};const ProxNativeInstallJob *job=&message.job;
     memset(&message,0,sizeof(message));message.protocol=PROX_NI_PROTOCOL;
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    int download_claimed=0,rollback_failed=0;
+#endif
     if(argc!=5 || !argv || !argv[0] || !argv[1] || strcmp(argv[1],PROX_NI_ARGUMENT) ||
        number(argv[2],&message.lease) || number(argv[3],&message.generation) || number(argv[4],&module_number))return -1;
     message.module=(int)module_number;
@@ -124,7 +127,8 @@ int main(int argc,char **argv)
     snprintf(path,sizeof(path),"%s/native/10.prx",job->root);
     reboot=kuKernelLoadModule(path,0,NULL);if(reboot<0)goto failure;
 #ifdef PROX_NATIVE_DEDICATED_OTA
-    if(prox_ota_dedicated_lock())goto failure;
+    if(prox_ota_dedicated_lock() || prox_dedicated_begin_write(&dedicated))goto failure;
+    download_claimed=1;
 #else
     if(prox_ota_before_write())goto failure;
 #endif
@@ -192,14 +196,29 @@ int main(int argc,char **argv)
     }
 failure:
 #ifdef PROX_NATIVE_DEDICATED_OTA
-    if(!committed && !mounted && (transaction.prepared || transaction.worker_prepared) && writable(&mounted))
+    if(!committed && !mounted && (transaction.prepared || transaction.worker_prepared) && writable(&mounted)) {
+        rollback_failed=1;
         prox_log("Could not reopen flash to roll back; preserve original backups and the card stage");
+    }
 #endif
     if(mounted) {
-        if(!finalizing && prox_native_flash_rollback(job,&transaction))
+        if(!finalizing && prox_native_flash_rollback(job,&transaction)) {
+#ifdef PROX_NATIVE_DEDICATED_OTA
+            rollback_failed=1;
+#endif
             prox_log("Background firmware rollback incomplete; keep exact stage and recovery package");
-        if(readonly(&mounted))prox_log("Background readonly restoration incomplete; retain exact stage and recovery package; no success/reboot");
+        }
+        if(readonly(&mounted)) {
+#ifdef PROX_NATIVE_DEDICATED_OTA
+            rollback_failed=1;
+#endif
+            prox_log("Background readonly restoration incomplete; retain exact stage and recovery package; no success/reboot");
+        }
     }
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(download_claimed && !committed && !rollback_failed && !prox_dedicated_record_available(&dedicated))
+        (void)prox_dedicated_mark_download(dedicated.install.root);
+#endif
     prox_log("Background installation/restart returned failure; committed=%d. No automatic reboot; retain stage/pending/backups",committed);
     prox_ota_close();
     if(!committed && reboot>=0)sceKernelUnloadModule(reboot);

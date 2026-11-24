@@ -314,7 +314,7 @@ def verify_build(metadata):
                 cleanup = (tree / 'Vshctrl/native_dedicated_cleanup.o').read_bytes()
                 require(b'prox_native_schedule_boot_cleanup' in (tree / 'Vshctrl/vshpatch.o').read_bytes() and
                         b'prox_native_query_request_boot_cleanup' in (tree / 'Vshctrl/native_query_loader.o').read_bytes() and
-                        b'startup cleanup build' in updater_elf,
+                        b' cleanup build ' in updater_elf,
                         'Dedicated cleanup is not wired to XMB startup')
                 require(b'prox_native_cleanup_flash' in cleanup and b'sceIoRemove' in cleanup and
                         b'sceIoWrite' not in cleanup and b'prox_native_mount_end' in cleanup,

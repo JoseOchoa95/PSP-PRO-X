@@ -17,13 +17,19 @@ int prox_dedicated_record_available(const ProxDedicatedJob *job);
 /* 1 pending regular record, 0 absent, -1 storage/metadata error. */
 int prox_dedicated_pending(const char *directory);
 int prox_dedicated_record_commit(const ProxDedicatedJob *job, const ProxNativeFlash *transaction);
-/* Read back the verified target and its exact flash-sidecar fingerprints. */
+/* Read the card record and pin its digest. The kernel checks flash0. */
 int prox_dedicated_read_committed(const char *directory, const char *active_build, const char *active_version,
-                                  unsigned int model, ProxDedicatedJob *job, ProxNativeFlash *transaction);
-/* Call once the active build is verified and flash finalization is flushed.
+                                  unsigned int model, ProxDedicatedJob *job, ProxNativeFlash *transaction,
+                                  unsigned char digest[32]);
+/* Call after the kernel succeeds for this exact committed record.
  * Retry uses the same committed record and preserves foreign files. */
 int prox_dedicated_cleanup_committed(const char *directory, const char *active_build, const char *active_version,
-                                     unsigned int model);
+                                     unsigned int model, const unsigned char digest[32]);
+/* Discard only download-owned staging after any pending commit is resolved. */
+int prox_dedicated_reset_download(const char *directory);
+int prox_dedicated_mark_download(const char *root);
+int prox_dedicated_begin_write(const ProxDedicatedJob *job);
+int prox_dedicated_discard_download(const char *root);
 /* Call only for a successfully prepared job in its still-owned stage. */
 int prox_dedicated_remove_parts(const ProxDedicatedJob *job);
 #endif

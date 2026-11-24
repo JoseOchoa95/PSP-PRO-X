@@ -204,7 +204,7 @@ cc -std=c99 -Wall -Wextra -Werror -DPROX_NATIVE_SERVICE_TEST -DPROX_NATIVE_OTA \
     -I firmware/tools/nativeinstaller tests/native/test_native_service.c firmware/Updater/native_service.c \
     firmware/Updater/policy.c firmware/Vshctrl/native_query_state.c -o /tmp/test-dedicated-handoff-service
 /tmp/test-dedicated-handoff-service
-cc -std=c99 -Wall -Wextra -Werror -DPROX_NATIVE_SERVICE_TEST -DPROX_NATIVE_OTA -DPROX_NATIVE_BACKGROUND \
+cc -std=c11 -Wall -Wextra -Werror -DPROX_NATIVE_SERVICE_TEST -DPROX_NATIVE_OTA -DPROX_NATIVE_BACKGROUND \
     -DPROX_NATIVE_RESIDENT_QUERY -DPROX_NATIVE_DEDICATED_OTA -DPROX_BUILD_ID=\"dedicated-writable-fixture\" \
     -I tests/native -I firmware/Common -I firmware/Updater -I firmware/Vshctrl -I firmware/tools/nativeinstaller \
     tests/native/test_native_service.c firmware/Updater/native_service.c firmware/Updater/policy.c \
