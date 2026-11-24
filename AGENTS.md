@@ -141,31 +141,22 @@ If a required test fails, fix the issue within scope and rerun the relevant chec
 Follow the PR acceptance and release-publication gate below before making any
 release public, including a beta, prerelease or console-test release.
 
-Before publishing any new stable PRO-X firmware release, attach both OTA assets
-to that same GitHub release, in addition to the manual binary ZIP, companion
-source ZIP, build manifests and SHA-256 files required above:
+Attach the OTA manifest and payload for the release's supported client to the same GitHub release as the matching manual binary ZIP, companion source ZIP, build manifests and SHA-256 files.
 
-- **`pro-x-update.json`**: the updater's compact update manifest; a general build
-  manifest is not a substitute.
-- **`pro-x-<version>-661-update.zip`**: the dedicated update package for that
-  exact product version and target firmware. The manual, source, diagnostic or
-  GitHub-generated source ZIP is not a substitute.
+| Release family | OTA manifest | OTA payload |
+| --- | --- | --- |
+| Resident dedicated updates, starting at v0.4.0 | `pro-x-dedicated-update.json` (schema 2) | `EBOOT.PBP` (data only) |
+| Legacy ZIP-based releases | `pro-x-update.json` (schema 1) | `pro-x-<version>-661-update.zip` |
 
-Generate both from the matching compiled build with the repository packager.
-Before publication, verify their version/tag, build identity, target firmware,
-supported models and minimum updater version, plus the package/file inventory,
-sizes and SHA-256 hashes. Run the available package and native OTA-consumer
-checks and ensure Installer, Fast Recovery, updater and CA bytes match the
-corresponding manual package. Stage and verify the complete asset set before
-publishing; do not publish a stable release missing either OTA asset or with a
-manifest that describes another build/package. Verify uploaded sizes and
-digests against the local files before considering publication complete.
+Use manual PROUPDATE and its matching Fast Recovery to move from older versions to v0.4.0. The resident release ships the schema-2 asset pair and the manual applications PROUPDATE and Fast Recovery. Preserve the published legacy releases and their assets.
+
+Generate both OTA assets from the matching compiled build with the repository packager. Before publication, verify the version, tag, build identity, target firmware, supported models, minimum updater version, inventory, sizes and SHA-256 hashes. For the resident contract, verify that the manual Installer provisions the same resident worker and firmware components carried by the dedicated EBOOT and that the compiled worker embeds the pinned CA bundle. For the legacy contract, verify that Installer, Fast Recovery, updater and CA bytes match the manual package. Run the native OTA-consumer checks and verify the complete set before publication. Verify uploaded sizes and digests against the local files.
 
 Internet-update eligibility also requires **`draft == false`**,
 **`prerelease == false`**, a stable **`vMAJOR.MINOR.PATCH`** product tag, a version
 numerically newer than the running product, and a compatible validated contract.
 A tag without the word beta does not override GitHub's draft/prerelease flags.
-The manifest and update ZIP must come from the same eligible release.
+The manifest and OTA payload must come from the same eligible release.
 
 Manual-test betas/prereleases may be published without stable OTA assets when
 explicitly authorized, but must remain marked as prereleases and excluded from

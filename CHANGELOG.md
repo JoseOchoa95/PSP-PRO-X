@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-### v0.4.0 — self-contained native update development
+## v0.4.0 — resident dedicated updates
 
 - Add a local query-only PSP diagnostic that measures worker startup, free kernel and user memory before and after load, and authenticated query duration. It uses the current card-based worker and blocks installation from System Update.
 - Add a PSP-2000 6.61 resident query test kit with matching Installer and Fast Recovery. The Installer provisions a build-specific flash0 worker. System Update verifies that worker's SHA-256 and uses its embedded CA bundle without a PROXUPDATE folder.
@@ -19,6 +19,7 @@
 - Add a local writable dedicated-update candidate that binds the consented package and resident worker to the native install job. Require verified original completion data and flash0 capacity before replacement. Keep backups and the card stage available for restart verification.
 - When the verified target starts in the XMB, retire the update's temporary flash0 files and remove the staged EBOOT from the Memory Stick without an Internet check. Retain the recovery record if cleanup is deferred and retry at the next startup or authenticated System Update check. Physical validation remains pending.
 - Start dedicated Internet updates from v0.4.0. For older versions, install v0.4.0 manually with the matching PROUPDATE Installer and Fast Recovery.
+- Stage the resident manual kit, companion source and dedicated Internet update assets from one verified build. The stable resident contract uses the data-only EBOOT and its separate manifest.
 - Verified one physical authenticated query using the internal worker with the Memory Stick inserted and the PROXUPDATE folder absent. The owner reported the expected no-newer-version result on the first query without the Memory Stick. Physical verification of the original completion text and cleanup after restarting into the new firmware remains pending.
 - Add a standalone read-only flash0 capacity diagnostic that uses the USB driver's kernel-mode geometry query and counts free allocation units.
 - Return to the PSP menu from the kernel-mode capacity diagnostic when X is pressed or the inactivity timer expires.

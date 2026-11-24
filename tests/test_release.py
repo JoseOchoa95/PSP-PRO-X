@@ -2,6 +2,7 @@ from pathlib import Path
 import gzip
 import hashlib
 import importlib.util
+import json
 import struct
 import sys
 import tempfile
@@ -60,6 +61,52 @@ class PackagingTests(unittest.TestCase):
         for flag in ('native_query_only','native_offer_preview','native_progress_preview','native_install_preview','test_only','simulated_positive_offer','simulated_incomplete_transfer'):
             with self.assertRaises(RuntimeError): require_release_variant({**valid,flag:True})
         with self.assertRaises(RuntimeError): require_release_variant({'mode':'pro-x','native_ota':False})
+
+    def test_resident_versions_require_the_writable_dedicated_build(self):
+        from product import VERSION
+        legacy={'mode':'pro-x','native_ota':True,'native_background':True,'product_version':'0.3.4'}
+        require_release_variant(legacy)
+        release=dict(legacy,product_version=VERSION,resident_query=True,resident_dedicated_ota=True)
+        require_release_variant(release)
+        for flag in ('resident_query','resident_dedicated_ota','native_background'):
+            with self.subTest(flag=flag), self.assertRaises(RuntimeError):
+                require_release_variant({**release,flag:False})
+        with self.assertRaises(RuntimeError):
+            require_release_variant(dict(legacy,product_version=VERSION))
+        with self.assertRaises(RuntimeError):
+            require_release_variant(dict(release,resident_dedicated_preview=True))
+
+    def test_resident_distribution_checks_the_exact_dedicated_pair(self):
+        from dedicated_update import PARTS, release_manifest, render_parts
+        from product import VERSION
+
+        spec=importlib.util.spec_from_file_location('verify_package',ROOT/'scripts/verify-package.py')
+        verify_package=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(verify_package)
+        image,identity=render_parts((bytes([i])*52 for i in range(len(PARTS))),
+                                    'pro-x-123456789abc',VERSION)
+        manifest=dict(version=VERSION,build_id=identity['build_id'],ota_contract=identity['format'],
+                      dedicated_update=identity,embedded_modules={PARTS[-1]:identity['parts'][-1]['sha256']})
+        with tempfile.TemporaryDirectory() as name:
+            directory=Path(name)
+            manual=directory/'manual.zip'
+            package=directory/'EBOOT.PBP'
+            metadata=directory/'pro-x-dedicated-update.json'
+            package.write_bytes(image)
+            contract=release_manifest(identity)
+            metadata.write_text(json.dumps(contract))
+            self.assertEqual(verify_package.verify_resident_assets(manual,manifest),(package,metadata))
+            metadata.write_text(json.dumps(dict(contract,minimum_updater_version='0.3.4')))
+            with self.assertRaises(RuntimeError):
+                verify_package.verify_resident_assets(manual,manifest)
+            metadata.write_text(json.dumps(contract))
+            package.write_bytes(image[:-1]+bytes([image[-1]^1]))
+            with self.assertRaises(RuntimeError):
+                verify_package.verify_resident_assets(manual,manifest)
+            package.write_bytes(image)
+            (directory/'pro-x-update.json').write_text('{}')
+            with self.assertRaises(RuntimeError):
+                verify_package.verify_resident_assets(manual,manifest)
     def test_background_preview_is_explicit_and_excluded_from_stable_assets(self):
         args=Namespace(mode='pro-x',native_query=False,native_offer_preview=False,native_progress_preview=False,native_ota=False,native_install_preview=True)
         configure_native_mode(args)
