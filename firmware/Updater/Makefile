@@ -16,7 +16,7 @@ OBJS += native_install_preview.o native_completion_text.o
 LIBS_EXTRA = -lpspkubridge
 endif
 ifneq ($(findstring -DPROX_NATIVE_DEDICATED_OTA=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
-OBJS += native_background.o native_completion_text.o native_completion_store.o
+OBJS += native_background.o native_completion_builtin.o
 LIBS_EXTRA = -lpspkubridge
 else ifneq ($(findstring -DPROX_NATIVE_BACKGROUND=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
 OBJS += native_background.o native_payload.o native_completion_text.o native_completion_store.o native_signed.o native_kirk.o native_crypto.o

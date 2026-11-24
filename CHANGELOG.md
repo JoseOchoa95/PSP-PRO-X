@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## v0.4.1 — self-contained installation and updates
+
+- Install PRO-X with the matching PROUPDATE and Fast Recovery from one ZIP. The resident updater includes completion messages for all twelve system languages and works without a separate completion resource.
+- Keep the PSP completion screen and restart with a fresh press of X. After installing, remove PROUPDATE from the Memory Stick and retain Fast Recovery for reactivation.
+- Users on v0.4.0 without a previously installed completion resource can move to this build using the new manual kit. The owner confirmed the `6.61 PRO-X 0.4.1` label on PSP. Fast Recovery reactivation and a complete Internet update remain pending.
 
 ## v0.4.0 — resident dedicated updates
 

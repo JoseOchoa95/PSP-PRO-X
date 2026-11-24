@@ -103,6 +103,12 @@ Preserve literal code identifiers, file paths, version strings, commands, exact 
 
 This rule does not change the language of the conversation or grant permission to commit, push, post comments, create PRs, or publish releases. The existing authorization requirements still apply.
 
+### Conventional Commits for pull requests
+
+For every pull request, use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) for the commits you author and use the same header format for the PR title and any squash-merge commit you create. Write the description in English.
+
+Use `type(scope): description`, with an optional scope. Use `feat` for features, `fix` for bug fixes and a relevant type such as `docs`, `build` or `test` for other changes. For a breaking change, add `!` before the colon or use a `BREAKING CHANGE:` footer in the commit message. Use the repository's build version policy to assign product versions.
+
 ### Markdown paragraph formatting
 
 Write each prose paragraph as one continuous physical line in GitHub descriptions, PR/release bodies, changelogs, repository documentation and other publication text. Do not wrap a paragraph at an arbitrary column width or insert a newline, trailing backslash or Markdown hard break merely to continue the same sentence or paragraph. Use blank lines only for intentional paragraph separation, and retain meaningful line breaks in headings, lists, tables, quotations and code blocks. Preserve intended Markdown syntax such as `**bold**`; do not add literal escape characters that turn formatting into visible punctuation. When posting through a CLI or API, preserve the reviewed text and actual paragraph boundaries without introducing literal `\\n` sequences or shell-escaping artifacts. Apply this rule to new or revised text; do not reflow unrelated historical content solely for formatting.
@@ -171,12 +177,13 @@ For every firmware feature or fix, produce the compiled files needed for the use
 
 ### Build location and contents
 
-Place the final deliverables in the repository-root `builds/` directory. At minimum, provide the matching files from the same build:
+Give each delivered build its own directory inside the repository-root `builds/` directory. Place the folders intended for the Memory Stick under `builds/<build>/release/`, with uppercase names at that level. For PRO-X, include `PSP` and, when the build ships menu translations or fonts, `SEPLUGINS`.
 
-- `builds/PSP/GAME/PROUPDATE/EBOOT.PBP`
-- `builds/PSP/GAME/FastRecovery/EBOOT.PBP`
+- `builds/<build>/release/PSP/GAME/PROUPDATE/EBOOT.PBP`
+- `builds/<build>/release/PSP/GAME/FastRecovery/EBOOT.PBP`
+- `builds/<build>/release/SEPLUGINS/` for optional menu translations and fonts.
 
-Also leave an installable ZIP in `builds/`, using the actual product version and target firmware in its filename, together with SHA-256 hashes and a small build manifest identifying the source/build state and toolchain.
+Tell the user to copy the applicable folders inside `release/` to the root of the Memory Stick. Keep the installable ZIP, source archive, documentation, licenses, credits, checksums, manifests and standalone Internet-update assets outside the ready-to-copy `release/` folder. Use the actual product version and target firmware in the installable ZIP filename and provide a build manifest identifying the source, build and toolchain.
 
 Existing scripts may use other locations for intermediate output, but the final files handed to the user must exist in `builds/`. Do not mix old and new EBOOT files, rename an older binary as a new version, or provide an empty directory as the deliverable.
 

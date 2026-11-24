@@ -17,8 +17,12 @@
 #include "native_payload.h"
 #include "native_signed.h"
 #include "native_service.h"
+#ifdef PROX_NATIVE_DEDICATED_OTA
+#include "native_completion_builtin.h"
+#else
 #include "native_completion_text.h"
 #include "native_completion_store.h"
+#endif
 #include "prox_completion_preview.h"
 #ifndef PROX_NATIVE_DEDICATED_OTA
 #include "prox_pbp_payload.h"
@@ -117,15 +121,15 @@ done:
 #endif
 static int completion_text(const char *directory,unsigned int language,unsigned short text[PROX_COMPLETION_UNITS])
 {
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    (void)directory;
+    return prox_completion_builtin_text(language,text,PROX_COMPLETION_UNITS);
+#else
     FILE *file=fopen(PROX_COMPLETION_STORE_PATH,"rb");
     if(file) {
         int count=prox_completion_read_store(file,language,text,PROX_COMPLETION_UNITS);
         return fclose(file)?-1:count;
     }
-#ifdef PROX_NATIVE_DEDICATED_OTA
-    (void)directory;
-    return -1;
-#else
     if(!directory || errno!=ENOENT)return -1;
     char path[256];
     snprintf(path,sizeof(path),"%s/native-completion.rco",directory);

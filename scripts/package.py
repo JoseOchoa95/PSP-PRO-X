@@ -15,6 +15,11 @@ from native_validation_report import for_build as native_validation
 
 NAME = 'pro-x-' + VERSION + '-661'
 OUTPUT_DIR = ROOT / 'builds'
+BUILTIN_COMPLETION = {'source':'resident updater','languages':12,'external_resource_required':False}
+PRIVATE_COMPLETION_HASHES = {
+    '714c0af3c51f61a895311ee1e58e719d8ed7fc5d3e5e441de38d67133617c265',
+    '4b47ddf778c8df121a7fe3ade8acaada307ffd3e96d17834f568e29240557ba7',
+}
 
 
 def archive(path, files):
@@ -65,13 +70,8 @@ def main():
         'included_in_package':False,
     } if background else None
     if resident:
-        completion = {
-            'path':'flash0:/kd/_proxc661.bin','bytes':522,
-            'sha256':'4b47ddf778c8df121a7fe3ade8acaada307ffd3e96d17834f568e29240557ba7',
-            'import_path':'PSP/GAME/PROUPDATE/native-completion.rco',
-            'included_in_package':False,
-        }
-    completion_note = ('The manual Installer can provision the original completion phrases from an exact owner-supplied resource. The resource stays outside the package.\n\n'
+        completion = BUILTIN_COMPLETION
+    completion_note = ('The resident updater supplies its own localized completion messages. Setup and Internet updates require no separate resource file.\n\n'
                        if resident else
                        'Native OTA uses a matched background writer; see the exact-build owner-reported validation scope in manifest.json. The separate owner-supplied original completion resource is required at runtime and is not included.\n\n'
                        if background else 'The existing target installer retains its text screen and X confirmations.\n\n')
@@ -170,7 +170,7 @@ def main():
     }
     if completion:
         for name,data in {**files,**sources}.items():
-            require(not name.lower().endswith('.rco') and sha(data)!=completion['sha256'],
+            require(not name.lower().endswith('.rco') and sha(data) not in PRIVATE_COMPLETION_HASHES,
                     'Original completion resource must remain outside distributable packages')
     if resident:
         manifest['ota_contract']='prox-dedicated-eboot-v1'

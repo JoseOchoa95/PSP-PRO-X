@@ -240,10 +240,16 @@ def verify_build(metadata):
         dedicated_ota = metadata.get('resident_dedicated_ota',False)
         if metadata.get('resident_query'):
             installer_elf = (tree / 'Installer/installer.elf').read_bytes()
-            require(all(marker in installer_elf for marker in (b'flash0:/kd/_proxc661.bin',
-                    b'prox_resident_completion_prepare', b'prox_completion_store_valid',
-                    b'4b47ddf778c8df121a7fe3ade8acaada307ffd3e96d17834f568e29240557ba7')),
-                    'Resident Installer must verify original compact completion data before provisioning')
+            external_completion = (b'native-completion.rco', b'flash0:/kd/_proxc661.bin',
+                                   b'prox_resident_completion_prepare', b'prox_completion_read_store')
+            if dedicated_ota:
+                require(not any(marker in installer_elf or marker in updater_elf for marker in external_completion),
+                        'Dedicated Installer and updater must work without an external completion resource')
+            else:
+                require(all(marker in installer_elf for marker in (b'flash0:/kd/_proxc661.bin',
+                        b'prox_resident_completion_prepare', b'prox_completion_store_valid',
+                        b'4b47ddf778c8df121a7fe3ade8acaada307ffd3e96d17834f568e29240557ba7')),
+                        'Resident diagnostic Installer must verify original compact completion data before provisioning')
             require(set(metadata['artifacts']) == {'GAME/PROUPDATE/EBOOT.PBP', 'GAME/FastRecovery/EBOOT.PBP'},
                     'Resident diagnostic must ship exactly the Installer and Fast Recovery applications')
             if metadata.get('resident_dedicated_preview'):
@@ -299,8 +305,9 @@ def verify_build(metadata):
                     'Resident worker is not isolated to authenticated query and removable reports')
             if dedicated_ota:
                 require(all(symbol in updater_elf for symbol in (b'prox_native_background_launch_dedicated',
-                        b'prox_dedicated_writer_check', b'prox_completion_read_store',
+                        b'prox_dedicated_writer_check', b'prox_completion_builtin_text',
                         b'prox_dedicated_cleanup_committed', b'Dedicated boot cleanup:')) and
+                        'PRO-X se actualizó correctamente.'.encode('utf-16le') in updater_elf and
                         b'prox_dedicated_writer_prepare' not in updater_elf and
                         b'DEDICATED PREVIEW:' not in updater_elf and b'PROX-DEDICATED-TEST.PBP' not in updater_elf,
                         'Writable resident flow must use the bound local engine and exclude fixtures')
