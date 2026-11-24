@@ -43,10 +43,33 @@ def main():
         require(set(sums) == set(names) - {'SHA256SUMS'}, 'SHA256SUMS inventory')
         for name, digest in sums.items():
             require(sha(archive.read(name)) == digest, 'SHA256SUMS mismatch: ' + name)
-        psp_names = {n for n in names if n.startswith('PSP/')}
         phase3 = manifest.get('phase3')
         resident=manifest.get('ota_contract')=='prox-dedicated-eboot-v1'
-        expected_psp = {'PSP/GAME/PROUPDATE/EBOOT.PBP', 'PSP/GAME/FastRecovery/EBOOT.PBP'}
+        card_directory = manifest.get('memory_stick_directory')
+        if resident and tuple(map(int, manifest['version'].split('.'))) >= (0, 4, 2):
+            require(card_directory == 'release', 'Manual ZIP requires a release directory')
+        require(card_directory is None or (resident and card_directory == 'release'),
+                'Unknown Memory Stick directory')
+        psp_prefix = 'release/PSP/' if card_directory else 'PSP/'
+        psp_names = {name for name in names if name.startswith(psp_prefix)}
+        expected_psp = {psp_prefix + 'GAME/' + folder + '/EBOOT.PBP'
+                        for folder in ('PROUPDATE', 'FastRecovery')}
+        if card_directory:
+            menu_prefix = 'release/SEPLUGINS/'
+            menu_names = {name for name in names if name.startswith(menu_prefix)}
+            require(any(name.startswith(menu_prefix + 'fonts/') for name in menu_names)
+                    and any(not name.startswith(menu_prefix + 'fonts/') for name in menu_names),
+                    'Missing translations or fonts under release/SEPLUGINS')
+            require({name for name in names if name.split('/')[0].casefold() == 'release'}
+                    == expected_psp | menu_names, 'Unexpected file in the Memory Stick directory')
+            require(not any(name.split('/')[0].casefold() in {'psp', 'seplugins'} for name in names),
+                    'PSP and SEPLUGINS must be inside release')
+            staged = path.parent / 'release'
+            actual = {file.relative_to(path.parent).as_posix() for file in staged.rglob('*') if file.is_file()}
+            require(actual == expected_psp | menu_names, 'Ready-to-copy inventory differs from the ZIP')
+            for name in actual:
+                require(sha((path.parent / name).read_bytes()) == manifest['files'][name],
+                        'Ready-to-copy file differs from the ZIP: ' + name)
         if phase3 and not resident:
             expected_psp |= {'PSP/GAME/PROXUPDATE/EBOOT.PBP', 'PSP/GAME/PROXUPDATE/cacert.pem'}
         require(psp_names == expected_psp, 'Unexpected PSP program')
@@ -54,7 +77,7 @@ def main():
         for folder, title in [('PROUPDATE', '661 PRO-X Installer'), ('FastRecovery', '661 PRO-X Fast Recovery')]:
             if phase3:
                 title = '661 PRO-X v'+manifest['version']+(' Installer' if folder == 'PROUPDATE' else ' Fast Recovery')
-            require(pbp_info(archive.read('PSP/GAME/' + folder + '/EBOOT.PBP'))['title'] == title, 'Wrong title')
+            require(pbp_info(archive.read(psp_prefix + 'GAME/' + folder + '/EBOOT.PBP'))['title'] == title, 'Wrong title')
         if phase3:
             if not resident:
                 title = pbp_info(archive.read('PSP/GAME/PROXUPDATE/EBOOT.PBP'), allow_plain=True)['title']
@@ -63,7 +86,8 @@ def main():
                 from native_validation_report import for_build
                 evidence=for_build({'build_id':manifest['build_id'],'product_version':manifest['version'],
                                     'source_tree_sha256':manifest['source_tree_sha256'],
-                                    'artifacts':{n[4:]:h for n,h in manifest['files'].items() if n.startswith('PSP/')}})
+                                    'artifacts':{n.removeprefix(psp_prefix):h for n,h in manifest['files'].items()
+                                                 if n.startswith(psp_prefix)}})
                 status=evidence['status'] if evidence else 'NOT RUN'
                 require(manifest['status']=='native-update-release-candidate' and manifest['hardware']==status and
                         manifest.get('native_update_hardware_report')==evidence and phase3['native_ota'] is True and

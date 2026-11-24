@@ -9,6 +9,7 @@
 #include "native_dedicated_stage.h"
 #include "policy.h"
 #include "prox_product.h"
+#include "prox_dedicated_storage.h"
 #include "transport.h"
 #include "update.h"
 
@@ -131,12 +132,17 @@ static int prepare_staged(const char *root, const ProxCatalogOffer *offer,
 
 int prox_native_dedicated_discard(const ProxDedicatedJob *job)
 {
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if (!job || prox_dedicated_discard_download(job->install.root))
+        return -1;
+#else
     char path[256];
     if (prox_dedicated_remove_parts(job))
         return -1;
     snprintf(path, sizeof(path), "%s/EBOOT.PBP", job->install.root);
     if (sceIoRemove(path) < 0 || sceIoRmdir(job->install.root) < 0)
         return -1;
+#endif
     prox_log("Dedicated diagnostic stage removed; no firmware write attempted");
     return 0;
 }
@@ -157,9 +163,7 @@ int prox_native_dedicated_stage(const char *directory, const char *ca, const uns
         return -1;
     if (!prox_power_ready())
         return PROX_DEDICATED_STAGE_POWER;
-    /* Keep the EBOOT and all its extracted files simultaneously. Reserve
-     * up to 64 KiB each for allocation rounding and directory growth. */
-    if (prox_storage_space(directory, 2ull * offer->manifest.package_size + 16u * 65536u))
+    if (prox_storage_space(directory, prox_dedicated_card_bytes(offer->manifest.package_size)))
         return PROX_DEDICATED_STAGE_STORAGE;
     if (!fixture && same_manifest(offer, ca, running, model))
         return -1;
@@ -175,6 +179,12 @@ int prox_native_dedicated_stage(const char *directory, const char *ca, const uns
     snprintf(stage, sizeof(stage), "%s/.dedicated-%08x-%08x", directory, lease, generation);
     if (sceIoMkdir(stage, 0700) < 0)
         return PROX_DEDICATED_STAGE_STORAGE;
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if (prox_dedicated_mark_download(stage)) {
+        (void)sceIoRmdir(stage);
+        return PROX_DEDICATED_STAGE_STORAGE;
+    }
+#endif
     snprintf(path, sizeof(path), "%s/EBOOT.PBP", stage);
     SceUID fd = sceIoOpen(path, PSP_O_WRONLY | PSP_O_EXCL | PSP_O_CREAT, 0600);
     int result = PROX_DEDICATED_STAGE_STORAGE;
@@ -200,10 +210,17 @@ int prox_native_dedicated_stage(const char *directory, const char *ca, const uns
             if (!result)
                 return 0;
         }
+#ifndef PROX_NATIVE_DEDICATED_OTA
         if (sceIoRemove(path) < 0)
             result = PROX_DEDICATED_STAGE_STORAGE;
+#endif
     }
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if (prox_dedicated_discard_download(stage))
+        result = PROX_DEDICATED_STAGE_STORAGE;
+#else
     if (sceIoRmdir(stage) < 0)
         result = PROX_DEDICATED_STAGE_STORAGE;
+#endif
     return result;
 }

@@ -2,6 +2,9 @@
 #define PROX_NATIVE_COMPLETION_PREVIEW_H
 #include "prox_completion_preview.h"
 void prox_native_completion_buffer(unsigned short *buffer);
+#ifdef PROX_NATIVE_DEDICATED_OTA
+void prox_native_offer_buffer(unsigned short *buffer);
+#endif
 void prox_native_completion_reset(void);
 int prox_native_completion_arm(unsigned int generation,const unsigned short *,unsigned int count);
 int prox_native_completion_ready(unsigned int generation);

@@ -148,7 +148,9 @@ def main():
             if entry.isfile() and relative.parts and relative.parts[0].startswith(('LICENSE', 'COPYING')):
                 files['licenses/mbedtls/'+relative.as_posix()] = tls.extractfile(entry).read()
     instructions='RESIDENT-DEDICATED-OTA.md' if dedicated_ota else 'RESIDENT-DEDICATED-PREVIEW.md' if dedicated_preview else 'RESIDENT-QUERY-TEST.md' if resident else 'NATIVE-BACKGROUND-TEST.md' if background else 'NATIVE-OTA-TEST.md' if ota else 'NATIVE-PROGRESS-PREVIEW.md' if progress else 'NATIVE-OFFER-PREVIEW.md' if preview else 'NATIVE-GITHUB-QUERY.md'
-    files[instructions] = (ROOT/'scripts/resources'/instructions).read_bytes().replace(b'@PRODUCT_VERSION@',VERSION.encode('ascii'))
+    files[instructions] = ((ROOT/'scripts/resources'/instructions).read_bytes()
+                           .replace(b'@PRODUCT_VERSION@', VERSION.encode('ascii'))
+                           .replace(b'@CARD_ROOT@', b'PSP'))
     if dedicated_preview:
         files['PROXDIAG/PROX-DEDICATED-TEST.PBP'] = (output/'dedicated-fixture/PROX-DEDICATED-TEST.PBP').read_bytes()
     files['SOURCE.md'] = (source_zip.name+'\nSHA-256: '+sha(source_zip.read_bytes())+'\n').encode()

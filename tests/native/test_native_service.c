@@ -10,6 +10,7 @@
 #include "native_download.h"
 #include "stage.h"
 #include "prox_product.h"
+#include "prox_dedicated_storage.h"
 #if defined(PROX_NATIVE_DEDICATED_PREVIEW) || defined(PROX_NATIVE_DEDICATED_OTA)
 #define TEST_DEDICATED_SETTINGS
 #include "native_dedicated_stage.h"
@@ -27,27 +28,42 @@ static unsigned int expected_running[3];
 #ifdef PROX_NATIVE_DEDICATED_OTA
 #include "dedicated_job.h"
 static int writer_starts, cleanup_case, cleanup_requests, cleanup_card, startup_cleanup;
+int sceUtilityGetSystemParamInt(int parameter,int *language)
+{
+    assert(parameter==PSP_SYSTEMPARAM_ID_INT_LANGUAGE);
+    *language=3;
+    return 0;
+}
 int prox_dedicated_pending(const char *directory)
 {
     assert(!borrowed);
     if(!strcmp(directory,PROX_RESIDENT_EF_REPORTS))return 0;
     assert(!strcmp(directory,PROX_RESIDENT_MS_REPORTS));
-    return mode==5 && cleanup_case!=0;
+    return (mode==5 && cleanup_case!=0) || mode==13;
+}
+int prox_dedicated_reset_download(const char *directory)
+{
+    assert(!strcmp(directory,PROX_RESIDENT_MS_REPORTS) && !borrowed && !report_open);
+    return mode==13 ? -1 : 0;
 }
 int prox_dedicated_read_committed(const char *directory,const char *build,const char *version,
-                                 unsigned int model,ProxDedicatedJob *job,ProxNativeFlash *transaction)
+                                 unsigned int model,ProxDedicatedJob *job,ProxNativeFlash *transaction,
+                                 unsigned char digest[32])
 {
     assert(!strcmp(directory,PROX_RESIDENT_MS_REPORTS) && !strcmp(build,PROX_BUILD_ID));
     assert(!strcmp(version,PROX_PRODUCT_VERSION) && model==1);
     memset(job,0,sizeof(*job));
     memset(transaction,0,sizeof(*transaction));
     strcpy(job->install.build_id,build);
-    return cleanup_case==2 ? -1 : 0;
+    memset(digest,0x42,32);
+    return cleanup_case==2 || mode==13 ? -1 : 0;
 }
-int prox_dedicated_cleanup_committed(const char *directory,const char *build,const char *version,unsigned int model)
+int prox_dedicated_cleanup_committed(const char *directory,const char *build,const char *version,unsigned int model,
+                                     const unsigned char digest[32])
 {
     assert(!strcmp(directory,PROX_RESIDENT_MS_REPORTS) && !strcmp(build,PROX_BUILD_ID));
     assert(!strcmp(version,PROX_PRODUCT_VERSION) && model==1 && cleanup_requests==1);
+    assert(digest[0]==0x42 && digest[31]==0x42 && !report_open);
     ++cleanup_card;
     return 0;
 }
@@ -108,7 +124,7 @@ int sceIoOpen(const char *p,int f,int m)
 #else
     assert(strstr(p,"ms0:/PSP/GAME/PROXUPDATE/native-") && f==(2|0x200|0x800) && m==0600 && !report_open);
 #endif
-    ++opened; if(mode>=9 && mode!=12) return -1; report_open=1; return 9;
+    ++opened; if(mode>=9 && mode!=12 && mode!=13) return -1; report_open=1; return 9;
 }
 int sceIoWrite(int fd,const void *p,unsigned int n) { assert(fd==9 && report_open && p); return mode==12?-1:(int)n; }
 int prox_native_trust(void) { return 0; }
@@ -261,6 +277,16 @@ int sceKernelDelayThread(unsigned int us)
         /* A cardless positive query first returns its real offer. Storage is
          * required only after this explicit native download decision. */
         assert(state.answer.result==1 && !state.answer.failure && !power_calls);
+#ifdef PROX_NATIVE_DEDICATED_OTA
+        const unsigned short *text = (const void *)state.answer.summary;
+        const unsigned int count = state.answer.downloaded;
+        int has_mb=0;
+        assert(count>30 && count<=PROX_OFFER_TEXT_UNITS && !text[count-1]);
+        for(unsigned int i=0;i+3<count;++i)
+            if(text[i]=='2' && text[i+1]==' ' && text[i+2]=='M' && text[i+3]=='B') has_mb=1;
+        assert(has_mb);
+        assert(prox_dedicated_card_bytes(1164713)==3378002 && prox_dedicated_card_mb(1164713)==4);
+#endif
         assert(!prox_nq_download(&state,1));
     } else if(state.phase==PROX_NQ_VERIFIED) {
         if(mode==3) prox_nq_cancel(&state);
@@ -272,7 +298,7 @@ int sceKernelDelayThread(unsigned int us)
         assert(!borrowed && !report_open && !state.active && state.answer.result==-1);
         if(mode==4) assert(state.answer.failure==PROX_NQ_CAUSE_POWER);
         if(mode==8) assert(state.answer.failure==PROX_NQ_CAUSE_POWER);
-        if(mode==6) assert(state.answer.failure==PROX_NQ_CAUSE_CLIENT);
+        if(mode==6 || mode==13) assert(state.answer.failure==PROX_NQ_CAUSE_CLIENT);
         if(mode==2) assert(state.answer.failure==PROX_NQ_CAUSE_NONE);
         if(mode==9 || mode==12) assert(state.answer.failure==PROX_NQ_CAUSE_STORAGE && !downloads && !power_calls);
         longjmp(finished,1);
@@ -287,16 +313,19 @@ int main(void)
     char *args[]={"ms0:/PSP/GAME/PROXUPDATE/EBOOT.PBP","--prox-native-query-v3","0000004d"};
 #endif
     sscanf(PROX_PRODUCT_VERSION,"%u.%u.%u",expected_running,expected_running+1,expected_running+2);
-    for(mode=0;mode<13;++mode) {
+    for(mode=0;mode<14;++mode) {
 #ifdef TEST_DEDICATED_SETTINGS
         if(mode!=0 && mode!=1 && mode!=2 && mode!=3 && mode!=4 && mode!=6 && mode!=8
 #ifdef PROX_NATIVE_DEDICATED_OTA
-           && mode!=5
+           && mode!=5 && mode!=13
 #endif
           )continue;
 #endif
 #ifdef PROX_NATIVE_DEDICATED_OTA
         writer_starts=0;
+#endif
+#ifndef PROX_NATIVE_DEDICATED_OTA
+        if(mode==13) continue;
 #endif
 #ifdef PROX_NATIVE_INSTALL_PREVIEW
         if(mode!=0 && mode!=1 && mode!=2 && mode!=3 && mode!=4 && mode!=8) continue;
@@ -307,10 +336,20 @@ int main(void)
         assert(!prox_nq_exchange(&state,2,PROX_NQ_REGISTER,&m)); assert(!prox_nq_submit(&state));
         if(!setjmp(finished)) prox_native_worker(3,args);
         assert(queries==1 && !borrowed && !report_open);
+        #ifdef PROX_NATIVE_DEDICATED_OTA
+        if(mode==13) assert(opened==1 && !downloads && !launches && !power_calls);
+        else if(mode==5 && !cleanup_case) assert(!opened && !downloads && !launches && !power_calls);
+        else
+#endif
         if(mode==9 || mode==12) assert(opened==2 && !downloads && !launches && !power_calls);
         else if(mode==5 || mode==7 || mode==10 || mode==11) assert(opened==1 && !downloads && !launches && !power_calls);
         else {
-            assert(opened==2); assert(downloads==(mode==4?0:1));
+            #ifdef PROX_NATIVE_DEDICATED_OTA
+            assert(opened==1);
+#else
+            assert(opened==2);
+#endif
+            assert(downloads==(mode==4?0:1));
 #ifdef TEST_DEDICATED_SETTINGS
             assert(launches==(mode==0 || mode==6));
 #else

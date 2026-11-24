@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.4.2 — verified Internet update cleanup
+
+- Verify the running firmware and remove its temporary flash files through the kernel before removing the matching download and staging directory from the Memory Stick.
+- Remove PRO-X reports and temporary update files after the verified first boot. An update check alone does not recreate the diagnostics folder.
+- Clear abandoned downloads before starting the next download from zero. Preserve any unresolved commit or files that could still be needed for recovery.
+- Show the actual Memory Stick staging requirement in the update offer, rounded up to a whole MB.
+- Place the Memory Stick folders under `release/` in the manual ZIP. Copy `PSP` and the optional `SEPLUGINS` folder to the card root.
+- Physical cleanup verification for this candidate is pending. The v0.4.1 Internet installation and target startup passed on the owner's PSP.
+
 ## v0.4.1 — self-contained installation and updates
 
 - Install PRO-X with the matching PROUPDATE and Fast Recovery from one ZIP. The resident updater includes completion messages for all twelve system languages and works without a separate completion resource.

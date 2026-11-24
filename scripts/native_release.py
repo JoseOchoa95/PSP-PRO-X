@@ -61,7 +61,7 @@ def verify_native_release(root,build):
     ca=(Path(root)/'firmware/Updater/cacert.pem').read_bytes()
     require(client.count(ca+b'\0')==1,'Compiled worker trust bytes differ from the pinned CA')
     if resident:
-        require(b'startup cleanup build' in client and not (compiled/'PSP/GAME/PROXUPDATE').exists(),
+        require(b' cleanup build ' in client and not (compiled/'PSP/GAME/PROXUPDATE').exists(),
                 'Resident distribution requires startup cleanup and a two-application manual kit')
     else:
         require((compiled/'PSP/GAME/PROXUPDATE/cacert.pem').read_bytes()==ca,

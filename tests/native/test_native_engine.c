@@ -88,7 +88,11 @@ int prox_ota_dedicated_lock(void) { return prox_ota_before_write(); }
 int prox_dedicated_writer_check(const ProxDedicatedJob *d,unsigned int lease,unsigned int generation)
 { assert(lease==77 && generation==2 && d->worker.size==633678 && d->package.size==980000 && !writing);return scenario==3?-1:0; }
 int prox_dedicated_record_available(const ProxDedicatedJob *d)
-{ assert(!writing && !strcmp(d->install.root,root));return scenario==26?-1:0; }
+{ assert(!strcmp(d->install.root,root));return scenario==26 || marked ? -1 : 0; }
+int prox_dedicated_begin_write(const ProxDedicatedJob *d)
+{ assert(writing && !access_calls && !strcmp(d->install.root,root));return 0; }
+int prox_dedicated_mark_download(const char *path)
+{ assert(writing && !marked && !committed && !strcmp(path,root));return 0; }
 int prox_dedicated_writer_prepare(const ProxDedicatedJob *d,unsigned int lease,unsigned int generation,ProxNativeFlash *t)
 {
     assert(lease==77 && generation==2);

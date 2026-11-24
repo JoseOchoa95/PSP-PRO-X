@@ -7,6 +7,7 @@ int prox_native_query_is_loading(void);
 #ifdef PROX_NATIVE_DEDICATED_OTA
 void prox_native_schedule_boot_cleanup(void);
 int prox_native_query_request_boot_cleanup(void);
+int prox_native_offer_storage_text(unsigned short *);
 #endif
 void prox_native_query_load_failed(void);
 void prox_native_query_load_failed_reason(unsigned int);

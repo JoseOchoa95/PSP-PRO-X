@@ -109,6 +109,12 @@ For every pull request, use [Conventional Commits 1.0.0](https://www.conventiona
 
 Use `type(scope): description`, with an optional scope. Use `feat` for features, `fix` for bug fixes and a relevant type such as `docs`, `build` or `test` for other changes. For a breaking change, add `!` before the colon or use a `BREAKING CHANGE:` footer in the commit message. Use the repository's build version policy to assign product versions.
 
+### Branches and updates to open pull requests
+
+Use a dedicated branch based on the intended target branch for every pull request. Use the `codex/` prefix for agent-created branches unless the owner requests another name. Carry follow-up changes for an open pull request on its existing branch.
+
+At the end of every authorized cycle that changes code, run the relevant checks, commit the reviewed changes and push the updated branch. Refresh the open pull request description and changelog when the change or validation status warrants it. Follow the test and authorization requirements for commits, pushes, pull request updates and releases below.
+
 ### Markdown paragraph formatting
 
 Write each prose paragraph as one continuous physical line in GitHub descriptions, PR/release bodies, changelogs, repository documentation and other publication text. Do not wrap a paragraph at an arbitrary column width or insert a newline, trailing backslash or Markdown hard break merely to continue the same sentence or paragraph. Use blank lines only for intentional paragraph separation, and retain meaningful line breaks in headings, lists, tables, quotations and code blocks. Preserve intended Markdown syntax such as `**bold**`; do not add literal escape characters that turn formatting into visible punctuation. When posting through a CLI or API, preserve the reviewed text and actual paragraph boundaries without introducing literal `\\n` sequences or shell-escaping artifacts. Apply this rule to new or revised text; do not reflow unrelated historical content solely for formatting.
@@ -183,7 +189,7 @@ Give each delivered build its own directory inside the repository-root `builds/`
 - `builds/<build>/release/PSP/GAME/FastRecovery/EBOOT.PBP`
 - `builds/<build>/release/SEPLUGINS/` for optional menu translations and fonts.
 
-Tell the user to copy the applicable folders inside `release/` to the root of the Memory Stick. Keep the installable ZIP, source archive, documentation, licenses, credits, checksums, manifests and standalone Internet-update assets outside the ready-to-copy `release/` folder. Use the actual product version and target firmware in the installable ZIP filename and provide a build manifest identifying the source, build and toolchain.
+Use the same `release/PSP/` and `release/SEPLUGINS/` layout inside new resident manual ZIPs. Before handing off a build, reopen the ZIP and verify that the folders inside `release/` match the loose files by path and hash, including uppercase names, and that the copyable directories are absent from the ZIP root. Tell the user to copy the applicable folders inside `release/` to the root of the Memory Stick. Keep the installable ZIP, source archive, documentation, licenses, credits, checksums, manifests and standalone Internet-update assets outside the ready-to-copy `release/` folder. Use the actual product version and target firmware in the installable ZIP filename and provide a build manifest identifying the source, build and toolchain.
 
 Existing scripts may use other locations for intermediate output, but the final files handed to the user must exist in `builds/`. Do not mix old and new EBOOT files, rename an older binary as a new version, or provide an empty directory as the deliverable.
 

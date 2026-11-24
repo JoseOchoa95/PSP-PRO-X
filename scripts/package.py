@@ -99,11 +99,15 @@ def main():
     archive(source_zip, sources)
 
     files = {}
+    card_root = 'release/' if resident else ''
+    psp_prefix = card_root + 'PSP/'
+    menu_prefix = card_root + ('SEPLUGINS/' if resident else 'seplugins/')
     output = ROOT / build['output']
     executables=('PROUPDATE','FastRecovery') if resident else ('PROUPDATE','FastRecovery','PROXUPDATE')
     for directory in executables:
-        name = 'PSP/GAME/' + directory + '/EBOOT.PBP'
-        files[name] = (output / name).read_bytes()
+        source_name = 'PSP/GAME/' + directory + '/EBOOT.PBP'
+        name = card_root + source_name
+        files[name] = (output / source_name).read_bytes()
         executable = destination / name
         executable.parent.mkdir(parents=True, exist_ok=True)
         executable.write_bytes(files[name])
@@ -112,16 +116,24 @@ def main():
         files[name] = (output / name).read_bytes()
         (destination / name).write_bytes(files[name])
     guide='RESIDENT-DEDICATED-OTA.md' if resident else 'NATIVE-UPDATE.md'
-    files[guide]=(ROOT/'scripts/resources'/guide).read_bytes().replace(b'@PRODUCT_VERSION@',VERSION.encode('ascii'))
+    files[guide] = ((ROOT/'scripts/resources'/guide).read_bytes()
+                    .replace(b'@PRODUCT_VERSION@', VERSION.encode('ascii'))
+                    .replace(b'@CARD_ROOT@', (card_root + 'PSP').encode('ascii')))
     with tarfile.open(ROOT / 'firmware/Updater/vendor/mbedtls-3.6.7.tar.bz2') as tls_source:
         for entry in tls_source:
             parts = Path(entry.name).parts[1:]
             if entry.isfile() and parts and ('LICENSE' in parts[0] or 'COPYING' in parts[0]):
                 files['licenses/mbedtls/'+'/'.join(parts)] = tls_source.extractfile(entry).read()
     for name in inventory(ROOT / 'firmware/Translated'):
-        files['seplugins/' + name] = (ROOT / 'firmware/Translated' / name).read_bytes()
+        files[menu_prefix + name] = (ROOT / 'firmware/Translated' / name).read_bytes()
     for name in inventory(ROOT / 'firmware/contrib/fonts'):
-        files['seplugins/fonts/' + name] = (ROOT / 'firmware/contrib/fonts' / name).read_bytes()
+        files[menu_prefix + 'fonts/' + name] = (ROOT / 'firmware/contrib/fonts' / name).read_bytes()
+    if resident:
+        for name, data in files.items():
+            if name.startswith(menu_prefix):
+                resource = destination / name
+                resource.parent.mkdir(parents=True, exist_ok=True)
+                resource.write_bytes(data)
     for name in ['LICENSE', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md']:
         files[name] = (ROOT / name).read_bytes()
     for name in ['build.md', 'upstream.md', 'install-and-validation.md', 'phase-1-results.md',
@@ -173,6 +185,7 @@ def main():
             require(not name.lower().endswith('.rco') and sha(data) not in PRIVATE_COMPLETION_HASHES,
                     'Original completion resource must remain outside distributable packages')
     if resident:
+        manifest['memory_stick_directory'] = 'release'
         manifest['ota_contract']='prox-dedicated-eboot-v1'
         manifest['dedicated_update']=json.loads((output/'dedicated-update/dedicated-update.json').read_bytes())
     files['manifest.json'] = (json.dumps(manifest, indent=2) + '\n').encode()
@@ -199,7 +212,7 @@ def main():
     compact_path.write_text(json.dumps(compact, indent=2)+'\n', encoding='utf-8')
     external = ''.join(sha(path.read_bytes()) + '  ' + path.name + '\n'
                        for path in (binary_zip,source_zip,*update_assets,manifest_path,compact_path))
-    external += ''.join(sha(data)+'  '+name+'\n' for name, data in sorted(files.items()) if name.startswith('PSP/'))
+    external += ''.join(sha(data)+'  '+name+'\n' for name, data in sorted(files.items()) if name.startswith(psp_prefix))
     (destination / (NAME + '.sha256')).write_text(external, encoding='ascii')
     if resident:
         print(external,end='')
