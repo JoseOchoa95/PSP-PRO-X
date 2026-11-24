@@ -6,7 +6,7 @@ from pathlib import Path
 import tarfile
 import zipfile
 from build import ROOT, inventory, sha
-from package import archive
+from package import archive, BUILTIN_COMPLETION, PRIVATE_COMPLETION_HASHES
 from product import VERSION
 from verify import require, verify_source, verify_build
 
@@ -123,8 +123,7 @@ def main():
             'metadata': json.loads((output/'dedicated-update/dedicated-update.json').read_text())
         }
     if dedicated_ota:
-        manifest['completion_resource']={'path':'flash0:/kd/_proxc661.bin','bytes':522,
-            'sha256':'4b47ddf778c8df121a7fe3ade8acaada307ffd3e96d17834f568e29240557ba7','included_in_package':False}
+        manifest['completion_resource']=BUILTIN_COMPLETION
     elif background:
         manifest['completion_resource']={'path':'PSP/GAME/PROXUPDATE/native-completion.rco','bytes':377448,
             'sha256':'714c0af3c51f61a895311ee1e58e719d8ed7fc5d3e5e441de38d67133617c265','included_in_package':False}
@@ -156,7 +155,7 @@ def main():
     files['build-manifest.json'] = (json.dumps(manifest, indent=2)+'\n').encode()
     if background:
         for n,data in {**files,**sources}.items():
-            require(not n.lower().endswith('.rco') and sha(data)!=manifest['completion_resource']['sha256'],
+            require(not n.lower().endswith('.rco') and sha(data) not in PRIVATE_COMPLETION_HASHES,
                     'Original resource must remain outside test/source packages')
     binary_zip = destination/(name+'.zip')
     archive(binary_zip, files)

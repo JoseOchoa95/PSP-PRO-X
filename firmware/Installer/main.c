@@ -55,7 +55,9 @@
 #include "../Updater/ota_installer.h"
 #ifdef PROX_NATIVE_RESIDENT_QUERY
 #include <stdint.h>
+#ifndef PROX_RESIDENT_BUILTIN_COMPLETION
 #include "resident_completion.h"
+#endif
 int prox_provision_resident_image(void);
 int prox_resident_capacity_ready(const char *installer_path, const uint32_t *module_sizes,
 				 unsigned int module_count);
@@ -269,25 +271,31 @@ int install_cfw(const char *installer_path)
 #endif
 
 #ifdef PROX_NATIVE_RESIDENT_QUERY
+	uint32_t module_sizes[NELEMS(g_file_lists) + 1];
+	unsigned int module_count = NELEMS(g_file_lists);
+	for (i = 0; i < NELEMS(g_file_lists); ++i)
+		module_sizes[i] = *g_file_lists[i].size;
+#ifndef PROX_RESIDENT_BUILTIN_COMPLETION
 	unsigned char completion[PROX_COMPLETION_STORE_BYTES];
 	int provision_completion = prox_resident_completion_prepare(installer_path, completion);
 	if (provision_completion < 0) {
 		printf("Original completion resource verification failed. No firmware write started.\n");
 		return -1;
 	}
-	uint32_t module_sizes[NELEMS(g_file_lists) + 1];
-	for (i = 0; i < NELEMS(g_file_lists); ++i)
-		module_sizes[i] = *g_file_lists[i].size;
-	module_sizes[NELEMS(g_file_lists)] = PROX_COMPLETION_STORE_BYTES;
-	if (prox_resident_capacity_ready(installer_path, module_sizes, NELEMS(g_file_lists) + provision_completion) < 0)
+	if (provision_completion)
+		module_sizes[module_count++] = PROX_COMPLETION_STORE_BYTES;
+#endif
+	if (prox_resident_capacity_ready(installer_path, module_sizes, module_count) < 0)
 		return -1;
 	init_flash();
+#ifndef PROX_RESIDENT_BUILTIN_COMPLETION
 	if (provision_completion && prox_resident_completion_install(completion) < 0) {
 		printf("Original completion resource could not be stored. CFW modules were not written.\n");
 		return -1;
 	}
 	if (provision_completion)
 		printf("Original completion resource verified and stored.\n");
+#endif
 	if (prox_provision_resident_image() < 0) {
 		printf("Resident worker verification failed. CFW modules were not written.\n");
 		return -1;

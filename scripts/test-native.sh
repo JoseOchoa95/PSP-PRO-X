@@ -13,9 +13,10 @@ cc -std=c99 -Wall -Wextra -Werror -Wno-pointer-to-int-cast -Wno-int-to-pointer-c
     -I tests/native -I firmware/Common -I firmware/Updater tests/native/test_native_background_target.c \
     firmware/Updater/native_background.c -o /tmp/test-native-background-target
 /tmp/test-native-background-target
-cc -std=c99 -Wall -Wextra -Werror -DPROX_BACKGROUND_TARGET_TEST -DPROX_NATIVE_DEDICATED_OTA \
+cc -std=c11 -Wall -Wextra -Werror -DPROX_BACKGROUND_TARGET_TEST -DPROX_NATIVE_DEDICATED_OTA \
     -I tests/native -I firmware/Common -I firmware/Updater tests/native/test_dedicated_launch.c \
-    firmware/Updater/native_background.c -o /tmp/test-dedicated-launch
+    firmware/Updater/native_background.c firmware/Updater/native_completion_builtin.c \
+    -Wl,--wrap=fopen -o /tmp/test-dedicated-launch
 /tmp/test-dedicated-launch
 cc -O2 tests/native/test_signer_template.c \
     firmware/contrib/PrxEncrypter/kirk_engine.c firmware/contrib/PrxEncrypter/crypto.c -lz -o /tmp/test-signer-template

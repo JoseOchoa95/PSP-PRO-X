@@ -16,6 +16,8 @@ Published v0.3.4 adds a matched background writer for Internet updates after the
 
 PRO-X v0.4.0 adds a resident updater for PSP-2000 on 6.61. Its manual Installer measures internal free space before writing and provisions a verified internal worker. The manual Installer can run without an AC or minimum battery charge requirement. System Update uses the original screens for authenticated catalog queries. A previous diagnostic on one PSP-2000 authenticated to GitHub with the Memory Stick inserted and the PROXUPDATE folder absent. The Internet update writer checks space for staged firmware and backups before opening flash0 for writing. Full Internet installation on the v0.4.0 build remains pending on PSP.
 
+PRO-X v0.4.1 includes completion messages for the twelve PSP system languages in the resident updater. The manual ZIP supplies the files for first installation and Internet updates. After activation, the user can remove PROUPDATE and keep Fast Recovery on the Memory Stick. The owner confirmed the `6.61 PRO-X 0.4.1` label on physical hardware. Fast Recovery reactivation and a complete Internet update remain pending.
+
 ## Validation and compatibility
 
 The local v0.4.0 dedicated update test package contains a data-only EBOOT built from the same firmware components as its manual installation kit. The owner reported that the read-only app verified the package and all twelve components on one PSP-2000. With a synthetic offer on that model, System Update retained the verified installer job until the original Settings handoff, passed the shared writer's read-only verification and removed its temporary card stage. Host tests use the compiled EBOOT to check recovery and show that a committed record supports retryable cleanup after observing the target build. Installation through System Update and cleanup after a physical PSP restart remain pending.
@@ -29,11 +31,11 @@ The existing WPA2 integration has a limited owner-reported connection result on 
 ## Install and activate
 
 1. Use a PSP already running system software **6.61**. Download the matching manual binary ZIP and verify its SHA-256. See [Releases](https://github.com/JoseOchoa95/PSP-PRO-X/releases) for published downloads.
-2. Copy the matching application folders into `PSP/GAME`. The v0.4.0 resident kit includes `PROUPDATE` and `FastRecovery`. The published v0.3.4 kit also requires `PROXUPDATE` and its `cacert.pem` for Internet updates.
-3. Open PROUPDATE from Games. Press X to install, wait for completion and press X to start PRO-X. Check **Settings -> System Settings -> System Information** for the installed version, such as `6.61 PRO-X 0.4.0`.
-4. After a full shutdown, use the matching Fast Recovery to activate PRO-X. For an Internet update, use System Update and meet the displayed storage and power prerequisites.
+2. Extract the ZIP's `PSP` folder to the Memory Stick root. The v0.4.1 manual kit supplies `PROUPDATE` and `FastRecovery`.
+3. Open PROUPDATE from Games. Press X to install, wait for completion and press X to start PRO-X. Check **Settings -> System Settings -> System Information** for the installed version, such as `6.61 PRO-X 0.4.1`. After activating v0.4.1, you can remove `PSP/GAME/PROUPDATE`.
+4. After a full shutdown, use the matching Fast Recovery to activate PRO-X. For an Internet update, use System Update with a Memory Stick and meet the displayed storage and power prerequisites.
 
-When upgrading from a version earlier than v0.4.0, use the matching v0.4.0 manual PROUPDATE Installer and Fast Recovery. The dedicated Internet update path starts from an installed v0.4.0 resident client and requires a newer compatible target.
+Use the manual v0.4.1 kit if you are on official 6.61, on a pre-v0.4.0 PRO-X version or on v0.4.0 without its previously installed completion resource. The dedicated Internet update path requires a resident client and a newer compatible target.
 
 PRO-X writes firmware modules and reuses PRO-C paths; it does not install alongside PRO-C. It does not install, remove or configure Infinity/cIPL. Do not uninstall existing CFW or reflash official firmware as a routine update step. Preserve previous working packages and follow the installer result instead of assuming a successful reboot after an error.
 
@@ -48,7 +50,7 @@ docker build -t pro-x-toolchain:phase1 -f scripts/Dockerfile scripts
 python scripts/build.py reference
 python scripts/build.py pro-x --resident-dedicated-ota
 python scripts/package.py
-python scripts/verify-package.py builds/resident-release-<build-id>/pro-x-0.4.0-661.zip
+python scripts/verify-package.py builds/resident-release-<build-id>/pro-x-0.4.1-661.zip
 ```
 
 Use the writable resident build when staging a v0.4.0 or later release. The query-only, simulated-offer and incomplete-progress options remain available as diagnostics. Build and packaging commands work locally. Follow [AGENTS.md](AGENTS.md) for validation, versioning and Git/release authorization.
