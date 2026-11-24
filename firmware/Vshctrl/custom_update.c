@@ -17,20 +17,33 @@
 #endif
 #include <stdio.h>
 #include "native_query_provider.h"
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+#include "prox_resident_query.h"
+#endif
 #if defined(PROX_NATIVE_UI_PROBE) || defined(PROX_NATIVE_UI_QUERY)
 #include "native_update_probe.h"
 int prox_hook_native_probe_imports(SceModule2 *);
 #endif
 
 #define UPDATE_ERROR ((int)0x80010002)
+#ifndef PROX_NATIVE_RESIDENT_QUERY
 static volatile int launching;
+#endif
 
 static void dispatch_log(const char *event, int result)
 {
     char line[128];
     int fd, n;
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+    char path[48];
+    const char *directory = prox_resident_report_directory();
+    if (!directory) return;
+    sprintf(path,"%s/dispatch.txt",directory);
+    fd = sceIoOpen(path, PSP_O_WRONLY|PSP_O_CREAT|PSP_O_APPEND, 0666);
+#else
     fd = sceIoOpen("ms0:/PSP/GAME/PROXUPDATE/dispatch.txt", PSP_O_WRONLY|PSP_O_CREAT|PSP_O_APPEND, 0666);
     if (fd < 0) fd = sceIoOpen("ef0:/PSP/GAME/PROXUPDATE/dispatch.txt", PSP_O_WRONLY|PSP_O_CREAT|PSP_O_APPEND, 0666);
+#endif
     if (fd < 0) return;
     /* event is one of the fixed literals below, all shorter than 48 bytes. */
     n = sprintf(line, "%s result=0x%08x fw=0x%08x\n", event, result, psp_fw_version);
@@ -46,6 +59,9 @@ void prox_native_query_event(const char *event,int result)
 
 int proxInternetUpdate(void)
 {
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+    return UPDATE_ERROR;
+#else
     const char *paths[] = {"ms0:/PSP/GAME/PROXUPDATE/EBOOT.PBP",
                            "ef0:/PSP/GAME/PROXUPDATE/EBOOT.PBP"};
     struct SceKernelLoadExecVSHParam param;
@@ -73,6 +89,7 @@ int proxInternetUpdate(void)
     dispatch_log("client launch failed", rc);
     pspSdkSetK1(k1);
     return rc;
+#endif
 }
 
 #if !defined(PROX_NATIVE_UI_PROBE) && !defined(PROX_NATIVE_UI_QUERY)

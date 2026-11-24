@@ -14,6 +14,10 @@
 #include "prox_product.h"
 #ifdef PROX_NATIVE_MOUNT_ACCESS
 #include "native_mount_access.h"
+#include "native_flash_preflight.h"
+#ifdef PROX_NATIVE_DEDICATED_OTA
+#include "native_dedicated_cleanup.h"
+#endif
 #ifndef PROX_NQ_PROVIDER_TEST
 #include <pspthreadman_kernel.h>
 #endif
@@ -56,6 +60,9 @@ static ProxNativeInstallState install_state;
 int prox_native_install_critical(void)
 {
     unsigned int mask=pspSdkDisableInterrupts();int locked=prox_ni_locked(&install_state);
+#if defined(PROX_NATIVE_MOUNT_ACCESS) && defined(PROX_NATIVE_DEDICATED_OTA)
+    locked=locked || access_busy;
+#endif
     pspSdkEnableInterrupts(mask);return locked;
 }
 int prox_native_install_completion_owner(int thread,unsigned int generation)
@@ -106,7 +113,26 @@ static int __attribute__((noinline)) install_service_inner(int action,ProxNative
          * interrupts disabled. Only the bound engine's copied job can enter. */
         if(!rc) {
             memset(&message.access,0,sizeof(message.access));
-            if(action==PROX_NI_ACCESS_BEGIN)message.result=prox_native_mount_begin(&message.access);
+            if(action==PROX_NI_ACCESS_BEGIN) {
+                message.result=0;
+                if(!install_state.flash_preflight_passed) {
+#ifdef PROX_NATIVE_DEDICATED_OTA
+                    message.result=prox_native_flash_preflight_dedicated(install_state.job.parts,&install_state.resident);
+#else
+                    message.result=prox_native_flash_preflight(install_state.job.parts);
+#endif
+                    mask=pspSdkDisableInterrupts();
+                    if(!message.result &&
+                       (state.cancel || state.fault || !state.active || state.phase!=PROX_NQ_HANDOFF ||
+                        state.lease!=message.lease || state.generation!=message.generation))
+                        message.result=-1;
+                    pspSdkEnableInterrupts(mask);
+                }
+                if(!message.result) {
+                    message.result=prox_native_mount_begin(&message.access);
+                    if(!message.result) install_state.flash_preflight_passed=1;
+                }
+            }
             else if(action==PROX_NI_ACCESS_END)message.result=prox_native_mount_end(&message.access);
             else message.result=prox_native_mount_access_probe(&message.access);
             mask=pspSdkDisableInterrupts();access_busy=0;pspSdkEnableInterrupts(mask);
@@ -134,7 +160,12 @@ static int __attribute__((noinline)) install_service_inner(int action,ProxNative
         if(action==PROX_NI_ARM && thread==state.owner && !state.cancel &&
            memchr(message.job.source_version,0,sizeof(message.job.source_version)) &&
            !strcmp(message.job.source_version,PROX_PRODUCT_VERSION))
+#ifdef PROX_NATIVE_DEDICATED_OTA
+            rc=prox_native_completion_armed(state.generation) ?
+                prox_ni_arm_dedicated(&install_state,thread,state.consumer,state.answer.version,state.answer.package_size,&message,now) : -1;
+#else
             rc=prox_ni_arm(&install_state,thread,state.consumer,state.lease,state.generation,state.answer.version,&message.job,now);
+#endif
         else if(action!=PROX_NI_ARM && ((action!=PROX_NI_BIND && action!=PROX_NI_CLAIM) || loaded==message.module))
             rc=prox_ni_exchange(&install_state,thread,action,state.cancel,&message,now);
     }
@@ -147,9 +178,38 @@ static int __attribute__((noinline)) install_service_inner(int action,ProxNative
 }
 #ifdef PROX_NATIVE_MOUNT_ACCESS
 typedef struct { int action,result,completed;ProxNativeInstallMessage *packet;unsigned int size; } AccessCall;
+#ifdef PROX_NATIVE_DEDICATED_OTA
+static int cleanup_service(const void *packet)
+{
+    ProxNativeCleanupMessage cleanup;
+    memcpy(&cleanup,packet,sizeof(cleanup));
+    int thread=sceKernelGetThreadId();
+    unsigned int mask=pspSdkDisableInterrupts();
+    int admitted=cleanup.protocol==PROX_NI_CLEANUP_PROTOCOL && cleanup.lease==state.lease &&
+        cleanup.generation==state.generation && thread>0 && thread==state.owner &&
+        state.active && state.phase==PROX_NQ_QUERY &&
+        (state.command==PROX_NQ_CHECK || state.command==PROX_NQ_BOOT_CLEANUP) && !state.fault && !state.cancel &&
+        !access_busy && !prox_ni_locked(&install_state) && !prox_native_mount_active();
+    if(admitted)access_busy=1;
+    pspSdkEnableInterrupts(mask);
+    if(!admitted)return -1;
+
+    int result=prox_native_cleanup_flash(&cleanup);
+    mask=pspSdkDisableInterrupts();
+    access_busy=0;
+    if(result==-2) { state.fault=1;state.answer.failure=PROX_NQ_CAUSE_CLIENT; }
+    pspSdkEnableInterrupts(mask);
+    return result;
+}
+#endif
 static void access_extended(void *arg)
 {
     AccessCall *call=arg;
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(call->action==PROX_NI_CLEANUP_COMMITTED)
+        call->result=cleanup_service(call->packet);
+    else
+#endif
     call->result=install_service_inner(call->action,call->packet,call->size);
     call->completed=1;
 }
@@ -157,9 +217,17 @@ static void access_extended(void *arg)
 int proxNativeInstallService(int action,ProxNativeInstallMessage *packet,unsigned int size)
 {
 #ifdef PROX_NATIVE_MOUNT_ACCESS
-    if(action==PROX_NI_ACCESS_PROBE || action==PROX_NI_ACCESS_BEGIN || action==PROX_NI_ACCESS_END) {
+    if(action==PROX_NI_ACCESS_PROBE || action==PROX_NI_ACCESS_BEGIN || action==PROX_NI_ACCESS_END
+#ifdef PROX_NATIVE_DEDICATED_OTA
+       || action==PROX_NI_CLEANUP_COMMITTED
+#endif
+      ) {
         AccessCall call;unsigned int mask;int k1,rc,busy;
-        if(!packet || size!=sizeof(*packet))return -1;
+        unsigned int expected=sizeof(*packet);
+#ifdef PROX_NATIVE_DEDICATED_OTA
+        if(action==PROX_NI_CLEANUP_COMMITTED)expected=sizeof(ProxNativeCleanupMessage);
+#endif
+        if(!packet || size!=expected)return -1;
 #ifdef PROX_NQ_PROVIDER_TEST
         if(!prox_native_test_valid(packet,size))return -1;
 #else
@@ -222,10 +290,31 @@ void prox_native_query_load_failed(void)
 void prox_native_query_load_failed_reason(unsigned int failure)
 {
     unsigned int mask=pspSdkDisableInterrupts();
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if (state.command==PROX_NQ_BOOT_CLEANUP) {
+        state.active=0;
+        state.command=PROX_NQ_IDLE;
+    }
+#endif
     state.fault=1; state.cancel=1; state.done=1; state.answer.result=-1;
     state.answer.failure=failure<=PROX_NQ_CAUSE_CLIENT?failure:PROX_NQ_CAUSE_CLIENT;
     pspSdkEnableInterrupts(mask);
 }
+#ifdef PROX_NATIVE_DEDICATED_OTA
+int prox_native_query_request_boot_cleanup(void)
+{
+    unsigned int seed=sceKernelGetSystemTimeLow()|1u;
+    unsigned int mask=pspSdkDisableInterrupts();
+    if (!state.lease)prox_nq_reset(&state,seed);
+    int result=prox_nq_start_boot_cleanup(&state);
+    unsigned int lease=state.lease;
+    pspSdkEnableInterrupts(mask);
+    if (result)return result;
+    result=prox_native_query_start(lease);
+    if (result<0)prox_native_query_load_failed();
+    return result;
+}
+#endif
 const char *proxNativeQueryTextKey(const char *key)
 {
 #ifdef PROX_NATIVE_OTA
@@ -238,17 +327,39 @@ const char *proxNativeQueryTextKey(const char *key)
 }
 int proxNativeQueryInitEx(const void *allocate,const void *release)
 {
-    unsigned int mask,lease,seed; int rc,k1,loaded,loading;
+    unsigned int mask,lease,start; int rc,k1,loaded,loading;
     if(!allocate || !release) return NATIVE_ARGUMENT;
-#ifdef PROX_NATIVE_MOUNT_ACCESS
+#if defined(PROX_NATIVE_MOUNT_ACCESS) && !defined(PROX_NATIVE_DEDICATED_OTA)
     /* Preserve the old owner's restoration token after a failed cleanup. */
     if(prox_native_mount_active())return NATIVE_STATE;
 #endif
     k1=pspSdkSetK1(0);
-    seed=sceKernelGetSystemTimeLow()|1u;
+    start=sceKernelGetSystemTimeLow();
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    /* An early Settings request can share the resident worker after the
+     * startup operation has released it. It cannot cancel the cleanup. */
+    for (;;) {
+        loaded=sceKernelFindModuleByName("ProxUpdater")!=NULL;
+        loading=prox_native_query_is_loading();
+        mask=pspSdkDisableInterrupts();
+        if (state.command!=PROX_NQ_BOOT_CLEANUP)break;
+        pspSdkEnableInterrupts(mask);
+        if ((unsigned int)(sceKernelGetSystemTimeLow()-start)>10000000u) {
+            pspSdkSetK1(k1);
+            return NATIVE_STATE;
+        }
+        sceKernelDelayThread(10000);
+    }
+    if (prox_native_mount_active()) {
+        pspSdkEnableInterrupts(mask);
+        pspSdkSetK1(k1);
+        return NATIVE_STATE;
+    }
+#else
     loaded=sceKernelFindModuleByName("ProxUpdater")!=NULL; loading=prox_native_query_is_loading();
     mask=pspSdkDisableInterrupts();
-    if(!state.lease || (!loaded && !loading && !state.active)) prox_nq_reset(&state,seed);
+#endif
+    if(!state.lease || (!loaded && !loading && !state.active)) prox_nq_reset(&state,start|1u);
     rc=prox_nq_open(&state); lease=state.lease;
     pspSdkEnableInterrupts(mask);
     if(!rc) rc=prox_native_query_start(lease);
@@ -271,7 +382,14 @@ int proxNativeQueryAbort(void)
 #if defined(PROX_NATIVE_INSTALL_PREVIEW) || defined(PROX_NATIVE_BACKGROUND)
     if(prox_native_install_preview_locked()) return 0;
 #endif
-    unsigned int mask=pspSdkDisableInterrupts(); prox_nq_cancel(&state); pspSdkEnableInterrupts(mask);
+    unsigned int mask=pspSdkDisableInterrupts();
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(state.command==PROX_NQ_BOOT_CLEANUP) {
+        pspSdkEnableInterrupts(mask);
+        return 0;
+    }
+#endif
+    prox_nq_cancel(&state); pspSdkEnableInterrupts(mask);
 #if defined(PROX_NATIVE_OFFER_PREVIEW) || defined(PROX_NATIVE_OTA)
     prox_native_preview_abort();
 #endif
@@ -298,6 +416,9 @@ int proxNativeQueryConnect(unsigned int *size,unsigned int *detail)
         }
         sceKernelDelayThread(10000);
     }
+#if defined(PROX_NATIVE_UI_QUERY) && !defined(PROX_NATIVE_OTA) && !defined(PROX_NATIVE_OFFER_PREVIEW)
+    prox_native_query_event("profile worker ready wait us", (int)(sceKernelGetSystemTimeLow() - start));
+#endif
     mask=pspSdkDisableInterrupts(); rc=prox_nq_submit(&state); pspSdkEnableInterrupts(mask);
     if(rc) return NATIVE_STATE;
     for(;;) {

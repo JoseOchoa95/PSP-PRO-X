@@ -15,6 +15,16 @@ int prox_nq_submit(ProxNativeQueryState *s)
     if(!s->ready || s->fault || s->active || s->cancel || !s->generation) return -1;
     s->active=1; s->done=0; s->command=PROX_NQ_CHECK; return 0;
 }
+#ifdef PROX_NATIVE_DEDICATED_OTA
+int prox_nq_start_boot_cleanup(ProxNativeQueryState *s)
+{
+    if (!s->lease || s->generation || prox_nq_open(s))
+        return -1;
+    s->active=1;
+    s->command=PROX_NQ_BOOT_CLEANUP;
+    return 0;
+}
+#endif
 int prox_nq_download(ProxNativeQueryState *s,int consumer)
 {
     if(consumer<=0 || s->fault || s->cancel || s->active || !s->ready || !s->done ||
@@ -44,7 +54,11 @@ int prox_nq_exchange(ProxNativeQueryState *s,int thread,int action,ProxNativeQue
         m->phase=s->phase; m->downloaded=s->downloaded; return 0;
     }
     if(action==PROX_NQ_FAULT) {
-        s->fault=1; s->cancel=1; s->active=0; s->done=1; s->answer.result=-1; return 0;
+        s->fault=1; s->cancel=1; s->active=0; s->done=1; s->answer.result=-1;
+#ifdef PROX_NATIVE_DEDICATED_OTA
+        if(s->command==PROX_NQ_BOOT_CLEANUP)s->command=PROX_NQ_IDLE;
+#endif
+        return 0;
     }
     if(!s->active || m->generation!=s->generation) return -1;
     if(action==PROX_NQ_PROGRESS) {
@@ -60,6 +74,14 @@ int prox_nq_exchange(ProxNativeQueryState *s,int thread,int action,ProxNativeQue
     if(action!=PROX_NQ_RESULT || m->result < -1 || m->result>1 ||
        m->failure>PROX_NQ_CAUSE_CLIENT || (m->result>=0 && m->failure) ||
        !memchr(m->version,0,sizeof(m->version)) || !memchr(m->summary,0,sizeof(m->summary))) return -1;
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(s->command==PROX_NQ_BOOT_CLEANUP) {
+        if(m->result>0)return -1;
+        s->active=0;
+        s->command=PROX_NQ_IDLE;
+        return 0;
+    }
+#endif
     if(s->phase!=PROX_NQ_QUERY) {
         if(m->result!=-1) return -1; /* Download/launch cannot report installation success. */
         s->phase=PROX_NQ_FAILED; s->answer.result=-1; s->answer.failure=m->failure; s->active=0; s->done=1;

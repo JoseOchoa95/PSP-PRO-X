@@ -9,6 +9,9 @@ typedef struct {
 void prox_nq_reset(ProxNativeQueryState *,unsigned int lease);
 int prox_nq_open(ProxNativeQueryState *);
 int prox_nq_submit(ProxNativeQueryState *);
+#ifdef PROX_NATIVE_DEDICATED_OTA
+int prox_nq_start_boot_cleanup(ProxNativeQueryState *);
+#endif
 int prox_nq_download(ProxNativeQueryState *,int consumer);
 int prox_nq_handoff(ProxNativeQueryState *,int consumer);
 void prox_nq_cancel(ProxNativeQueryState *);

@@ -20,6 +20,9 @@ int sceIoIoctl(int f,unsigned int c,void *i,int n,void *o,int z)
 int sceIoDevctl(const char *p,unsigned int c,void *i,int n,void *o,int z)
 { (void)p;(void)c;(void)i;(void)n;(void)o;(void)z; assert(0); return -1; }
 #if defined(PROX_NATIVE_PROGRESS_PREVIEW) || defined(PROX_NATIVE_OTA)
+#ifndef PROX_NATIVE_OTA
+int prox_native_flash_capacity_preview(void) { assert(0); return -1; }
+#endif
 int prox_preview_test_bytes(const void *p,unsigned int n) { (void)p;(void)n; assert(0); return 0; }
 int sceKernelGetThreadId(void) { assert(0); return 0; }
 unsigned int pspSdkDisableInterrupts(void) { assert(0); return 0; }

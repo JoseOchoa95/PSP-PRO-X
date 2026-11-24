@@ -1,6 +1,7 @@
 /* No release name/body heuristic: flags, numeric versions and exact assets.
  * Only the versioned allowlisted install files are accepted. GPL-3.0-or-later. */
 #include "contract.h"
+#include "dedicated_format.h"
 #include "policy.h"
 #include <stdio.h>
 #include <string.h>
@@ -41,37 +42,47 @@ static int asset(const Pj *j, int t, const char *tag, const char *name, ProxAsse
     }
     return 0;
 }
-int prox_release(const Pj *j, int t, const unsigned int running[3], ProxRelease *out)
+int prox_release_format(const Pj *j, int t, const unsigned int running[3], unsigned int format, ProxRelease *out)
 {
     int a,i,have_manifest=0,have_package=0;
     char name[96], wanted[96];
+    int dedicated = format == PROX_RELEASE_DEDICATED;
+    if (format != PROX_RELEASE_ZIP && !dedicated) return -1;
     memset(out,0,sizeof(*out));
+    out->format = format;
     if (t < 0 || t >= j->used || j->tokens[t].type != PJ_OBJECT || boolean(j,t,"draft") < 0 || boolean(j,t,"prerelease") < 0) return -1;
     if (boolean(j,t,"draft") || boolean(j,t,"prerelease")) return 0;
     if (text(j,t,"tag_name",out->tag,sizeof(out->tag)) || !prox_stable(0,0,out->tag)) return 0;
     strcpy(out->version,out->tag+1);
     if (prox_version(out->version,out->numbers) || prox_compare(out->numbers,running) <= 0) return 0;
-    snprintf(wanted,sizeof(wanted),"pro-x-%s-661-update.zip",out->version);
+    if (dedicated) strcpy(wanted, PROX_DEDICATED_ASSET);
+    else snprintf(wanted,sizeof(wanted),"pro-x-%s-661-update.zip",out->version);
     a=pj_field(j,t,"assets");
     if (a < 0 || j->tokens[a].type != PJ_ARRAY || j->tokens[a].count > 100) return -1;
     for (i=a+1;i<j->tokens[a].next;i=j->tokens[i].next) {
         if (text(j,i,"name",name,sizeof(name))) continue;
-        if (!strcmp(name,"pro-x-update.json")) {
+        if (!strcmp(name,dedicated ? PROX_DEDICATED_MANIFEST : "pro-x-update.json")) {
             if (have_manifest++ || asset(j,i,out->tag,name,&out->manifest) || out->manifest.size > 32768) return -1;
         } else if (!strcmp(name,wanted)) {
-            if (have_package++ || asset(j,i,out->tag,name,&out->package)) return -1;
+            if (have_package++ || asset(j,i,out->tag,name,&out->package) ||
+                (dedicated && out->package.size > PROX_DEDICATED_MAX_BYTES)) return -1;
         }
     }
     return have_manifest && have_package ? 1 : 0;
 }
+int prox_release(const Pj *j, int t, const unsigned int running[3], ProxRelease *out)
+{ return prox_release_format(j,t,running,PROX_RELEASE_ZIP,out); }
+
 int prox_manifest(const Pj *j, const ProxRelease *release, const unsigned int running[3],
                   const unsigned int client[3], unsigned int model, ProxManifest *out)
 {
     unsigned int n,minimum[3],seen=0,total=0;
     char buffer[96];
     int a,i;
+    int dedicated = release->format == PROX_RELEASE_DEDICATED;
+    if (release->format != PROX_RELEASE_ZIP && !dedicated) return -1;
     memset(out,0,sizeof(*out));
-    if (number(j,0,"schema_version",&n) || n != 1 || !equal(j,0,"product","PRO-X") ||
+    if (number(j,0,"schema_version",&n) || n != (dedicated ? 2u : 1u) || !equal(j,0,"product","PRO-X") ||
         !equal(j,0,"repository","JoseOchoa95/PSP-PRO-X") || !equal(j,0,"channel","stable") ||
         !equal(j,0,"firmware_target","6.61") || !equal(j,0,"tag",release->tag) ||
         text(j,0,"version",out->version,sizeof(out->version)) || strcmp(out->version,release->version) ||
@@ -89,12 +100,18 @@ int prox_manifest(const Pj *j, const ProxRelease *release, const unsigned int ru
     }
     if (!(out->models & (1u<<model))) return -1;
     a=pj_field(j,0,"package_asset");
-    snprintf(buffer,sizeof(buffer),"pro-x-%s-661-update.zip",out->version);
+    if (dedicated) strcpy(buffer, PROX_DEDICATED_ASSET);
+    else snprintf(buffer,sizeof(buffer),"pro-x-%s-661-update.zip",out->version);
     if (!equal(j,a,"name",buffer) || number(j,a,"size",&out->package_size) ||
         out->package_size != release->package.size || !out->package_size || out->package_size > PROX_UPDATE_MAX ||
         text(j,a,"sha256",out->package_sha256,sizeof(out->package_sha256)) || !prox_hash_text(out->package_sha256) ||
         (release->package.digest[0] && strcmp(release->package.digest,out->package_sha256))) return -1;
     strcpy(out->package_name,buffer);
+    if (dedicated)
+        return !equal(j,0,"format",PROX_DEDICATED_FORMAT) || out->models != 2u ||
+               out->package_size > PROX_DEDICATED_MAX_BYTES || pj_field(j,0,"files") >= 0 ||
+               number(j,0,"minimum_engine_revision",&out->minimum_engine_revision) ||
+               !out->minimum_engine_revision || out->minimum_engine_revision > PROX_DEDICATED_ENGINE_REVISION ? -1 : 0;
     a=pj_field(j,0,"files");
     if (a < 0 || j->tokens[a].type != PJ_ARRAY || j->tokens[a].count != PROX_UPDATE_FILES) return -1;
     for (i=a+1;i<j->tokens[a].next;i=j->tokens[i].next) {

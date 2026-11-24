@@ -9,8 +9,14 @@ OBJS += native_install_state.o
 OBJS += native_mount_access.o native_mount_lease.o native_mount_platform.o
 CFLAGS += -DPROX_NATIVE_MOUNT_ACCESS=1
 endif
+ifneq ($(filter -DPROX_NATIVE_BACKGROUND=1 -DPROX_NATIVE_PROGRESS_PREVIEW=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+OBJS += native_flash_preflight.o ../Common/prox_flash_capacity.o ../Common/prox_flash0_capacity.o
+endif
 ifneq ($(findstring -DPROX_NATIVE_OTA=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
-OBJS += native_error_text.o native_query_cache.o
+OBJS += native_error_text.o
+ifeq ($(findstring -DPROX_NATIVE_RESIDENT_QUERY=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+OBJS += native_query_cache.o
+endif
 endif
 IMPORTS =
 
@@ -90,6 +96,17 @@ USE_KERNEL_LIBS=1
 LIBDIR = ../libs
 LDFLAGS = -mno-crt0 -nostartfiles
 LIBS = -lpspsystemctrl_kernel -lpspusb -lpspusbdevice_driver
+ifneq ($(findstring -DPROX_NATIVE_RESIDENT_QUERY=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+OBJS += native_resident_loader.o resident_sha256.o
+INCDIR += ../Updater/vendor/mbedtls/include
+CFLAGS += -DMBEDTLS_CONFIG_FILE=\"prox_resident_sha256_config.h\"
+endif
+ifneq ($(findstring -DPROX_NATIVE_DEDICATED_OTA=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
+OBJS += native_dedicated_cleanup.o
+endif
 
 PSPSDK=$(shell psp-config --pspsdk-path)
 include $(PSPSDK)/lib/build.mak
+
+resident_sha256.o: ../Updater/vendor/mbedtls/library/sha256.c prox_resident_sha256_config.h
+	$(CC) $(CFLAGS) -c $< -o $@

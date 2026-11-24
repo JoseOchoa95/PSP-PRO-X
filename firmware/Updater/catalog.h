@@ -11,4 +11,6 @@ typedef struct {
  * -1: error/cancel/invalid contract. Never turn a failed query into 0. */
 int prox_catalog_query(const char *ca,const unsigned int running[3],
                        unsigned int model,ProxCatalogOffer *offer);
+int prox_catalog_query_format(const char *ca,const unsigned int running[3],
+                              unsigned int model,unsigned int format,ProxCatalogOffer *offer);
 #endif

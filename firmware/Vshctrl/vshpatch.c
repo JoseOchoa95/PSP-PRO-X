@@ -38,7 +38,10 @@
 #include "strsafe.h"
 #include "vshctrl_patch_offset.h"
 #include "version_display.h"
-#ifdef PROX_NATIVE_OTA
+#ifdef PROX_NATIVE_DEDICATED_OTA
+#include "native_query_provider.h"
+#endif
+#if defined(PROX_NATIVE_OTA) && !defined(PROX_NATIVE_RESIDENT_QUERY)
 #include "native_query_cache.h"
 #endif
 
@@ -90,6 +93,9 @@ static int vshpatch_module_chain(SceModule2 *mod)
 		patch_vsh_module(mod);
 		patch_sceCtrlReadBufferPositive();
 		sync_cache();
+#ifdef PROX_NATIVE_DEDICATED_OTA
+		if(psp_fw_version == FW_661 && psp_model == PSP_2000) prox_native_schedule_boot_cleanup();
+#endif
 		goto exit;
 	}
 
@@ -595,7 +601,7 @@ int vshpatch_init(void)
 	hook_iso_file_io();
 	hook_iso_directory_io();
 
-#ifdef PROX_NATIVE_OTA
+#if defined(PROX_NATIVE_OTA) && !defined(PROX_NATIVE_RESIDENT_QUERY)
 	if(psp_fw_version == FW_661 && conf.useownupdate) prox_native_query_prepare();
 #endif
 

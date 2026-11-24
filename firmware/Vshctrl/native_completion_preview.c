@@ -17,6 +17,8 @@ int prox_native_completion_arm(unsigned int generation,const unsigned short *tex
 { return guarded?prox_completion_arm(&notice,generation,user_text,text,count):-1; }
 int prox_native_completion_ready(unsigned int generation)
 { return guarded && generation && generation==notice.generation && notice.ready && !notice.failed; }
+int prox_native_completion_armed(unsigned int generation)
+{ return guarded && user_text && generation && generation==notice.generation && !notice.failed; }
 int prox_native_completion_health(unsigned int generation,unsigned int now)
 { return guarded?prox_completion_health(&notice,generation,now):-1; }
 void prox_native_completion_buttons(unsigned int buttons)
@@ -67,6 +69,7 @@ void prox_native_completion_reset(void) { }
 void prox_native_completion_guard(int r) { (void)r; }
 int prox_native_completion_arm(unsigned int g,const unsigned short *p,unsigned int n) { (void)g;(void)p;(void)n;return -1; }
 int prox_native_completion_ready(unsigned int g) { (void)g;return 0; }
+int prox_native_completion_armed(unsigned int g) { (void)g;return 0; }
 int prox_native_completion_health(unsigned int g,unsigned int now) { (void)g;(void)now;return -1; }
 void prox_native_completion_buttons(unsigned int buttons) { (void)buttons; }
 int proxNativeCompletionControl(int action) { (void)action;return -1; }

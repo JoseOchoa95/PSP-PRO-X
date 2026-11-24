@@ -20,6 +20,13 @@ WORK = ROOT/'artifacts/phase3/contract-native'
 NAMES = ['PROUPDATE/EBOOT.PBP', 'FastRecovery/EBOOT.PBP', 'PROXUPDATE/EBOOT.PBP',
          'PROXUPDATE/cacert.pem', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'SOURCE.md', 'licenses/mbedtls/LICENSE']
 PREFIX = 'https://github.com/JoseOchoa95/PSP-PRO-X/releases/download/v0.4.0/'
+LEGACY_CLIENT_VERSION = '0.3.4'
+
+
+def fixture_product_header(directory, version):
+    directory.mkdir(exist_ok=True)
+    (directory/'prox_product.h').write_text(f'#define PROX_PRODUCT_VERSION "{version}"\n')
+    return directory
 
 def sha(data):
     return hashlib.sha256(data).hexdigest()
@@ -79,13 +86,11 @@ class ContractTests(unittest.TestCase):
         flow.insert(1,'-I'+str(ROOT/'firmware/Common'))
         # These orchestrator fixtures model the already-delivered 0.3.0 client,
         # independently of the product version currently being built.
-        baseline=WORK/'source-fixture'; baseline.mkdir(exist_ok=True)
-        (baseline/'prox_product.h').write_text('#define PROX_PRODUCT_VERSION "0.3.0"\n')
+        baseline = fixture_product_header(WORK/'source-fixture', '0.3.0')
         flow.insert(1,'-I'+str(baseline))
         flow[-1] = str(WORK/'flow-test')
         subprocess.run(flow, check=True, capture_output=True)
-        include=WORK/'target-fixture'; include.mkdir(exist_ok=True)
-        (include/'prox_product.h').write_text('#define PROX_PRODUCT_VERSION "0.4.0"\n')
+        include = fixture_product_header(WORK/'target-fixture', '0.4.0')
         installer=list(command)
         installer[installer.index(str(ROOT/'tests/native/test_update_contract.c'))]=str(ROOT/'tests/native/test_ota_installer.c')
         installer.insert(installer.index('-L'+str(tls/'library')),str(ROOT/'firmware/Updater/ota_installer.c'))

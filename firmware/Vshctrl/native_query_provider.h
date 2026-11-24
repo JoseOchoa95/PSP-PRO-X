@@ -4,6 +4,10 @@ void *prox_native_query_function(unsigned int nid);
 void prox_native_query_event(const char *,int);
 int prox_native_query_start(unsigned int lease);
 int prox_native_query_is_loading(void);
+#ifdef PROX_NATIVE_DEDICATED_OTA
+void prox_native_schedule_boot_cleanup(void);
+int prox_native_query_request_boot_cleanup(void);
+#endif
 void prox_native_query_load_failed(void);
 void prox_native_query_load_failed_reason(unsigned int);
 const char *proxNativeQueryTextKey(const char *);

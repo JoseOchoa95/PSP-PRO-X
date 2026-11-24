@@ -56,15 +56,21 @@ def prepare_reference(destination):
 def configure_native_mode(args):
     """Normal PRO-X builds use the real native flow; previews stay opt-in."""
     selected=sum(bool(getattr(args,name,False)) for name in
-                 ('native_query','native_offer_preview','native_progress_preview','native_ota','native_install_preview'))
+                 ('native_query','native_offer_preview','native_progress_preview','native_ota','native_install_preview',
+                  'resident_query','resident_dedicated_preview','resident_dedicated_ota'))
     if selected>1 or (selected and args.mode!='pro-x'):
         raise ValueError('select one native mode for pro-x only')
     if args.mode=='pro-x' and not selected:
         args.native_ota=True
+    if getattr(args,'resident_dedicated_ota',False):
+        args.native_ota=True
+        args.resident_query=True
     if getattr(args,'native_install_preview',False): args.native_ota=True
     if args.native_ota: args.native_query=True
     if args.native_progress_preview: args.native_offer_preview=True
     if args.native_offer_preview: args.native_query=True
+    if getattr(args,'resident_dedicated_preview',False): args.resident_query=True
+    if getattr(args,'resident_query',False): args.native_query=True
     args.native_background=args.native_ota and not getattr(args,'native_install_preview',False)
 
 
@@ -72,6 +78,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=['reference', 'pro-x'])
     parser.add_argument('--native-query',action='store_true',help='real catalog query in original UI; native installation blocked')
+    parser.add_argument('--resident-query',action='store_true',help='opt-in model 1 resident flash0 catalog query diagnostic')
+    parser.add_argument('--resident-dedicated-preview',action='store_true',
+                        help='resident dedicated transfer test; does not install firmware')
+    parser.add_argument('--resident-dedicated-ota',action='store_true',
+                        help='local candidate for real resident dedicated EBOOT updates')
     parser.add_argument('--native-offer-preview',action='store_true',help='simulated positive native UI after real query; all native writes blocked')
     parser.add_argument('--native-progress-preview',action='store_true',help='synthetic incomplete progress through a virtual file; no real update writes')
     parser.add_argument('--native-ota',action='store_true',help='real native download/staging and background installation (the PRO-X default)')
@@ -104,6 +115,9 @@ def main():
         if args.native_ota: flags+=' -DPROX_NATIVE_OTA=1'
         if args.native_install_preview: flags+=' -DPROX_NATIVE_INSTALL_PREVIEW=1'
         if args.native_background: flags+=' -DPROX_NATIVE_BACKGROUND=1'
+        if args.resident_query: flags+=' -DPROX_NATIVE_RESIDENT_QUERY=1'
+        if args.resident_dedicated_preview: flags+=' -DPROX_NATIVE_OTA=1 -DPROX_NATIVE_DEDICATED_PREVIEW=1'
+        if args.resident_dedicated_ota: flags+=' -DPROX_NATIVE_DEDICATED_OTA=1'
         command[command.index(image):command.index(image)]=['--env','PROX_NATIVE_UPDATE_FLAGS='+flags]
     with log.open('wb') as stream:
         result = subprocess.run(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT)
@@ -119,6 +133,9 @@ def main():
         'native_ota':args.native_ota,
         'native_install_preview':args.native_install_preview,
         'native_background':args.native_background,
+        'resident_query':args.resident_query,
+        'resident_dedicated_preview':args.resident_dedicated_preview,
+        'resident_dedicated_ota':args.resident_dedicated_ota,
         'product_version': VERSION if args.mode == 'pro-x' else None,
         'build_id': identifier,
         'repository_head': repository_head(),

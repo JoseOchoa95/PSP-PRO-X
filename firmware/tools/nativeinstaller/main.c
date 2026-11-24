@@ -20,6 +20,9 @@
 #include "stage.h"
 #include "bridge.h"
 #include "transport.h"
+#ifdef PROX_NATIVE_DEDICATED_OTA
+#include "dedicated_writer.h"
+#endif
 PSP_MODULE_INFO(PROX_NI_MODULE,0x0800,1,0);
 /* Keep the CRT-created writer in the VSH API class of its 0x0800 module.
  * An ordinary USER main shares low-level per-device descriptor limits with
@@ -52,6 +55,7 @@ static int number(const char *text,unsigned int *value)
     if(text[8])return -1;
     *value=n;return 0;
 }
+#ifndef PROX_NATIVE_DEDICATED_OTA
 static int verify_parts(const ProxNativeInstallJob *job)
 {
     unsigned int i;char path[256],name[28];
@@ -70,6 +74,7 @@ static int verify_parts(const ProxNativeInstallJob *job)
     }
     return 0;
 }
+#endif
 static int writable(int *mounted)
 {
     int transport;memset(&message.access,0,sizeof(message.access));message.result=-1;
@@ -103,8 +108,14 @@ int main(int argc,char **argv)
     if(!memchr(job->root,0,sizeof(job->root)) ||
        snprintf(path,sizeof(path),"%s/native/engine.prx",job->root)>=(int)sizeof(path) || strcmp(argv[0],path) ||
        sceKernelDevkitVersion()!=0x06060110u || proxUpdateGetState(0)!=1 ||
-       proxUpdateGetState(5)!=(int)job->model || kuKernelGetModel()!=(int)job->model ||
-       prox_ota_native_begin(job,0x06060110u,job->model)!=1 || verify_parts(job))goto failure;
+       proxUpdateGetState(5)!=(int)job->model || kuKernelGetModel()!=(int)job->model)goto failure;
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    ProxDedicatedJob dedicated={.install=*job,.worker=message.worker,.package=message.package};
+    if(prox_ota_dedicated_trace(&dedicated) || prox_dedicated_writer_check(&dedicated,message.lease,message.generation) ||
+       prox_dedicated_record_available(&dedicated))goto failure;
+#else
+    if(prox_ota_native_begin(job,0x06060110u,job->model)!=1 || verify_parts(job))goto failure;
+#endif
     if(rpc(PROX_NI_ACCESS_CAPS) || message.result!=PROX_NI_ACCESS_REVISION) {
         prox_log("Background resident access revision mismatch; install/start the matching PROUPDATE before this test");goto failure;
     }
@@ -112,10 +123,18 @@ int main(int argc,char **argv)
      * All code/memory needed for restart is prepared before flash changes. */
     snprintf(path,sizeof(path),"%s/native/10.prx",job->root);
     reboot=kuKernelLoadModule(path,0,NULL);if(reboot<0)goto failure;
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(prox_ota_dedicated_lock())goto failure;
+#else
     if(prox_ota_before_write())goto failure;
+#endif
     if(writable(&mounted))goto failure;
     prox_log("Background firmware transaction begins; fixed PRO module paths only; no configuration/plugin/Infinity changes");
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    rc=prox_dedicated_writer_prepare(&dedicated,message.lease,message.generation,&transaction);
+#else
     rc=prox_native_flash_prepare(job,&transaction);
+#endif
     prox_log("TRANSACTION stage=firmware-prepare rc=%d prepared=0x%03x changed=0x%03x originals=0x%03x identical=0x%03x",rc,transaction.prepared,transaction.changed,transaction.originals,transaction.identical);
     if(rc)goto failure;
     /* Persist every verified original backup before destructive opens. The
@@ -129,15 +148,26 @@ int main(int argc,char **argv)
     rc=sceIoSync("flash0:",0);prox_log("TRANSACTION stage=firmware-sync rc=0x%08x",(unsigned int)rc);if(rc<0)goto failure;
     /* Confirm target persistence while original backups still exist. */
     prox_log("TRANSACTION stage=target-flush begins; verified original backups retained");
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(readonly(&mounted))goto failure;
+    rc=prox_dedicated_record_commit(&dedicated,&transaction);
+    prox_log("TRANSACTION stage=dedicated-card-record rc=%d",rc);
+    if(rc)goto failure;
+#else
     if(readonly(&mounted) || writable(&mounted))goto failure;
     rc=prox_ota_storage_commit();prox_log("TRANSACTION stage=application-commit rc=%d",rc);if(rc)goto failure;
     finalizing=1;
     rc=prox_native_flash_finalize(job,&transaction);prox_log("TRANSACTION stage=firmware-finalize rc=%d",rc);if(rc)goto failure;
     rc=readonly(&mounted);if(rc)goto failure;
     rc=prox_ota_mark_committed();prox_log("TRANSACTION stage=mark-committed rc=%d",rc);if(rc)goto failure;
+#endif
     if(rpc(PROX_NI_COMMIT))goto failure;
     committed=1;
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    prox_log("Dedicated target %s/%s: firmware verified, flash0 readonly, backups retained for restart verification",job->target_version,job->build_id);
+#else
     prox_log("Background target %s/%s: firmware bytes verified, applications committed, flash0 readonly; restart observation pending",job->target_version,job->build_id);
+#endif
     if(proxNativeCompletionControl(PROX_COMPLETION_FINISH)<0)goto failure;
     for(i=0;i<250;++i) {
         rc=proxNativeCompletionControl(PROX_COMPLETION_POLL);
@@ -161,6 +191,10 @@ int main(int argc,char **argv)
         rc=1;
     }
 failure:
+#ifdef PROX_NATIVE_DEDICATED_OTA
+    if(!committed && !mounted && (transaction.prepared || transaction.worker_prepared) && writable(&mounted))
+        prox_log("Could not reopen flash to roll back; preserve original backups and the card stage");
+#endif
     if(mounted) {
         if(!finalizing && prox_native_flash_rollback(job,&transaction))
             prox_log("Background firmware rollback incomplete; keep exact stage and recovery package");

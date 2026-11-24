@@ -6,7 +6,7 @@ import os
 import subprocess
 import tempfile
 import unittest
-from test_update_contract import fixture, archive
+from test_update_contract import LEGACY_CLIENT_VERSION, archive, fixture, fixture_product_header
 
 ROOT=Path(__file__).resolve().parents[1]
 WORK=ROOT/'artifacts/phase3/native-download'
@@ -21,8 +21,10 @@ class NativeDownloadTests(unittest.TestCase):
         if not (tls/'library/libmbedcrypto.a').exists():
             from test_update_https import prepare
             prepare()
+        client = fixture_product_header(WORK/'client-fixture', LEGACY_CLIENT_VERSION)
         cmd=['cc','-std=c99','-Wall','-Wextra','-Werror','-DPROX_OTA_NATIVE',
              '-DMBEDTLS_CONFIG_FILE="prox_mbedtls_config.h"',
+             '-I'+str(client),
              '-I'+str(ROOT/'firmware/Updater'),'-I'+str(ROOT/'firmware/Common'),'-I'+str(tls/'include'),
              str(ROOT/'tests/native/test_native_download.c')]
         cmd += [str(ROOT/'firmware/Updater'/n) for n in ('native_download.c','json.c','contract.c','policy.c','stage.c')]
