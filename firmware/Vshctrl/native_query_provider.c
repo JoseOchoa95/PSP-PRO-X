@@ -180,27 +180,107 @@ static int __attribute__((noinline)) install_service_inner(int action,ProxNative
 #ifdef PROX_NATIVE_MOUNT_ACCESS
 typedef struct { int action,result,completed;ProxNativeInstallMessage *packet;unsigned int size; } AccessCall;
 #ifdef PROX_NATIVE_DEDICATED_OTA
-static int cleanup_service(const void *packet)
+/* Owned by access_busy. The worker never sees the syscall's user pointer. */
+static struct {
+    ProxNativeCleanupMessage request;
+    int result, completed, detached;
+} cleanup_run;
+
+static int cleanup_query_active(void)
+{
+    return state.active && state.phase==PROX_NQ_QUERY &&
+           (state.command==PROX_NQ_CHECK || state.command==PROX_NQ_BOOT_CLEANUP) && !state.fault && !state.cancel;
+}
+
+static int cleanup_flash_thread(SceSize count, void *args)
+{
+    (void)count;
+    (void)args;
+    unsigned int mask=pspSdkDisableInterrupts();
+    int active=cleanup_query_active() && cleanup_run.request.lease==state.lease &&
+               cleanup_run.request.generation==state.generation;
+    pspSdkEnableInterrupts(mask);
+    int result=-1;
+    if(active)
+        result=prox_native_cleanup_flash(&cleanup_run.request);
+    else
+        cleanup_run.request.diagnostic=(ProxNativeCleanupDiagnostic){.phase=PROX_CLEANUP_STATE, .part=-1};
+    mask=pspSdkDisableInterrupts();
+    if(result==-2) { state.fault=1;state.answer.failure=PROX_NQ_CAUSE_CLIENT; }
+    cleanup_run.result=result;
+    cleanup_run.completed=1;
+    if(cleanup_run.detached)access_busy=0;
+    pspSdkEnableInterrupts(mask);
+    sceKernelExitDeleteThread(0);
+    return 0;
+}
+
+static int cleanup_thread_error(ProxNativeCleanupMessage *packet, int check, int result)
+{
+    packet->diagnostic=(ProxNativeCleanupDiagnostic){
+        .phase=PROX_CLEANUP_THREAD, .part=-1, .check=check, .detail=result};
+    return result;
+}
+
+static int cleanup_service(ProxNativeCleanupMessage *packet)
 {
     ProxNativeCleanupMessage cleanup;
     memcpy(&cleanup,packet,sizeof(cleanup));
     int thread=sceKernelGetThreadId();
     unsigned int mask=pspSdkDisableInterrupts();
-    int admitted=cleanup.protocol==PROX_NI_CLEANUP_PROTOCOL && cleanup.lease==state.lease &&
-        cleanup.generation==state.generation && thread>0 && thread==state.owner &&
-        state.active && state.phase==PROX_NQ_QUERY &&
-        (state.command==PROX_NQ_CHECK || state.command==PROX_NQ_BOOT_CLEANUP) && !state.fault && !state.cancel &&
-        !access_busy && !prox_ni_locked(&install_state) && !prox_native_mount_active();
-    if(admitted)access_busy=1;
+    int phase=PROX_CLEANUP_ENTRY;
+    if(cleanup.protocol!=PROX_NI_CLEANUP_PROTOCOL || cleanup.lease!=state.lease ||
+       cleanup.generation!=state.generation)
+        phase=PROX_CLEANUP_SESSION;
+    else if(thread<=0 || thread!=state.owner)
+        phase=PROX_CLEANUP_OWNER;
+    else if(!cleanup_query_active())
+        phase=PROX_CLEANUP_STATE;
+    else if(access_busy || prox_ni_locked(&install_state) || prox_native_mount_active())
+        phase=PROX_CLEANUP_BUSY;
+    else
+        access_busy=1;
     pspSdkEnableInterrupts(mask);
-    if(!admitted)return -1;
+    if(phase!=PROX_CLEANUP_ENTRY) {
+        packet->diagnostic=(ProxNativeCleanupDiagnostic){.phase=phase, .part=-1};
+        return -1;
+    }
 
-    int result=prox_native_cleanup_flash(&cleanup);
+    /* The FAT driver distinguishes a kernel thread from a user thread
+     * executing a syscall, even on an extended kernel stack. */
+    cleanup_run.request=cleanup;
+    cleanup_run.completed=0;
+    cleanup_run.detached=0;
+    int check=PROX_CLEANUP_CHECK_CREATE_THREAD;
+    SceUID worker=sceKernelCreateThread("PRO-X flash cleanup",cleanup_flash_thread,0x20,0x4000,0,NULL);
+    int result=worker;
+    if(worker>=0) {
+        check=PROX_CLEANUP_CHECK_START_THREAD;
+        result=sceKernelStartThread(worker,0,NULL);
+        if(result<0)
+            sceKernelDeleteThread(worker);
+        else {
+            result=sceKernelWaitThreadEnd(worker,NULL);
+            mask=pspSdkDisableInterrupts();
+            if(!cleanup_run.completed) {
+                /* A released wait cannot free the job before the worker exits. */
+                cleanup_run.detached=1;
+                pspSdkEnableInterrupts(mask);
+                return cleanup_thread_error(packet,PROX_CLEANUP_CHECK_WAIT_THREAD,result<0?result:-1);
+            }
+            /* A self-deleting worker can finish before the wait begins. */
+            result=cleanup_run.result;
+            cleanup.diagnostic=cleanup_run.request.diagnostic;
+            access_busy=0;
+            pspSdkEnableInterrupts(mask);
+            if(result)packet->diagnostic=cleanup.diagnostic;
+            return result;
+        }
+    }
     mask=pspSdkDisableInterrupts();
     access_busy=0;
-    if(result==-2) { state.fault=1;state.answer.failure=PROX_NQ_CAUSE_CLIENT; }
     pspSdkEnableInterrupts(mask);
-    return result;
+    return cleanup_thread_error(packet,check,result);
 }
 #endif
 static void access_extended(void *arg)
@@ -208,7 +288,7 @@ static void access_extended(void *arg)
     AccessCall *call=arg;
 #ifdef PROX_NATIVE_DEDICATED_OTA
     if(call->action==PROX_NI_CLEANUP_COMMITTED)
-        call->result=cleanup_service(call->packet);
+        call->result=cleanup_service((void *)call->packet);
     else
 #endif
     call->result=install_service_inner(call->action,call->packet,call->size);
@@ -236,9 +316,24 @@ int proxNativeInstallService(int action,ProxNativeInstallMessage *packet,unsigne
           if((address&3u) || address<0x08800000u || address>0x0c000000u-size)return -1; }
 #endif
         mask=pspSdkDisableInterrupts();busy=access_busy;pspSdkEnableInterrupts(mask);
-        if(busy)return -1;
+        if(busy) {
+#ifdef PROX_NATIVE_DEDICATED_OTA
+            if(action==PROX_NI_CLEANUP_COMMITTED) {
+                k1=pspSdkSetK1(0);
+                ((ProxNativeCleanupMessage *)(void *)packet)->diagnostic=
+                    (ProxNativeCleanupDiagnostic){.phase=PROX_CLEANUP_BUSY, .part=-1};
+                pspSdkSetK1(k1);
+            }
+#endif
+            return -1;
+        }
         call.action=action;call.packet=packet;call.size=size;call.result=-1;call.completed=0;
         k1=pspSdkSetK1(0);
+#ifdef PROX_NATIVE_DEDICATED_OTA
+        if(action==PROX_NI_CLEANUP_COMMITTED)
+            ((ProxNativeCleanupMessage *)(void *)packet)->diagnostic=
+                (ProxNativeCleanupDiagnostic){.phase=PROX_CLEANUP_STACK, .part=-1};
+#endif
         /* The entry frame stays small. The copied job and deep FAT/export/I/O
          * calls execute on a bounded 16 KiB kernel stack, not the VSH thread's
          * small syscall stack. Extension failure invokes no access callback.
@@ -351,7 +446,7 @@ int proxNativeQueryInitEx(const void *allocate,const void *release)
         }
         sceKernelDelayThread(10000);
     }
-    if (prox_native_mount_active()) {
+    if (access_busy || prox_native_mount_active()) {
         pspSdkEnableInterrupts(mask);
         pspSdkSetK1(k1);
         return NATIVE_STATE;

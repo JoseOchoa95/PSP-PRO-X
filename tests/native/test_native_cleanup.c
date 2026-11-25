@@ -108,16 +108,22 @@ int main(void)
 
     job.build_id[0]='x';
     assert(prox_native_cleanup_flash(&job)==-1 && !mounts && !removals);
+    assert(job.diagnostic.phase==PROX_CLEANUP_TARGET && job.diagnostic.check==PROX_CLEANUP_CHECK_RECORD);
     strcpy(job.build_id,PROX_RESIDENT_BUILD_ID);
-    put(prox_native_flash_paths[0],old,sizeof(old));
+    put(prox_native_flash_paths[0],old,sizeof(old)-1);
     assert(prox_native_cleanup_flash(&job)==-1 && !mounts && !removals);
+    assert(job.diagnostic.phase==PROX_CLEANUP_INSTALLED_PART && job.diagnostic.part==0 &&
+           job.diagnostic.check==PROX_CLEANUP_CHECK_SIZE);
     put(prox_native_flash_paths[0],current,sizeof(current));
     put(backup,current,sizeof(current));
     assert(prox_native_cleanup_flash(&job)==-1 && !mounts && !removals);
+    assert(job.diagnostic.phase==PROX_CLEANUP_BACKUP && job.diagnostic.part==0 &&
+           job.diagnostic.check==PROX_CLEANUP_CHECK_HASH);
     put(backup,old,sizeof(old));
 
     fail_after=1;
     assert(prox_native_cleanup_flash(&job)==-1 && mounts==1 && removals==1 && !active);
+    assert(job.diagnostic.phase==PROX_CLEANUP_BACKUP && job.diagnostic.check==PROX_CLEANUP_CHECK_REMOVE);
     fail_after=0;
     assert(!prox_native_cleanup_flash(&job) && mounts==2 && removals==3 && !active);
     assert(!prox_native_cleanup_flash(&job) && mounts==2 && removals==3);
@@ -127,5 +133,6 @@ int main(void)
     put(backup,old,sizeof(old));
     fail_restore=1;
     assert(prox_native_cleanup_flash(&job)==-2 && mounts==3 && removals==4 && active);
+    assert(job.diagnostic.phase==PROX_CLEANUP_RESTORE);
     puts("PASS: kernel boot cleanup verifies all installed bytes and every owned sidecar, preserves foreign files, and retries safely");
 }
