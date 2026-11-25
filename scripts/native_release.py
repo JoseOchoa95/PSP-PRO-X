@@ -2,9 +2,60 @@
 
 Packaging does not authorize a tag, release, PR or Git operation.
 """
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
+from build import sha
 from verify import require
+
+
+def resident_upload_paths(manual):
+    """Return the regular files uploaded to a normal resident release."""
+    return (
+        manual, manual.with_name(manual.stem + '-source.zip'),
+        manual.with_name(manual.stem + '-build.json'),
+        manual.with_name('pro-x-dedicated-update.json'), manual.with_name('EBOOT.PBP'),
+        manual.with_suffix('.sha256'),
+    )
+
+
+def check_resident_upload_layout(manual, complete=True):
+    uploads = resident_upload_paths(manual)
+    allowed = {path.name for path in uploads}
+    present = set()
+    for path in manual.parent.iterdir():
+        if path.name == 'release' and path.is_dir() and not path.is_symlink():
+            continue
+        require(path.name in allowed and path.is_file() and not path.is_symlink(),
+                'Unexpected item in the resident release directory: ' + path.name)
+        present.add(path.name)
+    if complete:
+        require(present == allowed, 'Missing release assets: ' + ', '.join(sorted(allowed - present)))
+    return uploads
+
+
+def read_checksums(path):
+    entries = {}
+    for line in path.read_text(encoding='ascii').splitlines():
+        digest, separator, name = line.partition('  ')
+        clean = PurePosixPath(name)
+        require(separator and re.fullmatch(r'[0-9a-f]{64}', digest) and clean.parts
+                and not clean.is_absolute() and clean.as_posix() == name and '..' not in clean.parts
+                and '\\' not in name and ':' not in name and name not in entries,
+                'Invalid or duplicate checksum entry: ' + line)
+        entries[name] = digest
+    return entries
+
+
+def verify_resident_uploads(manual, checksums):
+    uploads = check_resident_upload_layout(manual)
+    require(set(checksums) == {path.name for path in uploads[:-1]}, 'Resident upload checksum inventory differs')
+    assets = []
+    for path in uploads:
+        digest = sha(path.read_bytes())
+        if path != uploads[-1]:
+            require(checksums[path.name] == digest, 'Resident upload hash mismatch: ' + path.name)
+        assets.append({'name': path.name, 'size': path.stat().st_size, 'sha256': digest})
+    return assets
 
 
 def require_release_variant(build):

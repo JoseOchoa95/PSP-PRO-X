@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.4.5 — documentation and release packaging (unreleased)
+
+- Document the supported PSP model and firmware, the main PRO-X features, and how to install, reactivate and update PRO-X.
+- Stage six uploads for future resident releases. Include the detailed manifest in the manual ZIP and use a single SHA-256 list covering the other five uploads. Retain the two files required for Internet updates.
+
 ## v0.4.4 — installer maintenance
 
 - Separate the Internet update confirmation and restart flow from firmware writes so the install and recovery sequence is easier to review.

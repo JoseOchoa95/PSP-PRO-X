@@ -14,7 +14,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(ROOT / 'scripts'))
 from verify import pbp_info
 from build import configure_native_mode
-from native_release import require_release_variant
+from native_release import read_checksums, require_release_variant, resident_upload_paths, verify_resident_uploads
 from native_validation_report import for_build, TESTED_FINAL, BACKGROUND_FINAL
 import copy
 
@@ -107,6 +107,55 @@ class PackagingTests(unittest.TestCase):
             (directory/'pro-x-update.json').write_text('{}')
             with self.assertRaises(RuntimeError):
                 verify_package.verify_resident_assets(manual,manifest)
+
+    def test_resident_uploads_accept_only_six_files_and_hash_the_other_five(self):
+        with tempfile.TemporaryDirectory() as name:
+            directory = Path(name)
+            package = directory / 'pro-x-0.4.3-661.zip'
+            uploads = resident_upload_paths(package)
+            self.assertEqual({path.name for path in uploads}, {
+                'pro-x-0.4.3-661.zip', 'pro-x-0.4.3-661-source.zip', 'pro-x-0.4.3-661-build.json',
+                'pro-x-dedicated-update.json', 'EBOOT.PBP', 'pro-x-0.4.3-661.sha256',
+            })
+            (directory / 'release').mkdir()
+            for path in uploads[:-1]:
+                path.write_bytes(path.name.encode())
+            checksums = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in uploads[:-1]}
+            checksum_list = uploads[-1]
+            checksum_list.write_text(''.join(f'{value}  {name}\n' for name, value in checksums.items()), encoding='ascii')
+            self.assertEqual(read_checksums(checksum_list), checksums)
+            uploaded = verify_resident_uploads(package, checksums)
+            self.assertEqual([entry['name'] for entry in uploaded], [path.name for path in uploads])
+            self.assertEqual(uploaded[-1]['sha256'], hashlib.sha256(checksum_list.read_bytes()).hexdigest())
+
+            extra = directory / 'pro-x-0.4.3-661-manifest.json'
+            extra.write_text('{}')
+            with self.assertRaisesRegex(RuntimeError, 'Unexpected item'):
+                verify_resident_uploads(package, checksums)
+            extra.unlink()
+            with self.assertRaisesRegex(RuntimeError, 'checksum inventory'):
+                verify_resident_uploads(package, {**checksums, checksum_list.name: '0' * 64})
+            with self.assertRaisesRegex(RuntimeError, 'checksum inventory'):
+                verify_resident_uploads(package, {path: value for path, value in checksums.items() if path != 'EBOOT.PBP'})
+            payload = directory / 'EBOOT.PBP'
+            payload.write_bytes(b'changed')
+            with self.assertRaisesRegex(RuntimeError, 'upload hash mismatch'):
+                verify_resident_uploads(package, checksums)
+            payload.unlink()
+            with self.assertRaisesRegex(RuntimeError, 'Missing release assets: EBOOT.PBP'):
+                verify_resident_uploads(package, checksums)
+
+    def test_external_checksums_reject_duplicate_and_traversing_paths(self):
+        with tempfile.TemporaryDirectory() as name:
+            checksum_list = Path(name) / 'release.sha256'
+            row = '0' * 64 + '  EBOOT.PBP\n'
+            checksum_list.write_text(row + row, encoding='ascii')
+            with self.assertRaisesRegex(RuntimeError, 'duplicate checksum entry'):
+                read_checksums(checksum_list)
+            checksum_list.write_text('0' * 64 + '  ../EBOOT.PBP\n', encoding='ascii')
+            with self.assertRaisesRegex(RuntimeError, 'Invalid or duplicate checksum entry'):
+                read_checksums(checksum_list)
+
     def test_background_preview_is_explicit_and_excluded_from_stable_assets(self):
         args=Namespace(mode='pro-x',native_query=False,native_offer_preview=False,native_progress_preview=False,native_ota=False,native_install_preview=True)
         configure_native_mode(args)
