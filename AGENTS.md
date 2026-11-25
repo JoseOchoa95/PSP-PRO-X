@@ -30,6 +30,18 @@ Legacy files currently under `docs/` include licenses, pinned upstream inventori
 
 Do not replace a workflow specification with its implementation report. Do not record completed work in `workflow/` as a substitute for maintaining `context/`.
 
+## Code design and readability
+
+Prioritize code that another maintainer can understand from its names, data flow, and control flow. Preserve the existing module boundaries and keep PSP-specific integration at those boundaries. Apply SOLID to the existing C firmware and Python tooling.
+
+- **Single responsibility.** Keep policy, protocol validation, platform I/O, and presentation focused on their own responsibilities. Keep each function focused on one coherent task.
+- **Open/closed.** Add supported variants through stable module interfaces when the project has a real extension point. Keep variant-specific decisions close to the code that owns them.
+- **Liskov substitution.** Require alternate implementations and test doubles to honor the caller's contract, including error handling, ownership, cleanup, and retry behavior.
+- **Interface segregation.** Expose the operations and data each caller actually needs. Keep implementation details private to their module.
+- **Dependency inversion.** Keep testable policy independent of PSP-specific APIs where practical. Use small platform boundaries to run the same rules in host tests.
+
+Prefer direct functions and explicit data flow. Introduce an abstraction when it makes a responsibility clearer, isolates a platform dependency, or serves a concrete shared contract. Keep refactoring focused on an identified readability, maintenance, or testability problem and verify the affected behavior, including failure and recovery paths where relevant.
+
 ## Required outputs after each feature or phase
 
 Complete the documentation and release notes as part of the implementation, before requesting authorization for Git publication.

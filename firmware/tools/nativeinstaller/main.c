@@ -8,6 +8,7 @@
 #include <psppower.h>
 #include "kubridge.h"
 #endif
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,17 +44,26 @@ int prox_native_engine_write_gate(void)
        proxUpdateGetState(4)!=0x06060110 || proxUpdateGetState(5)!=(int)message.job.model)return -1;
     return rpc(PROX_NI_WRITE);
 }
-static int number(const char *text,unsigned int *value)
+static int parse_hex_word(const char *text, unsigned int *value)
 {
-    unsigned int i,n=0;
-    if(!text)return -1;
-    for(i=0;i<8;++i) {
-        unsigned int d=(unsigned char)text[i];
-        if(d>='0'&&d<='9')d-='0';else if(d>='a'&&d<='f')d=d-'a'+10;else return -1;
-        n=(n<<4)|d;
+    if (!text)
+        return -1;
+
+    unsigned int result = 0;
+    for (unsigned int i = 0; i < 8; ++i) {
+        unsigned int digit = (unsigned char)text[i];
+        if (digit >= '0' && digit <= '9')
+            digit -= '0';
+        else if (digit >= 'a' && digit <= 'f')
+            digit = digit - 'a' + 10;
+        else
+            return -1;
+        result = (result << 4) | digit;
     }
-    if(text[8])return -1;
-    *value=n;return 0;
+    if (text[8])
+        return -1;
+    *value = result;
+    return 0;
 }
 #ifndef PROX_NATIVE_DEDICATED_OTA
 static int verify_parts(const ProxNativeInstallJob *job)
@@ -93,19 +103,65 @@ static int readonly(int *mounted)
     if(transport || message.result || message.access.active || !message.access.restored)return -1;
     *mounted=0;return 0;
 }
+
+/* Returns only if the completion screen cannot continue. */
+static void restart_after_confirmation(int rebooter)
+{
+    if (proxNativeCompletionControl(PROX_COMPLETION_FINISH) < 0)
+        return;
+
+    int completion = 0;
+    for (unsigned int attempt = 0; attempt < 250; ++attempt) {
+        completion = proxNativeCompletionControl(PROX_COMPLETION_POLL);
+        if (completion < 0)
+            return;
+        if (completion >= 1)
+            break;
+        sceKernelDelayThread(20000);
+    }
+    if (completion == 0)
+        return;
+
+    for (;;) {
+        while (completion != 2) {
+            scePowerTick(0);
+            sceKernelDelayThread(20000);
+            completion = proxNativeCompletionControl(PROX_COMPLETION_POLL);
+            if (completion < 0)
+                return;
+        }
+
+        int mode = 1;
+        int status = -1;
+        prox_log("Cross requests verified target CFW restart; no additional installation confirmation");
+        prox_ota_close();
+        sceKernelStartModule(rebooter, sizeof(mode), &mode, &status, NULL);
+        /* Activation is verified after reboot. If this code is still running,
+         * retain the completion screen and wait for a fresh Cross press. */
+        sceKernelDelayThread(3000000);
+        if (proxNativeCompletionControl(PROX_COMPLETION_RETRY) < 0)
+            return;
+        completion = 1;
+    }
+}
+
 int main(int argc,char **argv)
 {
-    char path[256];unsigned int module_number,i;int reboot=-1,status=-1,rc=-1,mounted=0,finalizing=0,committed=0,level;
+    char path[256];
+    unsigned int module_number;
+    int reboot = -1, mounted = 0, finalizing = 0, committed = 0;
     ProxNativeFlash transaction={0};const ProxNativeInstallJob *job=&message.job;
     memset(&message,0,sizeof(message));message.protocol=PROX_NI_PROTOCOL;
 #ifdef PROX_NATIVE_DEDICATED_OTA
     int download_claimed=0,rollback_failed=0;
 #endif
-    if(argc!=5 || !argv || !argv[0] || !argv[1] || strcmp(argv[1],PROX_NI_ARGUMENT) ||
-       number(argv[2],&message.lease) || number(argv[3],&message.generation) || number(argv[4],&module_number))return -1;
-    message.module=(int)module_number;
+    if (argc != 5 || !argv || !argv[0] || !argv[1] || strcmp(argv[1], PROX_NI_ARGUMENT) ||
+        parse_hex_word(argv[2], &message.lease) || parse_hex_word(argv[3], &message.generation) ||
+        parse_hex_word(argv[4], &module_number) || module_number == 0 || module_number > INT_MAX)
+        return -1;
+    message.module = (int)module_number;
     if(rpc(PROX_NI_CLAIM))return -1;
-    level=kuKernelGetUserLevel();
+    int level = kuKernelGetUserLevel();
     prox_log("Background writer thread: VSH API expected level=4 actual=%d; no global privilege changes",level);
     if(level!=4)goto failure;
     if(!memchr(job->root,0,sizeof(job->root)) ||
@@ -125,7 +181,9 @@ int main(int argc,char **argv)
     /* Kernel target rebooter is loaded but never started until completion/X.
      * All code/memory needed for restart is prepared before flash changes. */
     snprintf(path,sizeof(path),"%s/native/10.prx",job->root);
-    reboot=kuKernelLoadModule(path,0,NULL);if(reboot<0)goto failure;
+    reboot = kuKernelLoadModule(path, 0, NULL);
+    if (reboot <= 0)
+        goto failure;
 #ifdef PROX_NATIVE_DEDICATED_OTA
     if(prox_ota_dedicated_lock() || prox_dedicated_begin_write(&dedicated))goto failure;
     download_claimed=1;
@@ -134,6 +192,7 @@ int main(int argc,char **argv)
 #endif
     if(writable(&mounted))goto failure;
     prox_log("Background firmware transaction begins; fixed PRO module paths only; no configuration/plugin/Infinity changes");
+    int rc;
 #ifdef PROX_NATIVE_DEDICATED_OTA
     rc=prox_dedicated_writer_prepare(&dedicated,message.lease,message.generation,&transaction);
 #else
@@ -172,28 +231,7 @@ int main(int argc,char **argv)
 #else
     prox_log("Background target %s/%s: firmware bytes verified, applications committed, flash0 readonly; restart observation pending",job->target_version,job->build_id);
 #endif
-    if(proxNativeCompletionControl(PROX_COMPLETION_FINISH)<0)goto failure;
-    for(i=0;i<250;++i) {
-        rc=proxNativeCompletionControl(PROX_COMPLETION_POLL);
-        if(rc<0)goto failure;
-        if(rc>=1)break;
-        sceKernelDelayThread(20000);
-    }
-    if(i==250)goto failure;
-    for(;;) {
-        while(rc!=2) {
-            scePowerTick(0);sceKernelDelayThread(20000);
-            rc=proxNativeCompletionControl(PROX_COMPLETION_POLL);if(rc<0)goto failure;
-        }
-        prox_log("Cross requests verified target CFW restart; no additional installation confirmation");
-        prox_ota_close();
-        { int mode=1;status=-1;rc=sceKernelStartModule(reboot,sizeof(mode),&mode,&status,NULL); }
-        /* Actual activation is verified after reboot, never inferred from
-         * StartModule. If still alive, retain completion and allow fresh X. */
-        sceKernelDelayThread(3000000);
-        if(proxNativeCompletionControl(PROX_COMPLETION_RETRY)<0)goto failure;
-        rc=1;
-    }
+    restart_after_confirmation(reboot);
 failure:
 #ifdef PROX_NATIVE_DEDICATED_OTA
     if(!committed && !mounted && (transaction.prepared || transaction.worker_prepared) && writable(&mounted)) {
@@ -221,7 +259,8 @@ failure:
 #endif
     prox_log("Background installation/restart returned failure; committed=%d. No automatic reboot; retain stage/pending/backups",committed);
     prox_ota_close();
-    if(!committed && reboot>=0)sceKernelUnloadModule(reboot);
+    if (!committed && reboot > 0)
+        sceKernelUnloadModule(reboot);
     (void)rpc(PROX_NI_FAIL);
     return -1;
 }

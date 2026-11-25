@@ -62,7 +62,14 @@ int prox_file_check(const char *p,unsigned int n,const char *hash,int executable
 int prox_native_image(const unsigned char *data,size_t n,char name[28],unsigned int *extent)
 { assert(n==1 && data[0]<11);strcpy(name,prox_native_payload_names[data[0]]);*extent=1;return 0; }
 int kuKernelLoadModule(const char *p,int flags,void *options)
-{ assert(strstr(p,"/native/10.prx") && !flags && !options && !writing);return scenario==4?-1:19; }
+{
+    assert(strstr(p,"/native/10.prx") && !flags && !options && !writing);
+    if (scenario == 4)
+        return -1;
+    if (scenario == 27)
+        return 0;
+    return 19;
+}
 int sceKernelUnloadModule(int module) { assert(module==19 && !committed);return 0; }
 int prox_ota_before_write(void) { return scenario==5?-1:prox_native_engine_write_gate(); }
 int sceIoUnassign(const char *p) { (void)p;assert(!"Actual writer must not unassign live flash0");return -1; }
@@ -136,7 +143,14 @@ int main(void)
     mkdir(root,0700);snprintf(path,sizeof(path),"%s/native",root);mkdir(path,0700);
     for(i=0;i<11;++i) { FILE *f;snprintf(path,sizeof(path),"%s/native/%02u.prx",root,i);f=fopen(path,"wb");assert(f);assert(fputc(i,f)!=EOF);assert(!fclose(f)); }
     snprintf(path,sizeof(path),"%s/native/engine.prx",root);
-    for(scenario=0;scenario<27;++scenario) {
+    /* The claim shim asserts if an invalid module ID reaches it. */
+    char invalid_modules[][9] = {"00000000", "80000000", "ffffffff"};
+    for (i = 0; i < sizeof(invalid_modules) / sizeof(invalid_modules[0]); ++i) {
+        args[4] = invalid_modules[i];
+        assert(prox_native_engine_main(5, args) == -1);
+    }
+    args[4] = "00000011";
+    for(scenario=0;scenario<28;++scenario) {
 #ifdef PROX_NATIVE_DEDICATED_OTA
         if(scenario==11 || scenario==13 || scenario==23 || scenario==24)continue;
 #else
@@ -155,6 +169,8 @@ int main(void)
         if((scenario>0 && scenario<7) || (scenario>=19 && scenario<=22))assert(!finished && !prepared && !stored && !committed);
         if(scenario==23)assert(prepared && !swapped && !stored && !committed && readonly_calls==1);
         if(scenario==20 || scenario==21)assert(!writing);
+        if (scenario == 27)
+            assert(!writing && !access_calls && !finished);
 #ifdef PROX_NATIVE_DEDICATED_OTA
         if(scenario==26)assert(!writing && !access_calls);
         if(scenario==10 || scenario==14)assert(access_calls==3 && readonly_calls==3 && !committed);

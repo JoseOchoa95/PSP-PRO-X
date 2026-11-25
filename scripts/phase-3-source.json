@@ -1,5 +1,5 @@
 {
-  "status": "v0.4.3 startup cleanup kernel thread and failure reporting",
+  "status": "v0.4.4 native installer confirmation and input validation",
   "modified": {
     "FastRecovery/Makefile": "7f77f83c0992c7baf8dba69c6f6d43907b53c4facf5a2742537faf3b5eb9c10d",
     "Installer/Makefile": "0d06cb2642ce998a7b66a23c6c4a10473303938e603f324c3f1494bb321e6cc5",
@@ -27,8 +27,8 @@
     "Common/prox_native_query.h": "8cb1fe1b35b9f00f56856cc52831c82f6dc3e2ddad38f10b079bf5afac215639",
     "Common/prox_ota_args.h": "3c1fc012238e044eed63834682d66a729a429dcbc535f8221f33f42ad03d538a",
     "Common/prox_pbp_payload.h": "7b67aeb5e93c244db3e1545506789c04922bb1eb6178d67ca0a00a13166d8692",
-    "Common/prox_product.h": "9e0ea32207ff27ec4ed37dee2bff2baf2f76e0b8ccf005125a9cda5713cb4111",
-    "Common/prox_product.mk": "366aef37e14b34cc59bdc9ce7b3fab1fd9d71f8dee0de918456e96a40725c9db",
+    "Common/prox_product.h": "fcfa66083d76a46be5f434fdcc904802d0741f1d3a4dfd6d8006050769a97296",
+    "Common/prox_product.mk": "3a13db25a7bca5875ec8a488e07fdcd1a7c61756e8ced07675171e8bf9769ea6",
     "Common/prox_resident_query.h": "6963a6357441dbf685dc51ee3ec09683c4dee628167d4c30af2dd5b7c6d3e8b7",
     "Common/prox_resident_slot.h": "1cd583b0b54f0370024a6f70a5a49d2c74e5094bca40f348ed0ac03d88928eec",
     "Installer/flash_capacity/Makefile": "dcf8ff8dca3c3d25e74d97a51af39920b6527cbab0005215710ec5765080eb13",
@@ -148,7 +148,7 @@
     "tools/nativeinstaller/bridge.S": "bee4c0b189b00a0d3da1c9d686a555e1038c925e3816f3ddef3f43cc103732bf",
     "tools/nativeinstaller/dedicated_writer.c": "14317adcfeb32feccc01ce2dfbc331fcf765d8be9120beff39cb6474305080b0",
     "tools/nativeinstaller/dedicated_writer.h": "4919beac6134093d9b52011668fa705f6562b0163efbf4263a0bc13dfdbe6e69",
-    "tools/nativeinstaller/main.c": "ceca5b33f9fcf21971ad31dbcc4840e4696de463eb3746df62d98aa9d4afd876",
+    "tools/nativeinstaller/main.c": "73e3991ee6e9b77638069cb6b6f25a86582e477ecbb124b15a0488a8763bc9bb",
     "tools/nativeinstallpreview/Makefile": "8569d9d44257646d7bdbfd0d584be99b863545e760ad5d61096eb4fda4d3594a",
     "tools/nativeinstallpreview/completion_bridge.S": "fda036756af2d74ef9a0cfe232b5762799d3a30cbe73d17235ad92e8934c5c65",
     "tools/nativeinstallpreview/main.c": "697910c8c1ed091c4def8a5a0454ae16cea5e4086721d696cc04c55b73125d8b",

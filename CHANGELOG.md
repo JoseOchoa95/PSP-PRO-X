@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.4.4 — installer maintenance
+
+- Separate the Internet update confirmation and restart flow from firmware writes so the install and recovery sequence is easier to review.
+- Reject invalid installer module IDs before opening an installation session. Stop before writing firmware if loading the restart module yields no valid handle.
+
 ## v0.4.3 — startup cleanup fix
 
 - Run startup flash verification and cleanup in a dedicated kernel thread so the Memory Stick stage can be removed once the installed firmware is verified.
