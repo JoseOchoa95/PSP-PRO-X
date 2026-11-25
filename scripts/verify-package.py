@@ -1,9 +1,10 @@
 """Reopen a package and verify its inventory, SHA-256 and both XMB titles."""
 from pathlib import Path, PurePosixPath
+import argparse
 import json
-import sys
 import zipfile
 from build import sha
+from native_release import read_checksums, resident_upload_paths, verify_resident_uploads
 from verify import require, pbp_info
 
 
@@ -29,12 +30,19 @@ def verify_resident_assets(path,manifest):
 
 
 def main():
-    path = Path(sys.argv[1])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('manual', type=Path)
+    parser.add_argument('--release-assets', action='store_true',
+                        help='verify a six-file resident release and print its upload inventory as JSON')
+    args = parser.parse_args()
+    path = args.manual
+    uploads = None
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
         require(len(names) == len(set(names)), 'Duplicate ZIP entries')
         require(all(not PurePosixPath(n).is_absolute() and '..' not in PurePosixPath(n).parts and '\\' not in n for n in names), 'Unsafe ZIP path')
-        manifest = json.loads(archive.read('manifest.json'))
+        manifest_bytes = archive.read('manifest.json')
+        manifest = json.loads(manifest_bytes)
         expected = set(manifest['files']) | {'manifest.json', 'SHA256SUMS'}
         require(set(names) == expected, 'ZIP inventory differs from manifest')
         for name, digest in manifest['files'].items():
@@ -86,7 +94,7 @@ def main():
                 from native_validation_report import for_build
                 evidence=for_build({'build_id':manifest['build_id'],'product_version':manifest['version'],
                                     'source_tree_sha256':manifest['source_tree_sha256'],
-                                    'artifacts':{n.removeprefix(psp_prefix):h for n,h in manifest['files'].items()
+                                    'artifacts':{n[len(psp_prefix):]:h for n,h in manifest['files'].items()
                                                  if n.startswith(psp_prefix)}})
                 status=evidence['status'] if evidence else 'NOT RUN'
                 require(manifest['status']=='native-update-release-candidate' and manifest['hardware']==status and
@@ -106,9 +114,13 @@ def main():
             require(set(source_zip.namelist()) == set(snapshot['files']) | {'source-snapshot.json'}, 'Source ZIP inventory')
             for name, digest in snapshot['files'].items():
                 require(sha(source_zip.read(name)) == digest, 'Source ZIP hash: ' + name)
+            if phase3:
+                product_label = f'#define PROX_PRODUCT_VERSION "{manifest["version"]}"'.encode('ascii')
+                product_header = source_zip.read('firmware/Common/prox_product.h')
+                require(product_label in product_header.splitlines(), 'Companion source product version differs from the manual ZIP')
             if manifest.get('wpa2'):
                 require('firmware/tools/wpa2diag/main.c' in snapshot['files'], 'Diagnostic source omitted')
-    external = dict((name, digest) for digest, name in (line.split('  ', 1) for line in path.with_suffix('.sha256').read_text().splitlines()))
+    external = read_checksums(path.with_suffix('.sha256'))
     for file in [path, source]:
         require(sha(file.read_bytes()) == external[file.name], 'External ZIP hash mismatch')
     if phase3:
@@ -119,12 +131,23 @@ def main():
                 'Compact manifest identity/status mismatch')
         if resident:
             update_path,update_json=verify_resident_assets(path,manifest)
-            detailed=path.with_name(path.stem+'-manifest.json')
-            require(set(external)=={p.name for p in (path,source,update_path,update_json,detailed,compact_path)} | expected_psp,
-                    'Resident delivery checksum inventory differs')
-            require(json.loads(detailed.read_bytes())==manifest and
-                    sha(detailed.read_bytes())==compact['detailed_manifest_sha256'],
-                    'Detailed manifest differs from the manual ZIP')
+            require(sha(manifest_bytes) == compact['detailed_manifest_sha256'],
+                    'Detailed manifest inside the manual ZIP differs from the compact build JSON')
+            require(compact['version'] == manifest['version'] and compact['firmware_target'] == manifest['firmware_target']
+                    and compact['source_tree_sha256'] == manifest['source_tree_sha256']
+                    and compact['repository_head'] == manifest['build_repository_head']
+                    and compact['toolchain_image'] == manifest['toolchain_image'],
+                    'Compact build provenance differs from the manual ZIP')
+            expected_uploads = {p.name for p in resident_upload_paths(path)[:-1]}
+            if set(external) == expected_uploads:
+                require(path.name == 'pro-x-' + manifest['version'] + '-661.zip', 'Unexpected manual ZIP name')
+                uploads = verify_resident_uploads(path, external)
+            else:
+                # Verify previously published resident packages with the separate detailed manifest.
+                detailed = path.with_name(path.stem + '-manifest.json')
+                require(set(external) == expected_uploads | {detailed.name} | expected_psp,
+                        'Resident delivery checksum inventory differs')
+                require(detailed.read_bytes() == manifest_bytes, 'Legacy detailed manifest differs from the manual ZIP')
         else:
             update_path=path.with_name(path.stem+'-update.zip')
             update_json=path.parent/'pro-x-update.json'
@@ -134,15 +157,17 @@ def main():
         if resident:
             require(phase3['update_assets'] == {p.name: sha(p.read_bytes()) for p in (update_path,update_json)},
                     'Detailed update asset hashes differ')
-        for name, value in external.items():
-            require(sha((path.parent/name).read_bytes()) == value, 'Delivered file hash mismatch: '+name)
+        if uploads is None:
+            for name, value in external.items():
+                require(sha((path.parent/name).read_bytes()) == value, 'Delivered file hash mismatch: '+name)
+        require(set(compact['executables']) == {name for name in expected_psp if name.endswith('/EBOOT.PBP')},
+                'Compact executable inventory differs from the manual ZIP')
         for name, info in compact['executables'].items():
             data = (path.parent/name).read_bytes()
             require(sha(data) == info['sha256'] and len(data) == info['size'], 'Delivered EBOOT differs: '+name)
     if manifest.get('wpa2'):
         if phase3:
-            from product import VERSION, WPA2_VARIANT, WPA2_REPORT_SHA256
-            require(manifest['version'] == VERSION, 'Milestone product version differs from compiled ticket')
+            from product import WPA2_VARIANT, WPA2_REPORT_SHA256
             require(manifest['wpa2'] == {'preference_enabled_by_default': True, 'verified_variants': 1,
                     'variant_id': WPA2_VARIANT, 'identification_report_sha256': WPA2_REPORT_SHA256,
                     'patch_active': True, 'status': 'INHERITED_PARTIAL_REPORT_NEW_BUILD_NOT_RUN'},
@@ -180,7 +205,11 @@ def main():
             require(json.loads(diagnostic_zip.read('source-reference.json')) == manifest['source_archive'], 'Diagnostic source mismatch')
         expected_hash, expected_name = diagnostic.with_suffix('.sha256').read_text().strip().split('  ',1)
         require(expected_name == diagnostic.name and sha(diagnostic.read_bytes()) == expected_hash, 'Diagnostic external hash')
-    print('PASS: ZIP inventory, payload/SFO, SHA-256, companion source and matching update assets')
+    if args.release_assets:
+        require(uploads is not None, 'Expected the current six-file resident release layout')
+        print(json.dumps(uploads, indent=2))
+    else:
+        print('PASS: ZIP inventory, payload/SFO, SHA-256, companion source and matching update assets')
 
 
 def verify_legacy_assets(path,manifest,update_path,update_json):

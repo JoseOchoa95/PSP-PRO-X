@@ -83,6 +83,10 @@ Update it when the change affects what the project offers or what users should u
 
 Keep it general. Detailed implementation steps, logs, test matrices, and phase history belong in `context/`.
 
+Maintain a concise feature list and an installation guide for the current supported release. Explain supported PSP models and system software, which package and Memory Stick folders to use, how to install and activate PRO-X, and how to update an existing installation. Distinguish implemented features from physical validation results.
+
+After opening or updating every pull request, verify the README at the PR head against the actual behavior and package layout. After the PR merges, verify it on the target branch, even if the PR did not change the README. Record the outcome in the handoff or the implementation record. Make any needed documentation correction through the existing authorization process.
+
 If the feature does not affect the general project description or status, leave the root README unchanged and state that it was reviewed and did not need changes.
 
 ### Release changelog
@@ -152,7 +156,7 @@ If a required test fails, fix the issue within scope and rerun the relevant chec
 - Use `builds/` for final packages, corresponding source ZIPs, matching PSP executables, release manifests and SHA-256 files. Use `artifacts/` for intermediate trees, full logs, machine-generated verification results and raw hardware diagnostic reports. Neither directory is a source input that should be committed.
 - Do not retain duplicate final ZIPs, release manifests or hash lists in `artifacts/` after migrating them to `builds/`. Verify identical hashes, remove the redundant copies, update active references and ensure the packager writes final deliverables only to `builds/`. Intermediate build outputs and the metadata required to verify them remain in `artifacts/`.
 - Store concise implementation/validation summaries, build identities and pending tests in `context/`, following its existing ignore policy. Keep the root README general. Do not force-add ignored records without explicit authorization.
-- Distribute the binary ZIP, corresponding source ZIP, manifest and hashes as assets of an explicitly authorized GitHub release. Full CI logs and temporary outputs can be retained as CI artifacts with appropriate retention; they do not need to be checked into Git. A local cleanup does not authorize publishing anything.
+- Distribute the binary ZIP, corresponding source ZIP, build information and integrity files according to the release asset policy below. Full CI logs and temporary outputs belong in CI artifacts with appropriate retention. A local cleanup does not authorize publishing anything.
 - Preserve inherited `.a`, `.prx`, `.bin`, headers and resources that are required build inputs and documented by the upstream inventory. Do not remove or globally ignore all binary files, ZIPs, JSON, text files or manifests merely by extension; classify their purpose first.
 - Before removing generated files from version control, inspect `git ls-files` and `git check-ignore`. If an output is already tracked, an ignore rule alone does not untrack it. Within an authorized cleanup, remove only the confirmed generated paths from the index and retain local packages/evidence needed by ongoing work.
 - Delete only disposable caches or confirmed redundant output. Preserve the latest delivered packages, their hashes, failed-build evidence useful for investigation, and required build metadata. Verify matching hashes before removing a duplicate package.
@@ -165,14 +169,22 @@ If a required test fails, fix the issue within scope and rerun the relevant chec
 Follow the PR acceptance and release-publication gate below before making any
 release public, including a beta, prerelease or console-test release.
 
-Attach the OTA manifest and payload for the release's supported client to the same GitHub release as the matching manual binary ZIP, companion source ZIP, build manifests and SHA-256 files.
+For new stable resident releases, upload exactly six files to the same GitHub release.
+
+- `pro-x-<version>-661.zip` with PROUPDATE, Fast Recovery, notices and the detailed `manifest.json` inside.
+- `pro-x-<version>-661-source.zip` with the matching build inputs.
+- `pro-x-<version>-661-build.json` with the compact build identity and the hash of the embedded manifest.
+- `pro-x-dedicated-update.json` and its matching data-only `EBOOT.PBP` for Internet updates.
+- `pro-x-<version>-661.sha256` covering the other five uploads. GitHub's generated source archives remain available through GitHub and outside this checksum list.
+
+Run `python scripts/verify-package.py --release-assets <manual-zip>` to obtain the canonical JSON upload list with names, sizes and SHA-256 digests. Stage only those files. Keep detailed diagnostics and test evidence in local or CI artifacts. Continue verifying archived packages with their original inventories.
 
 | Release family | OTA manifest | OTA payload |
 | --- | --- | --- |
 | Resident dedicated updates, starting at v0.4.0 | `pro-x-dedicated-update.json` (schema 2) | `EBOOT.PBP` (data only) |
 | Legacy ZIP-based releases | `pro-x-update.json` (schema 1) | `pro-x-<version>-661-update.zip` |
 
-Use manual PROUPDATE and its matching Fast Recovery to move from older versions to v0.4.0. The resident release ships the schema-2 asset pair and the manual applications PROUPDATE and Fast Recovery. Preserve the published legacy releases and their assets.
+Use manual PROUPDATE and its matching Fast Recovery to move from versions earlier than v0.4.0 to a compatible resident build. Preserve the published legacy releases and their assets.
 
 Generate both OTA assets from the matching compiled build with the repository packager. Before publication, verify the version, tag, build identity, target firmware, supported models, minimum updater version, inventory, sizes and SHA-256 hashes. For the resident contract, verify that the manual Installer provisions the same resident worker and firmware components carried by the dedicated EBOOT and that the compiled worker embeds the pinned CA bundle. For the legacy contract, verify that Installer, Fast Recovery, updater and CA bytes match the manual package. Run the native OTA-consumer checks and verify the complete set before publication. Verify uploaded sizes and digests against the local files.
 
@@ -209,33 +221,17 @@ Keep generated binaries and packages out of source commits. Preserve existing ig
 
 ### Build version policy
 
-Version numbering applies to generated product builds. It must not increment because a commit, push, PR, documentation update, or release action occurs.
+Use [Semantic Versioning 2.0.0](https://semver.org/) for PRO-X product versions. During the `0.y.z` development series, follow these project rules for changes that will be delivered from a branch.
 
-The migration starting point is `v0.1.0-beta.1`. The first build for the next feature ticket must be **`v0.2.0`**, without `-beta.1` or another prerelease suffix.
+- **MINOR** for a new feature ticket with compatible functionality. Increment the middle number and reset PATCH to zero, such as `v0.1.0` to `v0.2.0`.
+- **PATCH** for a delivered follow-up to the same ticket or a small compatible fix, documentation, packaging or maintenance change. Increment the last number, such as `v0.1.0` to `v0.1.1`.
+- **MAJOR** for an incompatible change to a supported public contract, such as an intentional break in updater or installation compatibility. Propose the bump and document the affected contract before proceeding.
 
-For each subsequent distinct feature ticket delivered as a build:
+Each feature, fix or maintenance branch prepared for delivery gets a new product version. An integration branch delivering several changes together has one version based on the combined scope. Before assigning or changing a version, always propose the exact number and the reason for the bump, then ask the owner to confirm it or choose another. Wait for confirmation before changing product metadata or building under the proposed version. Confirm the release version with the owner before publication, using any explicit confirmation already given for that exact version and scope.
 
-- Increment the second numeric component (MINOR) by one.
-- Keep the first component unchanged and reset the third component to zero.
-- Omit beta, alpha, and release-candidate suffixes unless the user explicitly changes this policy.
-- Apply the same rule to tickets classified as fixes; do not choose a PATCH increment instead.
+Check delivered build metadata, implementation records, accepted or merged PRs, tags and releases before proposing a version. Treat every previously assigned version as used, including tested or merged versions without a public release. Record an explicitly authorized reuse or temporary test version in `context/` with its scope and intended final version. Preserve the identity of existing binaries and published releases.
 
-Examples:
-
-| Ticket/build milestone | Product build version |
-| --- | --- |
-| Existing version when this policy was adopted | `v0.1.0-beta.1` |
-| First new feature ticket | `v0.2.0` |
-| Next distinct feature ticket | `v0.3.0` |
-| Following distinct feature ticket | `v0.4.0` |
-
-Before assigning a version, inspect the latest delivered build metadata and relevant `context/` records. Do not rely only on the latest Git tag: a tested build may not have been tagged or published. Once a later build exists, continue from it rather than resetting to `v0.2.0`.
-
-Do not reuse a product version already assigned to another change unless the owner explicitly authorizes it. Treat versions in accepted/merged PRs as used even when no tag or release has been published; also check existing version assignments, delivered builds, tags and releases before choosing a version. An unpublished release does not make its version available for a different change. Record any owner-authorized reuse or temporary test-version exception, its scope and the intended final version in `context/`; do not relabel existing binaries or rewrite their historical identity. Rebuilds of the same assigned change continue to follow the same-ticket iteration rule below and use distinct build identifiers.
-
-Assign one product version per feature ticket when generating its first build. Rebuilds, corrections, and test iterations of that same ticket retain its assigned version. Distinguish them with a separate build identifier and hashes in the manifest and context record. This identifier must not reintroduce a beta/alpha suffix into the product version.
-
-Do not consume another feature version for a failed compilation or for merely rerunning packaging. A new ticket with a new delivered build receives the next MINOR version.
+Rebuilding the same approved revision, retrying a failed build or rerunning packaging keeps its confirmed product version. Use distinct build identifiers and hashes for separate compiled candidates. A delivered follow-up with source changes requires a newly confirmed version. Commits, pushes, PR updates, tags and release actions alone do not consume another version. Add a prerelease suffix only with the owner's explicit approval.
 
 Keep the product version consistent across build/package metadata, package filenames, manifests, applicable installer/Fast Recovery product labels, and the version reported to the user. Use conventional package filenames such as `pro-x-0.2.0-661.zip`; retain the `v` prefix in the human-facing version identifier.
 

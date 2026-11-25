@@ -10,7 +10,7 @@ from verify import require
 from product import VERSION, WPA2_VARIANT, WPA2_REPORT_SHA256
 from hardware_report import REPORT as HARDWARE_REPORT
 from update_contract import generate as generate_update
-from native_release import verify_native_release
+from native_release import check_resident_upload_layout, read_checksums, verify_native_release, verify_resident_uploads
 from native_validation_report import for_build as native_validation
 
 NAME = 'pro-x-' + VERSION + '-661'
@@ -52,6 +52,9 @@ def main():
     resident=build.get('resident_dedicated_ota',False)
     destination=OUTPUT_DIR/('resident-release-'+build['build_id']) if resident else OUTPUT_DIR
     destination.mkdir(parents=True,exist_ok=True)
+    binary_zip = destination / (NAME + '.zip')
+    if resident:
+        upload_paths = check_resident_upload_layout(binary_zip, complete=False)
     source_commit = repository_head()
     reference = json.loads((ROOT / 'artifacts/reference-build.json').read_text())
     verification = json.loads((ROOT / 'artifacts/verification.json').read_text())
@@ -190,10 +193,7 @@ def main():
         manifest['dedicated_update']=json.loads((output/'dedicated-update/dedicated-update.json').read_bytes())
     files['manifest.json'] = (json.dumps(manifest, indent=2) + '\n').encode()
     files['SHA256SUMS'] = ''.join(sha(data) + '  ' + name + '\n' for name, data in sorted(files.items())).encode()
-    binary_zip = destination / (NAME + '.zip')
     archive(binary_zip, files)
-    manifest_path = destination / (NAME + '-manifest.json')
-    manifest_path.write_bytes(files['manifest.json'])
     compact_path = destination / (NAME + '-build.json')
     compact = {
         'product': 'PRO-X', 'version': VERSION, 'firmware_target': '6.61',
@@ -210,13 +210,19 @@ def main():
         'executables': {n: {'size': len(d), 'sha256': sha(d)} for n, d in files.items() if n.endswith('/EBOOT.PBP')},
     }
     compact_path.write_text(json.dumps(compact, indent=2)+'\n', encoding='utf-8')
+    checksums_path = binary_zip.with_suffix('.sha256')
+    if resident:
+        external = ''.join(sha(path.read_bytes()) + '  ' + path.name + '\n' for path in upload_paths[:-1])
+        checksums_path.write_text(external, encoding='ascii')
+        verify_resident_uploads(binary_zip, read_checksums(checksums_path))
+        print(external,end='')
+        return
+    manifest_path = destination / (NAME + '-manifest.json')
+    manifest_path.write_bytes(files['manifest.json'])
     external = ''.join(sha(path.read_bytes()) + '  ' + path.name + '\n'
                        for path in (binary_zip,source_zip,*update_assets,manifest_path,compact_path))
     external += ''.join(sha(data)+'  '+name+'\n' for name, data in sorted(files.items()) if name.startswith(psp_prefix))
-    (destination / (NAME + '.sha256')).write_text(external, encoding='ascii')
-    if resident:
-        print(external,end='')
-        return
+    checksums_path.write_text(external, encoding='ascii')
     # This opt-in tool is separate from the normal two-program installation ZIP.
     diagnostics = {name: (output / 'diagnostics' / name).read_bytes() for name in build['diagnostics']}
     diagnostics['docs/wpa2-support.md'] = (ROOT / 'docs/wpa2-support.md').read_bytes()
