@@ -175,6 +175,16 @@ static unsigned int write_storage_offer(char *destination, unsigned int package_
 
 static void cleanup_verified_boot(void)
 {
+    static const char *const phases[]={
+        "rpc-entry", "session", "worker-owner", "query-state", "kernel-busy",
+        "target-identity", "worker-identity", "installed-module", "installed-worker",
+        "temporary-module", "module-backup", "temporary-worker", "flash-mount", "flash-restore",
+        "kernel-stack", "kernel-thread"
+    };
+    static const char *const checks[]={
+        "none", "record", "stat", "type-or-size", "open", "read", "eof", "sha256", "close", "remove",
+        "create-thread", "start-thread", "wait-thread"
+    };
     const char *directory=PROX_RESIDENT_MS_REPORTS;
     int pending=prox_dedicated_pending(directory);
     if(pending<=0) {
@@ -209,14 +219,22 @@ static void cleanup_verified_boot(void)
     }
     ProxNativeCleanupMessage request={.protocol=PROX_NI_CLEANUP_PROTOCOL,.lease=lease_id,
         .generation=generation,.model=model,.prepared=transaction.prepared,.backups=transaction.backups,
-        .worker_prepared=(unsigned int)transaction.worker_prepared,.worker=job.worker};
+        .worker_prepared=(unsigned int)transaction.worker_prepared,.worker=job.worker,
+        .diagnostic={.phase=PROX_CLEANUP_ENTRY,.part=-1}};
     memcpy(request.build_id,job.install.build_id,sizeof(request.build_id));
     memcpy(request.installed,job.install.parts,sizeof(request.installed));
     memcpy(request.before,transaction.before,sizeof(request.before));
-    int result=prox_native_is_cancelled() ? -1 :
-        proxNativeInstallService(PROX_NI_CLEANUP_COMMITTED,(void *)&request,sizeof(request));
+    if(prox_native_is_cancelled()) {
+        prox_log("Dedicated boot cleanup deferred: worker session cancelled or unavailable");
+        goto done;
+    }
+    int result=proxNativeInstallService(PROX_NI_CLEANUP_COMMITTED,(void *)&request,sizeof(request));
     if(result) {
-        prox_log("Dedicated boot cleanup deferred: kernel flash verification or cleanup failed (%d)",result);
+        const ProxNativeCleanupDiagnostic *d=&request.diagnostic;
+        const char *phase=(unsigned)d->phase<sizeof(phases)/sizeof(*phases)?phases[d->phase]:"unknown";
+        const char *check=(unsigned)d->check<sizeof(checks)/sizeof(*checks)?checks[d->check]:"unknown";
+        prox_log("Dedicated boot cleanup deferred: phase=%s part=%d check=%s detail=0x%08x rpc=%d",
+                 phase,d->part,check,(unsigned int)d->detail,result);
         goto done;
     }
     /* The card finalizer removes the reports, including the current one. */

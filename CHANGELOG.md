@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.4.3 — startup cleanup fix
+
+- Run startup flash verification and cleanup in a dedicated kernel thread so the Memory Stick stage can be removed once the installed firmware is verified.
+- Report the exact stage of a deferred startup cleanup, including the affected module and file operation where available.
+- The owner confirmed that the corrected code removed the staged files and `PROXDIAG` at startup on a PSP-2000 using a local replay. Automatic removal of flash backups after an Internet update remains pending on hardware.
+
 ## v0.4.2 — verified Internet update cleanup
 
 - Verify the running firmware and remove its temporary flash files through the kernel before removing the matching download and staging directory from the Memory Stick.

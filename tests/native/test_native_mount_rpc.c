@@ -16,6 +16,8 @@ int prox_native_flash_preflight(const ProxNativePart *parts)
 }
 #ifdef PROX_NATIVE_DEDICATED_OTA
 static int cleanup_result, loader_calls, loader_failure, startup_waits;
+static int cleanup_test_case, worker_deleted, worker_started;
+static int (*worker_entry)(SceSize,void *);
 static const int resident_module;
 void prox_native_query_event(const char *name,int result) { (void)name;(void)result; }
 void prox_native_completion_reset(void) { assert(!irq && !k1); }
@@ -45,13 +47,63 @@ int prox_native_flash_preflight_dedicated(const ProxNativePart *parts,const Prox
     assert(worker==&install_state.resident);
     return prox_native_flash_preflight(parts);
 }
-int prox_native_cleanup_flash(const ProxNativeCleanupMessage *m)
+int prox_native_cleanup_flash(ProxNativeCleanupMessage *m)
 {
-    assert(!irq && !k1 && extended && access_busy && thread==state.owner);
+    ProxNativeCleanupMessage nested=*m;
+    assert(!irq && !k1 && access_busy && thread==32 && thread!=state.owner);
+    assert(m==&cleanup_run.request);
     assert(m->lease==31 && m->generation==45);
     ++called;
-    assert(proxNativeInstallService(PROX_NI_CLEANUP_COMMITTED,(void *)m,sizeof(*m))<0);
+    assert(proxNativeInstallService(PROX_NI_CLEANUP_COMMITTED,(void *)&nested,sizeof(nested))<0);
+    assert(nested.diagnostic.phase==PROX_CLEANUP_BUSY);
+    if(cleanup_result==-1)
+        m->diagnostic=(ProxNativeCleanupDiagnostic){
+            .phase=PROX_CLEANUP_INSTALLED_PART,.part=0,.check=PROX_CLEANUP_CHECK_STAT,.detail=(int)0x8001000d};
     return cleanup_result;
+}
+static void run_cleanup_worker(void)
+{
+    int owner=thread;
+    assert(worker_started && !worker_deleted);
+    thread=32;
+    assert(!worker_entry(0,NULL));
+    assert(worker_deleted);
+    thread=owner;
+}
+int sceKernelCreateThread(const char *name,int (*entry)(SceSize,void *),int priority,int stack,int attributes,void *options)
+{
+    assert(!irq && !k1 && extended && thread==state.owner && access_busy);
+    assert(!strcmp(name,"PRO-X flash cleanup") && entry && priority==0x20 && stack==0x4000 && !attributes && !options);
+    worker_entry=entry;
+    return cleanup_test_case==15?-71:32;
+}
+int sceKernelStartThread(int id,unsigned int size,void *args)
+{
+    assert(id==32 && !size && !args && !worker_started);
+    if(cleanup_test_case==16)return -72;
+    worker_started=1;
+    if(cleanup_test_case==18)run_cleanup_worker();
+    return 0;
+}
+int sceKernelWaitThreadEnd(int id,unsigned int *timeout)
+{
+    assert(id==32 && !timeout && worker_started);
+    if(cleanup_test_case==17 || cleanup_test_case==20)return -73;
+    if(worker_deleted)return -74;
+    run_cleanup_worker();
+    return 0;
+}
+int sceKernelDeleteThread(int id)
+{
+    assert(id==32 && !worker_started);
+    worker_deleted=1;
+    return 0;
+}
+int sceKernelExitDeleteThread(int status)
+{
+    assert(!status && thread==32 && cleanup_run.completed);
+    worker_deleted=1;
+    return 0;
 }
 #endif
 int prox_native_test_valid(const void *p,unsigned int n)
@@ -88,7 +140,7 @@ int prox_native_mount_end(ProxMountReport *r)
 #ifdef PROX_NATIVE_DEDICATED_OTA
 int main(void)
 {
-    for(int case_id=0;case_id<=14;++case_id) {
+    for(int case_id=0;case_id<=20;++case_id) {
         ProxNativeCleanupMessage m={.protocol=PROX_NI_CLEANUP_PROTOCOL,.lease=31,.generation=45};
         unsigned int size=sizeof(m);
         memset(&state,0,sizeof(state));
@@ -96,6 +148,7 @@ int main(void)
         state.lease=31;state.generation=45;state.active=1;state.phase=PROX_NQ_QUERY;
         state.command=PROX_NQ_CHECK;state.owner=4;
         thread=4;invalid=called=mount_active=access_busy=allocation_fail=cleanup_result=0;
+        cleanup_test_case=case_id;worker_deleted=worker_started=0;
         switch(case_id) {
         case 1:thread=5;break;
         case 2:--m.generation;break;
@@ -111,10 +164,29 @@ int main(void)
         case 12:++m.protocol;break;
         case 13:state.command=PROX_NQ_BOOT_CLEANUP;break;
         case 14:state.command=PROX_NQ_IDLE;break;
+        case 19:cleanup_result=-1;break;
         }
         int result=proxNativeInstallService(PROX_NI_CLEANUP_COMMITTED,(void *)&m,size);
-        assert(called==(case_id==0 || case_id==9 || case_id==13));
-        assert(case_id==0 || case_id==13 ? !result : result<0);
+        assert(called==(case_id==0 || case_id==9 || case_id==13 || case_id==18 || case_id==19));
+        assert(case_id==0 || case_id==13 || case_id==18 ? !result : result<0);
+        if(case_id==1)assert(m.diagnostic.phase==PROX_CLEANUP_OWNER);
+        if(case_id==2 || case_id==3 || case_id==12)assert(m.diagnostic.phase==PROX_CLEANUP_SESSION);
+        if(case_id==4 || case_id==10)assert(m.diagnostic.phase==PROX_CLEANUP_ENTRY);
+        if(case_id==5 || case_id==6 || case_id==14)assert(m.diagnostic.phase==PROX_CLEANUP_STATE);
+        if(case_id==7 || case_id==8)assert(m.diagnostic.phase==PROX_CLEANUP_BUSY);
+        if(case_id==11)assert(m.diagnostic.phase==PROX_CLEANUP_STACK && result==-77);
+        if(case_id==15)assert(m.diagnostic.phase==PROX_CLEANUP_THREAD && m.diagnostic.check==PROX_CLEANUP_CHECK_CREATE_THREAD);
+        if(case_id==16)assert(m.diagnostic.phase==PROX_CLEANUP_THREAD && m.diagnostic.check==PROX_CLEANUP_CHECK_START_THREAD && worker_deleted);
+        if(case_id==17 || case_id==20) {
+            assert(access_busy && m.diagnostic.phase==PROX_CLEANUP_THREAD && m.diagnostic.check==PROX_CLEANUP_CHECK_WAIT_THREAD);
+            if(case_id==20)state.cancel=1;
+            int saved=pspSdkSetK1(0);
+            run_cleanup_worker();
+            pspSdkSetK1(saved);
+            assert(called==(case_id==17));
+        }
+        if(case_id==19)assert(m.diagnostic.phase==PROX_CLEANUP_INSTALLED_PART &&
+            m.diagnostic.check==PROX_CLEANUP_CHECK_STAT && m.diagnostic.detail==(int)0x8001000d);
         assert(state.fault==(case_id==9) && !access_busy && !extended && !irq && k1==0x1234);
     }
     puts("PASS: production cleanup RPC requires the current query owner and generation, rejects an active writer, and faults on flash restore failure");

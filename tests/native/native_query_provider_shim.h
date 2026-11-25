@@ -9,4 +9,13 @@ int sceKernelGetThreadId(void);
 unsigned int sceKernelGetSystemTimeLow(void);
 int sceKernelDelayThread(unsigned int);
 void *sceKernelFindModuleByName(const char *);
+#if defined(PROX_NATIVE_MOUNT_ACCESS) && defined(PROX_NATIVE_DEDICATED_OTA)
+typedef unsigned int SceSize;
+typedef int SceUID;
+int sceKernelCreateThread(const char *,int (*)(SceSize,void *),int,int,int,void *);
+int sceKernelStartThread(int,unsigned int,void *);
+int sceKernelWaitThreadEnd(int,unsigned int *);
+int sceKernelDeleteThread(int);
+int sceKernelExitDeleteThread(int);
+#endif
 #endif
