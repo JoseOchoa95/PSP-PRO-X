@@ -19,4 +19,17 @@ const char *stock_reader_init(struct StockReader *reader, uint32_t reported_bloc
 const char *stock_read_sector(const struct StockReader *reader, uint32_t lba,
                               void *buffer, int *result, struct StockReadTrace *trace);
 
+#ifdef MSDIAG_WRITE_TRIAL
+struct StockWriteState {
+    int observed;
+    uint32_t media_type, open_handles, write_enabled, write_protected;
+};
+
+const char *stock_write_trial_check(const struct StockReader *reader,
+                                    struct StockWriteState *observed);
+const char *stock_write_trial(const struct StockReader *reader, const void *original,
+                              void *replacement, const void *mbr_digest,
+                              int *result, int *dispatched);
+#endif
+
 #endif
