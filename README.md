@@ -39,6 +39,8 @@ Build with the pinned Docker toolchain; generated firmware and packages stay in 
 
 The standalone [MSDIAG utility](firmware/tools/msdiag/README.md) estimates Memory Stick capacity in read-only mode on the supported PSP 6.61 configuration. The owner reported exact matches with direct-reader measurements on the tested 256 GB and 512 GB card and adapter combinations. To build the utility locally, run `python scripts/build-msdiag.py` with the pinned toolchain image.
 
+The experimental MBR and partition-switch trials were tested on one backed-up 256 GB card and Memory Stick adapter. The owner verified raw reads from all three primary partitions. FAT32 mounting and formatting remain pending. [MBR trial](firmware/tools/mswrite/PARTITION-TRIAL.md) · [Read-only switch trial](firmware/tools/msswitch/README.md)
+
 The resident packager stages six release uploads. The manual ZIP contains the detailed build manifest. A companion source ZIP, compact build JSON, one checksum file and the two Internet-update files complete the inventory.
 
 ```text

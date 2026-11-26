@@ -7,6 +7,8 @@
 - Add a standalone, read-only PSP utility that reports the capacity exposed by the Memory Stick driver and estimates the card's capacity without a PC reference on the supported 6.61 configuration.
 - Add an optional direct-reader comparison for sample sectors, including a high-sector read and a boundary and recovery check.
 - The owner reported exact capacity matches with the direct reader for the tested 256 GB and 512 GB card and adapter combinations. Other geometries, 1 TB media and extended formatting remain unverified.
+- Add standalone trials for one high-sector write and creation of three primary MBR entries on the backed-up 256 GB test card. PSP readback and independent direct-reader checks matched the expected data and unchanged witness sectors.
+- Add a standalone read-only partition switch trial. The owner verified matching PC reference sectors in all three primary partitions, partition bounds and Circle return to the PSP menu on the same card. FAT32 mounting, Sony formatting and GPT conversion remain pending.
 
 ## v0.4.5 — documentation and release packaging (unreleased)
 

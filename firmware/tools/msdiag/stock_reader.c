@@ -10,6 +10,9 @@
 
 #include "probe.h"
 #include "stock_reader.h"
+#ifdef MSDIAG_WRITE_TRIAL
+#include "write_trial.h"
+#endif
 
 enum {
     TEXT_BYTES = 0xf2f4,
@@ -81,6 +84,11 @@ static const struct AddressRelocation address_relocations[] = {
     {0x3230, 0x3238, 0x3c020000, 0x8c420164, 1},
     {0x3234, 0x3240, 0x3c030000, 0x8c645094, 1},
     {0x79a4, 0x79a8, 0x3c060001, 0x24c6ecc8, 0},
+#ifdef MSDIAG_WRITE_TRIAL
+    {0x32d4, 0x32dc, 0x3c020000, 0x8c435094, 1},
+    {0x330c, 0x3310, 0x3c020000, 0x8c420164, 1},
+    {0x7bac, 0x7bb0, 0x3c060001, 0x24c6ed44, 0},
+#endif
 };
 
 static uint32_t runtime_word(uintptr_t address)
@@ -205,3 +213,123 @@ const char *stock_read_sector(const struct StockReader *reader, uint32_t lba,
     active_read = NULL;
     return NULL;
 }
+
+#ifdef MSDIAG_WRITE_TRIAL
+enum {
+    RAW_WRITE = 0x32cc,
+    RAW_WRITE_END = 0x3334,
+    PRO_WRITE = 0x7b64,
+    PRO_WRITE_END = 0x7d78,
+};
+
+struct WriteTrial {
+    const struct StockReader *reader;
+    const void *original;
+    const void *mbr_digest;
+    uint32_t open_handles;
+    int *dispatched;
+    const char *error;
+};
+
+static struct WriteTrial *write_trial;
+static unsigned char write_check_sector[SECTOR_BYTES] __attribute__((aligned(64)));
+
+static const char *write_trial_state(const struct StockReader *reader,
+                                     struct StockWriteState *observed)
+{
+    uintptr_t io = reader->data + IO_CONTEXT;
+    uintptr_t media = reader->data + MEDIA_CONTEXT;
+    struct StockWriteState state = {1, runtime_word(media + MEDIA_TYPE), runtime_word(io + 0x10),
+                                    runtime_word(media + 0x4c18), runtime_word(media + 0x4c1c)};
+    if (observed)
+        *observed = state;
+    if (reader->reported_blocks != TRIAL_REPORTED_BLOCKS ||
+        runtime_word(media + SECTOR_COUNT) != TRIAL_REPORTED_BLOCKS)
+        return "Stock sector count changed.";
+    if ((state.media_type != 64 && state.media_type != 65) ||
+        runtime_word(reader->data + ACTIVE_TABLE) != reader->text + PRO_TABLE ||
+        runtime_word(reader->text + PRO_TABLE) != reader->text + PRO_READ ||
+        runtime_word(reader->text + PRO_TABLE + 4) != reader->text + PRO_WRITE)
+        return "Active Memory Stick PRO transfer path differs.";
+    if ((int32_t)runtime_word(io) <= 0 ||
+        runtime_word(io + 8) != media || runtime_word(reader->data + ACTIVE_MEDIA) != media ||
+        !runtime_word(io + 4) || runtime_word(io + 4) != runtime_word(media + CONTROLLER))
+        return "Stock I/O context changed or is unavailable.";
+    if (state.write_protected)
+        return "Stock driver reports write protection.";
+    if (!state.write_enabled)
+        return "Stock driver has disabled writes for this media.";
+    if ((int32_t)state.open_handles <= 0)
+        return "The stock I/O handle is no longer open.";
+    return NULL;
+}
+
+const char *stock_write_trial_check(const struct StockReader *reader, struct StockWriteState *observed)
+{
+    if (!matches_code(reader, RAW_WRITE, RAW_WRITE_END,
+                      "\x56\x4b\xd3\x78\x15\xbb\x49\x25\x9f\xa0\x79\xe4\x54\xe0\x73\x27\xd4\x49\xf2\xd1") ||
+        !matches_code(reader, PRO_WRITE, PRO_WRITE_END,
+                      "\xa1\x59\xbf\xf5\x69\x8d\xc1\x86\x6a\x00\x30\xe5\x62\x0e\x0b\xd5\xe0\x48\xe7\x09"))
+        return "Stock write code did not match.";
+    return write_trial_state(reader, observed);
+}
+
+static int dispatch_write_trial(uint32_t lba, unsigned count, void *buffer)
+{
+    struct WriteTrial *trial = write_trial;
+    struct StockWriteState state;
+    unsigned char digest[DIGEST_BYTES];
+    ReadDispatch raw_read;
+    if (!trial || lba != TRIAL_LBA || count != 1 || *trial->dispatched)
+        return -1;
+    trial->error = write_trial_state(trial->reader, &state);
+    if (trial->error)
+        return -1;
+    if (state.open_handles != trial->open_handles) {
+        trial->error = "Stock I/O handle count changed before the write.";
+        return -1;
+    }
+    raw_read = (ReadDispatch)(trial->reader->text + RAW_DISPATCH);
+    /* The stock worker owns its mutex across the identity checks and write.
+       Its open-handle count includes idle clients of the same driver. */
+    if (raw_read(0, 1, write_check_sector) != 0 ||
+        sceKernelUtilsSha1Digest(write_check_sector, SECTOR_BYTES, digest) != 0 ||
+        memcmp(digest, trial->mbr_digest, DIGEST_BYTES) ||
+        raw_read(lba, 1, write_check_sector) != 0 ||
+        memcmp(write_check_sector, trial->original, SECTOR_BYTES)) {
+        trial->error = "Card identity or target data changed under the I/O lock.";
+        return -1;
+    }
+    trial->error = write_trial_state(trial->reader, &state);
+    if (trial->error)
+        return -1;
+    if (state.open_handles != trial->open_handles) {
+        trial->error = "Stock I/O handle count changed before the write.";
+        return -1;
+    }
+    *trial->dispatched = 1;
+    return ((ReadDispatch)(trial->reader->text + RAW_WRITE))(lba, count, buffer);
+}
+
+const char *stock_write_trial(const struct StockReader *reader, const void *original,
+                              void *replacement, const void *mbr_digest,
+                              int *result, int *dispatched)
+{
+    struct StockWriteState state;
+    const char *error = stock_write_trial_check(reader, &state);
+    struct StockFile request = {0};
+    struct WriteTrial trial = {.reader = reader, .original = original,
+                               .mbr_digest = mbr_digest, .dispatched = dispatched};
+    if (error)
+        return error;
+    *dispatched = 0;
+    trial.open_handles = state.open_handles;
+    request.file.arg = (void *)(reader->data + IO_CONTEXT);
+    request.position = (uint64_t)TRIAL_LBA * SECTOR_BYTES;
+    write_trial = &trial;
+    *result = ((StockRead)(reader->text + STOCK_READ))(
+        &request, replacement, SECTOR_BYTES, 1, dispatch_write_trial);
+    write_trial = NULL;
+    return trial.error;
+}
+#endif
