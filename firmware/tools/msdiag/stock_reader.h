@@ -32,4 +32,24 @@ const char *stock_write_trial(const struct StockReader *reader, const void *orig
                               int *result, int *dispatched);
 #endif
 
+#ifdef MSFORMAT_TRIAL
+struct WriteTrialReference;
+#ifdef MSDIRS_CARD_TRIAL
+struct Fat32Ram;
+#endif
+struct StockFormatTrial {
+    const struct StockReader *reader;
+    const struct WriteTrialReference *reference;
+    const unsigned char *confirmed_boot;
+    unsigned writes, verified;
+    int worker_result, command_result;
+    const char *error;
+#ifdef MSDIRS_CARD_TRIAL
+    struct Fat32Ram *directory_image;
+#endif
+};
+
+int stock_format_partition_trial(struct StockFormatTrial *trial);
+#endif
+
 #endif

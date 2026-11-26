@@ -13,6 +13,12 @@
 #ifdef MSDIAG_WRITE_TRIAL
 #include "write_trial.h"
 #endif
+#ifdef MSFORMAT_TRIAL
+#include "fat32_init.h"
+#endif
+#ifdef MSDIRS_CARD_TRIAL
+#include "fat32_dirs.h"
+#endif
 
 enum {
     TEXT_BYTES = 0xf2f4,
@@ -222,6 +228,7 @@ enum {
     PRO_WRITE_END = 0x7d78,
 };
 
+#ifndef MSFORMAT_TRIAL
 struct WriteTrial {
     const struct StockReader *reader;
     const void *original;
@@ -232,6 +239,7 @@ struct WriteTrial {
 };
 
 static struct WriteTrial *write_trial;
+#endif
 static unsigned char write_check_sector[SECTOR_BYTES] __attribute__((aligned(64)));
 
 static const char *write_trial_state(const struct StockReader *reader,
@@ -274,6 +282,7 @@ const char *stock_write_trial_check(const struct StockReader *reader, struct Sto
     return write_trial_state(reader, observed);
 }
 
+#ifndef MSFORMAT_TRIAL
 static int dispatch_write_trial(uint32_t lba, unsigned count, void *buffer)
 {
     struct WriteTrial *trial = write_trial;
@@ -332,4 +341,248 @@ const char *stock_write_trial(const struct StockReader *reader, const void *orig
     write_trial = NULL;
     return trial.error;
 }
+#else
+#ifdef MSDIRS_CARD_TRIAL
+enum { FORMAT_METADATA_SECTORS = TRIAL_DIRECTORY_METADATA_SECTORS };
+#else
+enum { FORMAT_METADATA_SECTORS = 9694 };
+#endif
+
+struct LockedFormat {
+    struct StockFormatTrial *trial;
+    uint32_t open_handles;
+#ifndef MSDIRS_CARD_TRIAL
+    unsigned verify_events;
+#endif
+    int started;
+};
+
+static struct LockedFormat *active_format;
+static unsigned char format_write_sector[SECTOR_BYTES] __attribute__((aligned(64)));
+
+static int format_read(struct StockFormatTrial *trial, uint32_t lba)
+{
+    ReadDispatch read = (ReadDispatch)(trial->reader->text + RAW_DISPATCH);
+    trial->command_result = read(lba, 1, write_check_sector);
+    return trial->command_result == 0;
+}
+
+static int format_witness(struct StockFormatTrial *trial, uint32_t lba, unsigned index)
+{
+    unsigned char digest[DIGEST_BYTES];
+    return format_read(trial, lba) &&
+           !sceKernelUtilsSha1Digest(write_check_sector, SECTOR_BYTES, digest) &&
+           !memcmp(digest, trial->reference->witnesses[index], sizeof(digest));
+}
+
+static int state_stable(struct LockedFormat *locked)
+{
+    struct StockWriteState state;
+    struct StockFormatTrial *trial = locked->trial;
+    trial->error = write_trial_state(trial->reader, &state);
+    if (!trial->error && state.open_handles != locked->open_handles)
+        trial->error = "Stock I/O handle count changed.";
+    return !trial->error;
+}
+
+static int format_medium_matches(struct LockedFormat *locked)
+{
+    struct StockFormatTrial *trial = locked->trial;
+    if (!state_stable(locked))
+        return 0;
+    if (!format_read(trial, 0) || memcmp(write_check_sector, trial->reference->marker, SECTOR_BYTES) ||
+        !format_witness(trial, 2048, 1) || !format_witness(trial, 268435456, 2) ||
+        !format_witness(trial, TRIAL_HIGH_LBA, 3) || !format_witness(trial, 230688768, 4) ||
+        !format_witness(trial, TRIAL_SECTORS - 1, 6)) {
+        trial->error = "The MBR or a control sector differs from the PC reference.";
+        return 0;
+    }
+    return 1;
+}
+
+static int write_format_sector(void *context, uint32_t relative, const uint8_t *sector)
+{
+    struct LockedFormat *locked = context;
+    struct StockFormatTrial *trial = locked->trial;
+    if (relative >= FORMAT_METADATA_SECTORS ||
+        trial->writes >= FORMAT_METADATA_SECTORS + 2) {
+        trial->error = "A format write exceeded the approved metadata range.";
+        return 0;
+    }
+    /* The existing worker owns the stock mutex throughout this callback. */
+    if (!state_stable(locked))
+        return 0;
+    if (!format_witness(trial, TRIAL_HIGH_LBA, 3)) {
+        trial->error = "The high-sector card witness changed before a write.";
+        return 0;
+    }
+    if (!state_stable(locked))
+        return 0;
+    memcpy(format_write_sector, sector, SECTOR_BYTES);
+    ReadDispatch write = (ReadDispatch)(trial->reader->text + RAW_WRITE);
+    ++trial->writes;
+    trial->command_result = write(TRIAL_FORMAT_START + relative, 1, format_write_sector);
+    if (trial->command_result) {
+        trial->error = "The stock sector write failed.";
+        return 0;
+    }
+    return 1;
+}
+
+#ifdef MSDIRS_CARD_TRIAL
+static int scan_directory_image(struct LockedFormat *locked, uint8_t *changed)
+{
+    struct StockFormatTrial *trial = locked->trial;
+    uint8_t expected[SECTOR_BYTES];
+    for (uint32_t relative = 0; relative < FORMAT_METADATA_SECTORS; ++relative) {
+        if (!fat32_ram_read(trial->directory_image, relative, expected) ||
+            !format_read(trial, TRIAL_FORMAT_START + relative)) {
+            trial->error = changed ? "Could not read the complete metadata range before writing."
+                                   : "Could not read back the new directory image.";
+            return 0;
+        }
+        int differs = memcmp(write_check_sector, expected, SECTOR_BYTES);
+        if (changed) {
+            if (differs)
+                changed[relative / 8] |= 1u << (relative % 8);
+        } else {
+            if (differs) {
+                trial->error = "Directory image readback did not match.";
+                return 0;
+            }
+            ++trial->verified;
+        }
+    }
+    return 1;
+}
+
+static int publish_directory_image(struct LockedFormat *locked)
+{
+    struct StockFormatTrial *trial = locked->trial;
+    uint8_t changed[(FORMAT_METADATA_SECTORS + 7) / 8] = {0};
+    uint8_t expected[SECTOR_BYTES] = {0};
+    if (!scan_directory_image(locked, changed) || !format_medium_matches(locked))
+        return 0;
+    if (!format_read(trial, TRIAL_FORMAT_START) ||
+        memcmp(write_check_sector, trial->confirmed_boot, SECTOR_BYTES)) {
+        trial->error = "The boot sector changed during the metadata scan. No writes made.";
+        return 0;
+    }
+    /* Publish boot records only after the new FAT and directories are in place. */
+    if (!write_format_sector(locked, 0, expected) || !write_format_sector(locked, 6, expected))
+        return 0;
+    for (uint32_t relative = 1; relative < FORMAT_METADATA_SECTORS; ++relative) {
+        if (relative == 6 || !(changed[relative / 8] & (1u << (relative % 8))))
+            continue;
+        if (!fat32_ram_read(trial->directory_image, relative, expected) ||
+            !write_format_sector(locked, relative, expected))
+            return 0;
+    }
+    return fat32_ram_read(trial->directory_image, 6, expected) &&
+           write_format_sector(locked, 6, expected) &&
+           fat32_ram_read(trial->directory_image, 0, expected) &&
+           write_format_sector(locked, 0, expected) &&
+           format_medium_matches(locked) && scan_directory_image(locked, NULL) &&
+           format_medium_matches(locked);
+}
+#else
+static int verify_format_sector(void *context, uint32_t relative, const uint8_t *sector)
+{
+    struct LockedFormat *locked = context;
+    struct StockFormatTrial *trial = locked->trial;
+    /* The first two writes invalidate old boot sectors. Compare final contents. */
+    if (locked->verify_events++ < 2)
+        return 1;
+    if (relative >= FORMAT_METADATA_SECTORS ||
+        !format_read(trial, TRIAL_FORMAT_START + relative) ||
+        memcmp(write_check_sector, sector, SECTOR_BYTES)) {
+        trial->error = "Formatted metadata readback did not match.";
+        return 0;
+    }
+    ++trial->verified;
+    return 1;
+}
+#endif
+
+static int dispatch_format_trial(uint32_t lba, unsigned count, void *buffer)
+{
+    struct LockedFormat *locked = active_format;
+    if (!locked || locked->started || lba != TRIAL_FORMAT_START || count != 1 ||
+        buffer != format_write_sector)
+        return -1;
+    locked->started = 1;
+    struct StockFormatTrial *trial = locked->trial;
+    if (!format_medium_matches(locked))
+        return -1;
+    if (!format_read(trial, TRIAL_FORMAT_START)) {
+        trial->error = "Could not reread the confirmed boot sector under the I/O lock.";
+        return -1;
+    }
+    if (memcmp(write_check_sector, trial->confirmed_boot, SECTOR_BYTES)) {
+        trial->error = "The boot sector changed after confirmation. No writes made.";
+        return -1;
+    }
+#ifdef MSDIRS_CARD_TRIAL
+    if (!publish_directory_image(locked))
+        return -1;
+#else
+    if (fat32_initialize(TRIAL_FORMAT_START, TRIAL_FORMAT_SECTORS, 0x50585031,
+                         write_format_sector, locked) != FAT32_INIT_OK ||
+        !format_medium_matches(locked) ||
+        fat32_initialize(TRIAL_FORMAT_START, TRIAL_FORMAT_SECTORS, 0x50585031,
+                         verify_format_sector, locked) != FAT32_INIT_OK ||
+        !format_medium_matches(locked))
+        return -1;
+#endif
+    return 0;
+}
+
+int stock_format_partition_trial(struct StockFormatTrial *trial)
+{
+    struct StockWriteState state;
+    struct Fat32Layout layout;
+    unsigned clusters = 1;
+#ifdef MSDIRS_CARD_TRIAL
+    clusters += PSP_INITIAL_DIRECTORY_COUNT;
+    struct Fat32Ram *image = trial->directory_image;
+    if (!image || image->start != TRIAL_FORMAT_START || image->length != TRIAL_FORMAT_SECTORS ||
+        image->used > FAT32_RAM_CAPACITY || !fat32_ram_finish_directories(image)) {
+        trial->error = "The completed Sony directory image did not verify.";
+        return 0;
+    }
+    for (unsigned i = 0; i < image->used; ++i) {
+        if (image->entries[i].lba >= FORMAT_METADATA_SECTORS) {
+            trial->error = "The staged image contains data outside the metadata extent.";
+            return 0;
+        }
+    }
+#endif
+    if (!fat32_plan(TRIAL_FORMAT_SECTORS, &layout) ||
+        layout.root_sector + clusters * layout.sectors_per_cluster != FORMAT_METADATA_SECTORS ||
+        !trial->confirmed_boot || active_format || trial->writes || trial->verified) {
+        trial->error = "The formatter's metadata layout is unsupported.";
+        return 0;
+    }
+    trial->error = stock_write_trial_check(trial->reader, &state);
+    if (trial->error)
+        return 0;
+    struct LockedFormat locked = {.trial = trial, .open_handles = state.open_handles};
+    struct StockFile request = {0};
+    request.file.arg = (void *)(trial->reader->data + IO_CONTEXT);
+    request.position = (uint64_t)TRIAL_FORMAT_START * SECTOR_BYTES;
+    active_format = &locked;
+    trial->worker_result = ((StockRead)(trial->reader->text + STOCK_READ))(
+        &request, format_write_sector, SECTOR_BYTES, 1, dispatch_format_trial);
+    active_format = NULL;
+    if (!trial->error && trial->worker_result != SECTOR_BYTES)
+        trial->error = "The stock format worker did not complete.";
+    return !trial->error && trial->worker_result == SECTOR_BYTES &&
+#ifdef MSDIRS_CARD_TRIAL
+           trial->writes >= 4 &&
+#else
+           trial->writes == FORMAT_METADATA_SECTORS + 2 &&
+#endif
+           trial->verified == FORMAT_METADATA_SECTORS;
+}
+#endif
 #endif

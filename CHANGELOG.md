@@ -8,7 +8,11 @@
 - Add an optional direct-reader comparison for sample sectors, including a high-sector read and a boundary and recovery check.
 - The owner reported exact capacity matches with the direct reader for the tested 256 GB and 512 GB card and adapter combinations. Other geometries, 1 TB media and extended formatting remain unverified.
 - Add standalone trials for one high-sector write and creation of three primary MBR entries on the backed-up 256 GB test card. PSP readback and independent direct-reader checks matched the expected data and unchanged witness sectors.
-- Add a standalone read-only partition switch trial. The owner verified matching PC reference sectors in all three primary partitions, partition bounds and Circle return to the PSP menu on the same card. FAT32 mounting, Sony formatting and GPT conversion remain pending.
+- Add a standalone read-only partition switch trial. The owner verified matching PC reference sectors in all three primary partitions, partition bounds and Circle return to the PSP menu on the same card.
+- Extend MSSWITCH with FAT32 file readback and private Sony FAT block switching. The owner verified the on-card file and the 1 → 3 → 1 sequence on the prepared 256 GB card.
+- Exercise Sony's format dispatch in RAM and add MSFORMAT for bounded physical FAT32 initialization of partition 3 on the backed-up trial card. The owner verified 9,694 metadata sectors on the PSP. The Windows direct reader independently checked the resulting layout.
+- Add MSDIRS and MSDIRCARD to stage initial contents with Sony's FAT directory routine and verify them. MSDIRCARD reproduces the 17 folders, including `ISO`, `ISO/VIDEO` and `SEPLUGINS`, plus the empty, hidden, read-only `MEMSTICK.IND` and `MSTK_PRO.IND` files. The owner reported 10,782 verified sectors on partition 3. The direct reader independently matched the contents, MBR, partition boundaries and five control sectors.
+- Whole-card formatting, final mounting of partition 1, GPT conversion and PSP Settings integration remain pending.
 
 ## v0.4.5 — documentation and release packaging (unreleased)
 
