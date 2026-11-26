@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Memory Stick diagnostic
+
+- Add a standalone, read-only PSP utility that reports the capacity exposed by the Memory Stick driver and estimates the card's capacity without a PC reference on the supported 6.61 configuration.
+- Add an optional direct-reader comparison for sample sectors, including a high-sector read and a boundary and recovery check.
+- The owner reported exact capacity matches with the direct reader for the tested 256 GB and 512 GB card and adapter combinations. Other geometries, 1 TB media and extended formatting remain unverified.
+
 ## v0.4.5 — documentation and release packaging (unreleased)
 
 - Document the supported PSP model and firmware, the main PRO-X features, and how to install, reactivate and update PRO-X.
