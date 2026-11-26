@@ -37,6 +37,8 @@ WPA2 was tested on a PSP-2010 with a 2.4 GHz WPA2-only access point allowing 802
 
 Build with the pinned Docker toolchain; generated firmware and packages stay in ignored `builds/`, with intermediate trees/logs in `artifacts/`.
 
+The standalone [MSDIAG utility](firmware/tools/msdiag/README.md) estimates Memory Stick capacity in read-only mode on the supported PSP 6.61 configuration. The owner reported exact matches with direct-reader measurements on the tested 256 GB and 512 GB card and adapter combinations. To build the utility locally, run `python scripts/build-msdiag.py` with the pinned toolchain image.
+
 The resident packager stages six release uploads. The manual ZIP contains the detailed build manifest. A companion source ZIP, compact build JSON, one checksum file and the two Internet-update files complete the inventory.
 
 ```text
