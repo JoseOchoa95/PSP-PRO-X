@@ -89,6 +89,10 @@ After opening or updating every pull request, verify the README at the PR head a
 
 If the feature does not affect the general project description or status, leave the root README unchanged and state that it was reviewed and did not need changes.
 
+### Credits and source attribution
+
+Thank the authors or maintainers of external repositories consulted during research, implementation, or validation in the relevant project credits. Link to each repository and describe its contribution, including technical references and test tools. Record detailed source links in the relevant `context/` entry. For reused code or assets, record their provenance and preserve their copyright and license notices.
+
 ### Release changelog
 
 For every completed feature:

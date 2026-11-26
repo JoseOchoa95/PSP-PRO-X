@@ -39,7 +39,7 @@ Build with the pinned Docker toolchain; generated firmware and packages stay in 
 
 The standalone [MSDIAG utility](firmware/tools/msdiag/README.md) estimates Memory Stick capacity in read-only mode on the supported PSP 6.61 configuration. The owner reported exact matches with direct-reader measurements on the tested 256 GB and 512 GB card and adapter combinations. To build the utility locally, run `python scripts/build-msdiag.py` with the pinned toolchain image.
 
-The experimental MBR and partition-switch trials were tested on one backed-up 256 GB card and Memory Stick adapter. The owner verified raw reads from all three primary partitions. FAT32 mounting and formatting remain pending. [MBR trial](firmware/tools/mswrite/PARTITION-TRIAL.md) · [Read-only switch trial](firmware/tools/msswitch/README.md)
+The standalone Memory Stick trials were tested on one backed-up 256 GB card and adapter. The owner verified reads from three primary partitions, private Sony FAT block switching and FAT32 formatting of partition 3. A direct card reader independently verified the new volume's initial contents. Formatting every partition and integration with PSP Settings remain pending. [MBR trial](firmware/tools/mswrite/PARTITION-TRIAL.md) · [Partition switch trial](firmware/tools/msswitch/README.md) · [FAT32 directory trial](firmware/tools/msswitch/DIRECTORY-CARD-TRIAL.md)
 
 The resident packager stages six release uploads. The manual ZIP contains the detailed build manifest. A companion source ZIP, compact build JSON, one checksum file and the two Internet-update files complete the inventory.
 
@@ -60,6 +60,11 @@ PRO-X is an independent fork and is not an official release from Team PRO, the A
 - **Team PRO**, including Coldbird and Virtuous Flame, for the original PRO custom firmware. [PRO source](https://github.com/MrColdbird/procfw)
 - **Davee** for Infinity. [Infinity](https://github.com/DaveeFTW/Infinity)
 - **ARK contributors**, **Moment** and **wpa2psp contributors** for the WPA2 payload adapted in phase 2. [ARK-5](https://github.com/PSP-Arkfive/ARK-5) · [wpa2psp](https://github.com/Kethen/wpa2psp)
+- **PSPDEV contributors** for the SDK and API documentation, the library NID catalog used to verify Sony's mutex imports, and the PRXTool kernel error reference. [PSPSDK](https://github.com/pspdev/pspsdk) · [PSPLibDoc](https://github.com/pspdev/psplibdoc) · [PRXTool](https://github.com/pspdev/prxtool)
+- **PSP Homebrew Community Wiki contributors** for the PSP error-code reference used during the MSDIRS investigation. [PSP Homebrew Community Wiki](https://github.com/psp-homebrew-community/wiki)
+- **PPSSPP contributors** for the PSP ELF loader used as a reference for packed relocations. [PPSSPP ELF reader](https://github.com/hrydgard/ppsspp/blob/master/Core/ELF/ElfReader.cpp)
+- **uOFW documentation contributors** for archiving the Memory Stick PRO specification. [upspd](https://github.com/uofw/upspd)
+- **Unicorn Engine and dosfstools contributors** for host replay and independent FAT32 validation. [Unicorn Engine](https://github.com/unicorn-engine/unicorn) · [dosfstools](https://github.com/dosfstools/dosfstools)
 
 Original copyright notices, license notices, and contributor acknowledgments must be retained.
 
