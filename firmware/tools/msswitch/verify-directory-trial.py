@@ -10,9 +10,7 @@ LENGTH = COMMON["LENGTH"]
 FAT_SECTORS = COMMON["FAT_SECTORS"]
 SECTOR = COMMON["SECTOR"]
 require = COMMON["require"]
-FIRST_CLUSTER = 32 + 2 * FAT_SECTORS
 CLUSTER_SECTORS = 64
-TOTAL_CLUSTERS = (LENGTH - FIRST_CLUSTER) // CLUSTER_SECTORS
 EXPECTED = {
     "": {"PSP", "MP_ROOT", "MUSIC", "PICTURE", "VIDEO", "ISO", "SEPLUGINS"},
     "/PSP": {"GAME", "SAVEDATA", "COMMON", "SYSTEM", "THEME", "RSSCH"},
@@ -55,15 +53,21 @@ def entry_cluster(entry):
 def verify(read, reference):
     COMMON["verify_identity"](read, reference)
     COMMON["verify_boot"](read, allow_mount_status=True)
+    return verify_contents(read, START, LENGTH, FAT_SECTORS, CLUSTER_SECTORS)
+
+
+def verify_contents(read, partition_start, length, fat_sectors, cluster_sectors, expected_label=None):
+    data_start = 32 + 2 * fat_sectors
+    total_clusters = (length - data_start) // cluster_sectors
     visited = set()
     windows_cluster = 0
 
     def check_cluster(cluster, path):
-        require(2 <= cluster <= TOTAL_CLUSTERS + 1 and cluster not in visited,
+        require(2 <= cluster <= total_clusters + 1 and cluster not in visited,
                 f"Invalid or reused cluster at {path}")
         fat_sector, entry_index = divmod(cluster, SECTOR // 4)
-        fat = read(START + 32 + fat_sector)
-        other = read(START + 32 + FAT_SECTORS + fat_sector)
+        fat = read(partition_start + 32 + fat_sector)
+        other = read(partition_start + 32 + fat_sectors + fat_sector)
         entry = struct.unpack_from("<I", fat, entry_index * 4)[0]
         mirror = struct.unpack_from("<I", other, entry_index * 4)[0]
         require(entry == mirror and entry & 0x0fffffff >= 0x0ffffff8,
@@ -73,8 +77,9 @@ def verify(read, reference):
         nonlocal windows_cluster
         check_cluster(cluster, path or "/")
         visited.add(cluster)
-        start = START + FIRST_CLUSTER + (cluster - 2) * CLUSTER_SECTORS
+        start = partition_start + data_start + (cluster - 2) * cluster_sectors
         pending_names, seen, dots, indicators = [], set(), set(), set()
+        volume_label = None
 
         def check_complete():
             require(not pending_names and seen == EXPECTED.get(path, set()),
@@ -82,8 +87,9 @@ def verify(read, reference):
             require(dots == ({".", ".."} if path else set()), f"Missing dot entries at {path or '/'}")
             if not path:
                 require(indicators == INDICATORS, "Missing initial Memory Stick indicator files.")
+                require(volume_label == expected_label, "Unexpected or missing FAT32 volume label.")
 
-        for number in range(CLUSTER_SECTORS):
+        for number in range(cluster_sectors):
             data = read(start + number)
             for offset in range(0, SECTOR, 32):
                 entry = data[offset:offset + 32]
@@ -92,6 +98,12 @@ def verify(read, reference):
                     return
                 if entry[11] == 0x0f:
                     pending_names.append(entry)
+                    continue
+                if not path and entry[11] == 0x08:
+                    require(not pending_names and volume_label is None and entry[:11] == expected_label and
+                            entry_cluster(entry) == 0 and entry[28:32] == bytes(4),
+                            "Invalid FAT32 root volume label.")
+                    volume_label = entry[:11]
                     continue
                 if not path and pending_names and not windows_cluster and windows_entry(pending_names, entry):
                     windows_cluster = entry_cluster(entry)
@@ -128,13 +140,13 @@ def verify(read, reference):
     require(len(visited) == allocated, "The initial tree does not contain 17 directories.")
     if windows_cluster:
         check_cluster(windows_cluster, "/System Volume Information")
-    info, backup = read(START + 1), read(START + 7)
+    info, backup = read(partition_start + 1), read(partition_start + 7)
     for sector in (info, backup):
         require(struct.unpack_from("<I", sector)[0] == 0x41615252 and
                 struct.unpack_from("<I", sector, 484)[0] == 0x61417272 and
                 struct.unpack_from("<I", sector, 508)[0] == 0xaa550000,
                 "Unexpected FAT32 free-cluster summary signatures.")
-    require(struct.unpack_from("<II", backup, 488) == (TOTAL_CLUSTERS - allocated, allocated + 2),
+    require(struct.unpack_from("<II", backup, 488) == (total_clusters - allocated, allocated + 2),
             "Unexpected backup free-cluster summary.")
     if not windows_cluster:
         require(info == backup, "The primary free-cluster summary changed.")

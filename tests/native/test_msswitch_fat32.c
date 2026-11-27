@@ -8,7 +8,7 @@
 struct Disk {
     struct Fat32Trial fixture;
     unsigned calls;
-    enum { VALID, EXFAT, TOO_LARGE, SHORT_FAT, INVALID_CLUSTER, NO_FILE, READ_FAILURE } mode;
+    enum { VALID, EXFAT, TOO_LARGE, SHORT_FAT, INVALID_CLUSTER, NO_FILE, READ_FAILURE, RENAMED } mode;
 };
 
 static int backing_read(void *context, uint32_t lba, unsigned char *sector)
@@ -46,6 +46,10 @@ static int read_disk(void *context, uint32_t lba, unsigned char *sector)
         }
         if (disk->mode == NO_FILE)
             sector[0] = 0;
+        if (disk->mode == RENAMED) {
+            memcpy(sector + 32, "GAMES      ", 11);
+            sector[43] = 0x08;
+        }
     }
     return 1;
 }
@@ -85,5 +89,13 @@ int main(void)
     assert(!fat32_matches_extent(boot, 2048, FAT32_TRIAL_SECTORS + 1));
     boot[510] = 0;
     assert(!fat32_matches_extent(boot, 2048, FAT32_TRIAL_SECTORS));
-    puts("PASS: FAT32 file lookup, physical backing address and corrupt metadata refusal");
+    struct Fat32VolumeIdentity identity;
+    disk.mode = VALID;
+    assert(fat32_read_volume_identity(read_disk, &disk, &identity));
+    assert(identity.sectors == FAT32_TRIAL_SECTORS && !identity.label[0]);
+    disk.mode = RENAMED;
+    assert(fat32_read_volume_identity(read_disk, &disk, &identity) && !strcmp(identity.label, "GAMES"));
+    disk.mode = EXFAT;
+    assert(!fat32_read_volume_identity(read_disk, &disk, &identity));
+    puts("PASS: FAT32 file lookup, volume identity, physical backing address and corrupt metadata refusal");
 }

@@ -123,6 +123,19 @@ int main(int argc, char **argv)
     sector[5 * ENTRY_BYTES + 13] ^= 1;
     assert(fat32_ram_write(&volume, layout.root_sector, sector));
     verify_finish();
+    assert(fat32_ram_name_partition(&volume, 12));
+    assert(!fat32_ram_name_partition(&volume, 13));
+    assert(fat32_ram_read(&volume, 0, sector) && !memcmp(sector + 71, "PART 12    ", 11));
+    assert(fat32_ram_read(&volume, 6, sector) && !memcmp(sector + 71, "PART 12    ", 11));
+    assert(fat32_ram_read(&volume, layout.root_sector, sector));
+    assert(!memcmp(sector + 8 * ENTRY_BYTES, "MEMSTICKIND\003", 12));
+    assert(!memcmp(sector + 9 * ENTRY_BYTES, "MSTK_PROIND\003", 12));
+    assert(!memcmp(sector + 10 * ENTRY_BYTES, "PART 12    \010", 12));
+    verify_finish();
+    sector[10 * ENTRY_BYTES] = 'X';
+    assert(fat32_ram_write(&volume, layout.root_sector, sector) && !fat32_ram_finish_directories(&volume));
+    sector[10 * ENTRY_BYTES] = 'P';
+    assert(fat32_ram_write(&volume, layout.root_sector, sector));
     assert(fat32_ram_read(&volume, 32 + layout.fat_sectors, sector));
     sector[12] = 0;
     assert(fat32_ram_write(&volume, 32 + layout.fat_sectors, sector));
@@ -135,7 +148,7 @@ int main(int argc, char **argv)
     assert(fat32_ram_write(&volume, layout.root_sector, sector));
     writes = volume.writes;
     assert(!fat32_ram_finish_directories(&volume) && volume.writes == writes);
-    puts("PASS: RAM directories, FSInfo, bad tree and mismatched FAT refusal");
+    puts("PASS: RAM directories, volume labels, FSInfo, bad tree and mismatched FAT refusal");
     if (argc == 2)
         recorded_image(argv[1]);
     return 0;

@@ -17,6 +17,24 @@ static unsigned int read_be16(const uint8_t *data)
 }
 
 /* Memory Stick PRO System Information as returned by msstor on 6.61. */
+unsigned decode_attribute_directory(const uint8_t *page, struct MsAttribute *entries)
+{
+    const unsigned capacity = 32768;
+    unsigned count = page[4];
+    if (page[0] != 0xa5 || page[1] != 0xc3 || !count || count > MS_ATTRIBUTE_MAX)
+        return 0;
+    unsigned header_bytes = 16 + 12 * count;
+    for (unsigned i = 0; i < count; ++i) {
+        const uint8_t *p = page + 16 + 12 * i;
+        uint32_t offset = (uint32_t)read_be16(p) << 16 | read_be16(p + 2);
+        uint32_t size = (uint32_t)read_be16(p + 4) << 16 | read_be16(p + 6);
+        if (offset < header_bytes || offset >= capacity || size > capacity - offset)
+            return 0;
+        entries[i] = (struct MsAttribute){offset, size, p[8]};
+    }
+    return count;
+}
+
 int decode_media_geometry(struct MediaGeometry *geometry, const uint8_t *data)
 {
     struct MediaGeometry parsed;

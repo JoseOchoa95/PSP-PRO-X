@@ -19,6 +19,11 @@ const char *stock_reader_init(struct StockReader *reader, uint32_t reported_bloc
 const char *stock_read_sector(const struct StockReader *reader, uint32_t lba,
                               void *buffer, int *result, struct StockReadTrace *trace);
 
+#ifdef MSDIAG_ATTRIBUTE_PROBE
+const char *stock_read_attribute_page(const struct StockReader *reader, uint32_t page, void *buffer,
+                                     int *result);
+#endif
+
 #ifdef MSDIAG_WRITE_TRIAL
 struct StockWriteState {
     int observed;
@@ -50,6 +55,18 @@ struct StockFormatTrial {
 };
 
 int stock_format_partition_trial(struct StockFormatTrial *trial);
+#endif
+
+#ifdef MSMULTI_CARD_TRIAL
+struct StockFormatAccess;
+typedef void (*StockFormatOperation)(struct StockFormatAccess *access, void *context);
+int stock_format_transaction(const struct StockReader *reader, StockFormatOperation operation,
+                             void *context, uint32_t sector_limit);
+int stock_format_locked_read(struct StockFormatAccess *access, uint32_t lba, void *buffer);
+int stock_format_locked_write(struct StockFormatAccess *access, uint32_t lba, const void *buffer);
+int stock_format_locked_write_status(struct StockFormatAccess *access, uint32_t lba,
+                                     const void *buffer, int *command);
+int stock_format_refresh_media(const struct StockReader *reader);
 #endif
 
 #endif

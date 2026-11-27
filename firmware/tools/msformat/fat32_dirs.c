@@ -1,5 +1,6 @@
 /* GPL-3.0-or-later */
 #include <string.h>
+#include <stdio.h>
 
 #include "fat32_dirs.h"
 
@@ -65,6 +66,33 @@ int fat32_ram_add_indicators(struct Fat32Ram *volume)
     return 0;
 }
 
+int fat32_ram_name_partition(struct Fat32Ram *volume, unsigned number)
+{
+    struct Fat32Layout layout;
+    uint8_t root[FAT32_SECTOR_BYTES], boot[FAT32_SECTOR_BYTES], backup[FAT32_SECTOR_BYTES];
+    char label[12];
+    int length = snprintf(label, sizeof(label), "PART %u", number);
+    if (!number || length < 1 || length >= (int)sizeof(label) ||
+        !fat32_plan(volume->length, &layout) || !fat32_ram_read(volume, layout.root_sector, root) ||
+        !fat32_ram_read(volume, 0, boot) || !fat32_ram_read(volume, 6, backup) ||
+        memcmp(boot, backup, sizeof(boot)) || memcmp(boot + 71, "NO NAME    ", 11))
+        return 0;
+    memset(label + length, ' ', 11 - length);
+    for (unsigned offset = 0; offset + 2 * DIR_ENTRY_BYTES <= sizeof(root); offset += DIR_ENTRY_BYTES) {
+        if (root[offset + 11] == 0x08)
+            return 0;
+        if (!root[offset]) {
+            memset(root + offset, 0, 2 * DIR_ENTRY_BYTES);
+            memcpy(root + offset, label, 11);
+            root[offset + 11] = 0x08;
+            memcpy(boot + 71, label, 11);
+            return fat32_ram_write(volume, layout.root_sector, root) &&
+                   fat32_ram_write(volume, 6, boot) && fat32_ram_write(volume, 0, boot);
+        }
+    }
+    return 0;
+}
+
 const char *fat32_trial_directory(unsigned index)
 {
     return index < PSP_INITIAL_DIRECTORY_COUNT ? directories[index].path : NULL;
@@ -112,7 +140,7 @@ static int record_child(uint32_t *clusters, unsigned parent, uint32_t cluster, c
 }
 
 static int scan_directory(struct Fat32Ram *volume, const struct Fat32Layout *layout,
-                          uint32_t *clusters, unsigned index)
+                          uint32_t *clusters, unsigned index, const uint8_t *label)
 {
     uint8_t data[FAT32_SECTOR_BYTES];
     uint32_t cluster = clusters[index];
@@ -135,11 +163,19 @@ static int scan_directory(struct Fat32Ram *volume, const struct Fat32Layout *lay
         offset = 64;
     }
     unsigned found_indicators = 0;
+    int found_label = 0, expect_label = memcmp(label, "NO NAME    ", 11) != 0;
     /* The initial tree fits in the first sector of each directory cluster. */
     for (; offset < sizeof(data); offset += DIR_ENTRY_BYTES) {
         const uint8_t *entry = data + offset;
         if (!entry[0])
-            return index || found_indicators == (1u << INDICATOR_COUNT) - 1;
+            return index || (found_indicators == (1u << INDICATOR_COUNT) - 1 && found_label == expect_label);
+        if (!index && entry[11] == 0x08) {
+            if (!expect_label || found_label || memcmp(entry, label, 11) || le32(entry + 28) ||
+                le16(entry + 20) || le16(entry + 26))
+                return 0;
+            found_label = 1;
+            continue;
+        }
         int long_name = entry[11] == 0x0f;
         if (long_name) {
             if (index || offset + DIR_ENTRY_BYTES >= sizeof(data) ||
@@ -205,7 +241,7 @@ int fat32_ram_finish_directories(struct Fat32Ram *volume)
         le32(boot + 36) != layout.fat_sectors || le32(boot + 44) != 2)
         return 0;
     for (unsigned i = 0; i <= PSP_INITIAL_DIRECTORY_COUNT; ++i) {
-        if (!scan_directory(volume, &layout, clusters, i))
+        if (!scan_directory(volume, &layout, clusters, i, boot + 71))
             return 0;
     }
     return update_free_summary(volume, &layout);

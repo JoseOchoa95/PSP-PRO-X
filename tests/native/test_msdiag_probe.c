@@ -121,8 +121,30 @@ static void test_sample_results(void)
     assert(!sector_read_ok(&read));
 }
 
+static void check_attribute_directory(void)
+{
+    struct MsAttribute entries[MS_ATTRIBUTE_MAX];
+    uint8_t page[SECTOR_BYTES] = {
+        [0] = 0xa5, [1] = 0xc3, [4] = 2,
+        [18] = 1, [19] = 0xa0, [23] = 96, [24] = 0x10,
+        [30] = 2, [35] = 16, [36] = 0x70,
+    };
+    assert(decode_attribute_directory(page, entries) == 2);
+    assert(entries[0].offset == 416 && entries[0].size == 96 && entries[0].id == 0x10);
+    assert(entries[1].offset == 512 && entries[1].size == 16 && entries[1].id == 0x70);
+    page[30] = 0x80;
+    assert(!decode_attribute_directory(page, entries));
+    page[30] = 2;
+    page[32] = 0xff;
+    assert(!decode_attribute_directory(page, entries));
+    page[32] = 0;
+    page[4] = MS_ATTRIBUTE_MAX + 1;
+    assert(!decode_attribute_directory(page, entries));
+}
+
 int main(void)
 {
+    check_attribute_directory();
     test_reference();
     test_media_geometry();
     test_primary_mbr_end();

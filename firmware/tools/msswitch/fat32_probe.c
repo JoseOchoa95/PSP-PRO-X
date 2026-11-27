@@ -85,6 +85,45 @@ static int read_next(ReadFatSector read, void *context, const struct FatVolume *
     return 1;
 }
 
+int fat32_read_volume_identity(ReadFatSector read, void *context, struct Fat32VolumeIdentity *identity)
+{
+    unsigned char buffer[SECTOR_BYTES] __attribute__((aligned(64)));
+    struct FatVolume volume;
+    if (!read(context, 0, buffer) || !is_fat32_boot(buffer) ||
+        !parse_volume(&volume, buffer, read32(buffer + 32)))
+        return 0;
+    *identity = (struct Fat32VolumeIdentity){.start = read32(buffer + 28),
+        .sectors = read32(buffer + 32), .serial = read32(buffer + 67)};
+    uint32_t cluster = volume.root;
+    unsigned budget = ROOT_SECTOR_BUDGET;
+    while (budget && data_cluster(&volume, cluster)) {
+        for (uint32_t i = 0; i < volume.sectors_per_cluster && budget; ++i, --budget) {
+            if (!read(context, cluster_start(&volume, cluster) + i, buffer))
+                return 0;
+            for (unsigned offset = 0; offset < SECTOR_BYTES; offset += 32) {
+                const unsigned char *entry = buffer + offset;
+                if (!entry[0])
+                    return 1;
+                if (entry[0] == 0xe5 || entry[11] != 0x08)
+                    continue;
+                unsigned length = 11;
+                while (length && entry[length - 1] == ' ')
+                    --length;
+                for (unsigned j = 0; j < length; ++j)
+                    identity->label[j] = entry[j] >= 0x20 && entry[j] <= 0x7e ? (char)entry[j] : '?';
+                return 1;
+            }
+        }
+        uint32_t next;
+        if (!budget || !read_next(read, context, &volume, cluster, buffer, &next) || next == cluster)
+            return 0;
+        if (next >= fat_end)
+            return 1;
+        cluster = next;
+    }
+    return 0;
+}
+
 enum Fat32ProbeResult fat32_read_probe(ReadFatSector read, void *context, uint32_t sectors,
                                      unsigned char file[SECTOR_BYTES])
 {

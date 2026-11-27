@@ -22,6 +22,21 @@ ifeq ($(PHYSICAL_FORMAT_TRIAL),1)
 CFLAGS += -DMSFORMAT_TRIAL -DMSDIAG_WRITE_TRIAL
 PSP_EBOOT_TITLE = PRO-X FAT32 Partition Format Trial
 endif
+ifeq ($(WHOLE_CARD_TRIAL),1)
+OBJS += capacity.o layout.o job.o card_mount.o
+CFLAGS += -DMSMULTI_CARD_TRIAL
+PSP_EBOOT_TITLE = PRO-X Memory Stick Whole Card Trial
+endif
+ifeq ($(AUTO_FORMAT_TRIAL),1)
+OBJS := $(filter-out dirs_card.o,$(OBJS)) auto_card.o psp_media.o auto_probe.o card_snapshot.o write_probe.o
+CFLAGS += -DMSAUTO_FORMAT_TRIAL
+PSP_EBOOT_TITLE = PRO-X Memory Stick Auto Format
+endif
+ifeq ($(WRITE_PATH_TRIAL),1)
+OBJS := $(filter-out card_mount.o job.o,$(OBJS))
+CFLAGS += -DMSWRITE_PATH_TRIAL
+PSP_EBOOT_TITLE = PRO-X Memory Stick Write Path Trial
+endif
 PSPSDK = $(shell psp-config --pspsdk-path)
 include $(PSPSDK)/lib/build.mak
 

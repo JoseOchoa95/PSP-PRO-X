@@ -164,6 +164,8 @@ If a required test fails, fix the issue within scope and rerun the relevant chec
 - Preserve inherited `.a`, `.prx`, `.bin`, headers and resources that are required build inputs and documented by the upstream inventory. Do not remove or globally ignore all binary files, ZIPs, JSON, text files or manifests merely by extension; classify their purpose first.
 - Before removing generated files from version control, inspect `git ls-files` and `git check-ignore`. If an output is already tracked, an ignore rule alone does not untrack it. Within an authorized cleanup, remove only the confirmed generated paths from the index and retain local packages/evidence needed by ongoing work.
 - Delete only disposable caches or confirmed redundant output. Preserve the latest delivered packages, their hashes, failed-build evidence useful for investigation, and required build metadata. Verify matching hashes before removing a duplicate package.
+- When a build supersedes an earlier build, review the old build during handoff and remove it once it is no longer needed for testing or rollback. Keep the current test and release packages, rollback builds still in use, and evidence for unresolved failures.
+- After opening or updating a PR, and again after it merges, review `builds/`, `artifacts/` and generated outputs in the worktrees used for that PR. Remove disposable build and replay trees after saving their required logs, checksums and evidence. Measure the space recovered and record the cleanup in the implementation handoff.
 - Keep cleanup targets inside the resolved project root and avoid symlink/reparse-point traversal. Preserve previous ignore rules and use narrowly scoped rules for new output locations. Use `builds/` as the canonical final output directory; `/build/` is ignored only as a legacy guard.
 - Do not rewrite Git history or delete release assets as part of routine cleanup. Already committed artifacts remain in historical commits unless a separate history-rewrite task is explicitly authorized.
 - Verify that intended output paths are ignored, required build inputs remain available to Git, package checks still pass and `git diff --check` is clean. Documentation/ignore/cache-only cleanup does not require a firmware rebuild or a new product version.
@@ -226,6 +228,8 @@ Keep generated binaries and packages out of source commits. Preserve existing ig
 ### Build version policy
 
 Use [Semantic Versioning 2.0.0](https://semver.org/) for PRO-X product versions. During the `0.y.z` development series, follow these project rules for changes that will be delivered from a branch.
+
+Assign a new product version to each new pull request, including standalone diagnostic changes. Apply the version confirmation and build validation requirements below before submitting the pull request.
 
 - **MINOR** for a new feature ticket with compatible functionality. Increment the middle number and reset PATCH to zero, such as `v0.1.0` to `v0.2.0`.
 - **PATCH** for a delivered follow-up to the same ticket or a small compatible fix, documentation, packaging or maintenance change. Increment the last number, such as `v0.1.0` to `v0.1.1`.

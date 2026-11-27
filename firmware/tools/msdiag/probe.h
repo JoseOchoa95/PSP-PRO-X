@@ -7,12 +7,20 @@
 
 enum {
     SECTOR_BYTES = 512,
+    MS_ATTRIBUTE_MAX = 12,
     DIGEST_BYTES = 20,
     MEDIA_ATTRIBUTE_BYTES = 96,
     SAMPLE_WINDOW = 2048,
     REFERENCE_HEADER_BYTES = 24,
     REFERENCE_RECORD_BYTES = 8 + DIGEST_BYTES,
 };
+
+struct MsAttribute {
+    uint32_t offset, size;
+    uint8_t id;
+};
+
+unsigned decode_attribute_directory(const uint8_t *page, struct MsAttribute *entries);
 
 #define DECIMAL_CUTOFF (UINT64_C(128000000000) / SECTOR_BYTES)
 #define BINARY_CUTOFF (UINT64_C(128) * 1024 * 1024 * 1024 / SECTOR_BYTES)

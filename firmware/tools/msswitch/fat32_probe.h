@@ -8,6 +8,12 @@ typedef int (*ReadFatSector)(void *context, uint32_t lba, unsigned char sector[S
 
 int fat32_matches_extent(const unsigned char boot[SECTOR_BYTES], uint32_t start, uint32_t sectors);
 
+struct Fat32VolumeIdentity {
+    uint32_t start, sectors, serial;
+    char label[12];
+};
+int fat32_read_volume_identity(ReadFatSector read, void *context, struct Fat32VolumeIdentity *identity);
+
 enum Fat32ProbeResult {
     FAT32_PROBE_MATCHED_FILE,
     FAT32_PROBE_NO_VOLUME,
