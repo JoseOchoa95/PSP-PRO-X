@@ -6,13 +6,21 @@
 
 - Add a standalone, read-only PSP utility that reports the capacity exposed by the Memory Stick driver and estimates the card's capacity without a PC reference on the supported 6.61 configuration.
 - Add an optional direct-reader comparison for sample sectors, including a high-sector read and a boundary and recovery check.
-- The owner reported exact capacity matches with the direct reader for the tested 256 GB and 512 GB card and adapter combinations. Other geometries, 1 TB media and extended formatting remain unverified.
+- The owner reported exact capacity matches with the direct reader for the tested 256 GB and 512 GB card and adapter combinations. Physical validation on 1 TB media remains pending.
 - Add standalone trials for one high-sector write and creation of three primary MBR entries on the backed-up 256 GB test card. PSP readback and independent direct-reader checks matched the expected data and unchanged witness sectors.
 - Add a standalone read-only partition switch trial. The owner verified matching PC reference sectors in all three primary partitions, partition bounds and Circle return to the PSP menu on the same card.
 - Extend MSSWITCH with FAT32 file readback and private Sony FAT block switching. The owner verified the on-card file and the 1 → 3 → 1 sequence on the prepared 256 GB card.
 - Exercise Sony's format dispatch in RAM and add MSFORMAT for bounded physical FAT32 initialization of partition 3 on the backed-up trial card. The owner verified 9,694 metadata sectors on the PSP. The Windows direct reader independently checked the resulting layout.
 - Add MSDIRS and MSDIRCARD to stage initial contents with Sony's FAT directory routine and verify them. MSDIRCARD reproduces the 17 folders, including `ISO`, `ISO/VIDEO` and `SEPLUGINS`, plus the empty, hidden, read-only `MEMSTICK.IND` and `MSTK_PRO.IND` files. The owner reported 10,782 verified sectors on partition 3. The direct reader independently matched the contents, MBR, partition boundaries and five control sectors.
-- Whole-card formatting, final mounting of partition 1, GPT conversion and PSP Settings integration remain pending.
+
+## v0.5.1 — automatic FAT32 formatting (unreleased)
+
+- Add MSAUTO and MSAUTOFMT to preview and format FAT32 partitions on MBR cards directly on the PSP without a per-card reference file. Layouts use the adapter's reported size rounded down to whole GiB and the verified card capacity up to a 1 TB planning limit.
+- Verify an extended-sector write before replacing the partition table. Report write failures and initialize the standard PSP folders and indicator files on each verified volume.
+- Assign default FAT32 labels such as `PART 1` and identify the mounted volume by its serial and extent. Recover the first-volume mount when Sony FAT still holds the whole-card handle.
+- Add MSATTR and MSWRPATH for adapter attributes and single-sector write diagnostics. Add MSMULTI for formatting and rechecking the prepared 256 GB test card.
+- Verify automatic formatting on the tested 256 GB and 512 GB combinations. A direct USB reader confirmed all six labels on the second 512 GB card, and the owner verified XMB access without reinsertion after recovering the `ms0:` mount.
+- PSP-managed GPT conversion, physical 1 TB validation, and Settings menu integration remain pending.
 
 ## v0.4.5 — documentation and release packaging (unreleased)
 

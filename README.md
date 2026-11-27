@@ -39,7 +39,17 @@ Build with the pinned Docker toolchain; generated firmware and packages stay in 
 
 The standalone [MSDIAG utility](firmware/tools/msdiag/README.md) estimates Memory Stick capacity in read-only mode on the supported PSP 6.61 configuration. The owner reported exact matches with direct-reader measurements on the tested 256 GB and 512 GB card and adapter combinations. To build the utility locally, run `python scripts/build-msdiag.py` with the pinned toolchain image.
 
-The standalone Memory Stick trials were tested on one backed-up 256 GB card and adapter. The owner verified reads from three primary partitions, private Sony FAT block switching and FAT32 formatting of partition 3. A direct card reader independently verified the new volume's initial contents. Formatting every partition and integration with PSP Settings remain pending. [MBR trial](firmware/tools/mswrite/PARTITION-TRIAL.md) · [Partition switch trial](firmware/tools/msswitch/README.md) · [FAT32 directory trial](firmware/tools/msswitch/DIRECTORY-CARD-TRIAL.md)
+The standalone Memory Stick trials were tested on one backed-up 256 GB card and adapter. The PSP formatted three primary FAT32 volumes and automatically mounted the first as `ms0:` in one run. A direct card reader independently checked the layout and the initial contents of all three volumes. Formatting other card and adapter combinations and integration with PSP Settings remain pending. [Partition switch trial](firmware/tools/msswitch/README.md) · [Whole-card trial](firmware/tools/msswitch/WHOLE-CARD-TRIAL.md)
+
+MSAUTO is a read-only diagnostic that computes a capacity candidate and partition preview using the inserted card. It reports ambiguous samples separately. The owner verified ordinary format routing on an 8 GB card and the three-volume preview on the prepared 256 GB card without reference files. [MSAUTO diagnostic](firmware/tools/msdiag/AUTO-PREVIEW.md)
+
+MSAUTOFMT is a standalone 6.61 test app that uses the live card to plan and format FAT32 volumes and restores the first volume as `ms0:`. It requires an exact boundary and distinct live sector samples before it offers formatting. The owner verified automatic formatting and first-volume mounting on a 256 GB card, and a direct USB reader confirmed all three FAT32 volumes. On the first 512 GB card, verification stopped at the second volume. On the second 512 GB card, a direct USB reader verified all six volumes. The owner verified an automatic first-volume mount after formatting from Sony's whole-device fallback and confirmed that the XMB recognized the card without reinsertion. GPT conversion remains pending. [MSAUTOFMT trial](firmware/tools/msswitch/AUTO-FORMAT-TRIAL.md)
+
+[MSATTR](firmware/tools/msdiag/ATTRIBUTE-PROBE.md) lists the live Memory Stick PRO attributes provided by the adapter. A physical scan on the 512 GB trial card confirmed that the raw System Info matches the Sony driver's reported capacity. Native SD CSD access remains unverified.
+
+MSAUTOFMT assigns FAT32 labels such as `PART 1` to newly formatted volumes. Its read-only preview identifies which volume Sony has mounted using the stored serial and extent and displays its current label. The owner verified that the second 512 GB card mounted as `PART 1` after a repeat format. A direct USB reader confirmed all six labels.
+
+[MSWRPATH](firmware/tools/msswitch/WRITE-PATH-TRIAL.md) is a standalone one-sector write trial for comparing adapters on the backed-up 512 GB card. The first physical run reached the write and readback. The write reported success and the original data remained at the tested address. The failure also occurred through a direct USB reader, which passed a lower-sector write and restore on the same microSD. The second 512 GB card retained and restored data at the same sector through that reader.
 
 The resident packager stages six release uploads. The manual ZIP contains the detailed build manifest. A companion source ZIP, compact build JSON, one checksum file and the two Internet-update files complete the inventory.
 
@@ -64,6 +74,7 @@ PRO-X is an independent fork and is not an official release from Team PRO, the A
 - **PSP Homebrew Community Wiki contributors** for the PSP error-code reference used during the MSDIRS investigation. [PSP Homebrew Community Wiki](https://github.com/psp-homebrew-community/wiki)
 - **PPSSPP contributors** for the PSP ELF loader used as a reference for packed relocations. [PPSSPP ELF reader](https://github.com/hrydgard/ppsspp/blob/master/Core/ELF/ElfReader.cpp)
 - **uOFW documentation contributors** for archiving the Memory Stick PRO specification. [upspd](https://github.com/uofw/upspd)
+- **Linux Memory Stick maintainers** for the Memory Stick PRO attribute directory reference. [Linux Memory Stick PRO driver](https://github.com/torvalds/linux/blob/master/drivers/memstick/core/mspro_block.c)
 - **Unicorn Engine and dosfstools contributors** for host replay and independent FAT32 validation. [Unicorn Engine](https://github.com/unicorn-engine/unicorn) · [dosfstools](https://github.com/dosfstools/dosfstools)
 
 Original copyright notices, license notices, and contributor acknowledgments must be retained.

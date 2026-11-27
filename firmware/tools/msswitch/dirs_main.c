@@ -137,13 +137,13 @@ static PspIoDrv driver = {
     .name2 = "PRO-X isolated RAM trial", .funcs = &functions,
 };
 
-static int prepare_volume(void)
+static int prepare_volume(uint32_t start, uint32_t length, uint32_t serial)
 {
     memset(&volume, 0, sizeof(volume));
-    volume.start = PARTITION_START;
-    volume.length = PARTITION_SECTORS;
+    volume.start = start;
+    volume.length = length;
     disk.position = disk.writes = disk.denied_writes = disk.rejected_bounds = 0;
-    return fat32_initialize(volume.start, volume.length, 0x50585031, fat32_ram_write, &volume) ==
+    return fat32_initialize(start, length, serial, fat32_ram_write, &volume) ==
            FAT32_INIT_OK && fat32_ram_verify(&volume);
 }
 
@@ -162,6 +162,27 @@ static int cleanup(void)
     return 1;
 }
 
+#ifdef MSMULTI_CARD_TRIAL
+int dirs_card_stage(struct Fat32Ram *output, uint32_t start, uint32_t length, uint32_t serial)
+{
+    if (!sony_mkdir_ram_check() || !prepare_volume(start, length, serial) || sceIoAddDrv(&driver) < 0)
+        return 0;
+    registered = 1;
+    fd = sceIoOpen(DEVICE, PSP_O_RDWR, 0);
+    int ok = 0;
+    if (fd >= 0) {
+        struct SonyMkdirResult created = sony_mkdir_ram_run(DEVICE, fd, volume.length, 0);
+        ok = !created.result && created.created == PSP_INITIAL_DIRECTORY_COUNT &&
+             !created.unmount && !created.mutex_close && created.boundary_rejected &&
+             disk.rejected_bounds == 2 && fat32_ram_add_indicators(&volume);
+    }
+    if (!cleanup() || !ok)
+        return 0;
+    *output = volume;
+    return 1;
+}
+#endif
+
 static int run_trial(void)
 {
     if (!sony_mkdir_ram_check()) {
@@ -169,7 +190,7 @@ static int run_trial(void)
         return 0;
     }
     pspDebugScreenPrintf("Sony 6.61 FAT module profile: MATCH\n");
-    if (!prepare_volume() || sceIoAddDrv(&driver) < 0) {
+    if (!prepare_volume(PARTITION_START, PARTITION_SECTORS, 0x50585031) || sceIoAddDrv(&driver) < 0) {
         pspDebugScreenPrintf("Could not prepare the private RAM device.\n");
         return 0;
     }
@@ -193,7 +214,7 @@ static int run_trial(void)
 #endif
     int denied = 0;
     int try_denied = tree && bounds && !created.unmount && !created.mutex_close;
-    if (try_denied && prepare_volume()) {
+    if (try_denied && prepare_volume(PARTITION_START, PARTITION_SECTORS, 0x50585031)) {
         disk.deny = 1;
         struct SonyMkdirResult failure = sony_mkdir_ram_run(DEVICE, fd, volume.length, 1);
         disk.deny = 0;
@@ -219,7 +240,13 @@ static int run_trial(void)
 static void heading(void)
 {
     pspDebugScreenClear();
-#ifdef MSDIRS_CARD_TRIAL
+#if defined(MSWRITE_PATH_TRIAL)
+    pspDebugScreenPrintf("PRO-X Memory Stick Write Path Trial\n%s\n\n", MSSWITCH_BUILD_ID);
+#elif defined(MSAUTO_FORMAT_TRIAL)
+    pspDebugScreenPrintf("PRO-X Memory Stick Auto Format\n%s\n\n", MSSWITCH_BUILD_ID);
+#elif defined(MSMULTI_CARD_TRIAL)
+    pspDebugScreenPrintf("PRO-X Memory Stick Whole Card Trial\n%s\n\n", MSSWITCH_BUILD_ID);
+#elif defined(MSDIRS_CARD_TRIAL)
     pspDebugScreenPrintf("PRO-X FAT32 Physical Directory Trial\n%s\n\n", MSSWITCH_BUILD_ID);
 #else
     pspDebugScreenPrintf("PRO-X FAT32 RAM Directory Trial\n%s\n\n", MSSWITCH_BUILD_ID);
@@ -233,9 +260,19 @@ int main(void)
     sceCtrlSetSamplingMode(PSP_CTRL_MODE_DIGITAL);
     heading();
 #ifdef MSDIRS_CARD_TRIAL
-    enum { PREPARE, CHECK_CARD, CONFIRM, DONE } stage = dirs_card_load_reference() ? PREPARE : DONE;
+    enum { PREPARE, CHECK_CARD, CONFIRM, DONE };
+#ifdef MSWRITE_PATH_TRIAL
+    int stage = CHECK_CARD;
+    pspDebugScreenPrintf("Wait for the Memory Stick light to go out.\n"
+                         "Insert the backed-up 512 GB trial card.\n\nX: check card    O: exit\n");
+#elif defined(MSAUTO_FORMAT_TRIAL)
+    int stage = PREPARE;
+    pspDebugScreenPrintf("X: check the formatter in RAM\nO: exit\n");
+#else
+    int stage = dirs_card_load_reference() ? PREPARE : DONE;
     pspDebugScreenPrintf(stage == PREPARE ? "X: prepare the initial filesystem in RAM\nO: exit\n" :
-                         "Missing or invalid MSPART.BIN in PSP/GAME/MSDIRCARD.\nO: exit\n");
+                         "Missing or invalid MSPART.BIN beside EBOOT.PBP.\nO: exit\n");
+#endif
 #else
     pspDebugScreenPrintf("Sony mkdir on a private FAT32 volume in RAM.\n"
                          "Leave the launch Memory Stick inserted.\n\nX: run trial    O: exit\n");
@@ -262,13 +299,34 @@ int main(void)
             }
         }
 #ifdef MSDIRS_CARD_TRIAL
+#if defined(MSMULTI_CARD_TRIAL) && !defined(MSAUTO_FORMAT_TRIAL)
+        else if (stage == CHECK_CARD && (pressed & PSP_CTRL_SQUARE)) {
+            stage = DONE;
+            heading();
+            dirs_card_test_mount();
+        }
+        else if (stage == CHECK_CARD && (pressed & PSP_CTRL_START)) {
+            heading();
+            if (dirs_card_preview_repeat())
+                stage = CONFIRM;
+        }
+#endif
         else if (pressed & PSP_CTRL_CROSS) {
             if (stage == PREPARE) {
                 heading();
                 stage = run_trial() ? CHECK_CARD : DONE;
                 if (stage == CHECK_CARD)
                     pspDebugScreenPrintf("\nWhen the Memory Stick light is off, insert the\n"
-                                         "backed-up 256 GB card with its original adapter.\nX: check card    O: exit\n");
+#ifdef MSAUTO_FORMAT_TRIAL
+                                         "backed-up microSD with its Memory Stick adapter.\n"
+#else
+                                         "backed-up 256 GB card with its original adapter.\n"
+#endif
+                                         "X: check card    O: exit\n"
+#if defined(MSMULTI_CARD_TRIAL) && !defined(MSAUTO_FORMAT_TRIAL)
+                                         "Square: test mount   Start: repeat format\n"
+#endif
+                    );
                 else
                     pspDebugScreenPrintf("\nO: exit\n");
             } else if (stage == CHECK_CARD) {

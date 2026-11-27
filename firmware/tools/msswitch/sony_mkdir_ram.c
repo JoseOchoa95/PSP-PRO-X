@@ -1,5 +1,6 @@
 /* GPL-3.0-or-later */
 #include <pspkernel.h>
+#include <pspiofilemgr_kernel.h>
 #include <psploadcore.h>
 #include <pspsysmem_kernel.h>
 #include <psputils.h>
@@ -9,6 +10,7 @@
 #include <systemctrl.h>
 
 #include "fat32_dirs.h"
+#include "fat32_probe.h"
 #include "sony_mkdir_ram.h"
 
 struct SonyRelocation {
@@ -22,15 +24,20 @@ struct SonyRelocation {
 enum {
     SONY_MKDIR = 0x3814, SONY_MOUNT = 0xb7d4, SONY_UNMOUNT = 0xb910,
     SONY_READ = 0xaca8, SONY_WRITE = 0xb000, SONY_PREPARE = 0xba94,
+    SONY_LOCK_MUTEX = 0xca34, SONY_UNLOCK_MUTEX = 0xca14,
     SONY_CREATE_MUTEX = 0xca3c, SONY_DELETE_MUTEX = 0xca74, SONY_MUTEX_ATTR = 0x301,
     CONTEXT_BYTES = 0x234, DIRECTORY_CACHE = 0x1fc,
     BLOCK_CACHE = 0x30, SECTOR_CACHE = 0x28, CACHE_STATE = 0xdc,
     MEDIA_STATE = 0x12c, MOUNT_COUNT = 0x130, BOUNCE = 0x13c,
-    BLOCK_FD = 0x1d0, DEVICE = 0x1f0, BACKEND = 0x1f8,
+    BLOCK_FD = 0x1d0, MEDIA_EVENT = 0x1d8, DETECTING = 0x1e0,
+    DEVICE = 0x1f0, BACKEND = 0x1f8,
     LABEL = 0x228, MUTEX = 0x230,
 };
 
 static uintptr_t sony_text;
+#ifdef MSMULTI_CARD_TRIAL
+static uintptr_t sony_data;
+#endif
 static uint32_t profile_words[SONY_MKDIR_CODE_BYTES / 4];
 static uint32_t context[CONTEXT_BYTES / 4];
 static uintptr_t backend[13];
@@ -69,6 +76,9 @@ static uint32_t normalize(uint32_t word, const struct SonyRelocation *rel, uint3
 int sony_mkdir_ram_check(void)
 {
     sony_text = 0;
+#ifdef MSMULTI_CARD_TRIAL
+    sony_data = 0;
+#endif
     if (sceKernelDevkitVersion() != 0x06060110 || sceKernelGetModel() != 1)
         return 0;
     uintptr_t address = (uintptr_t)sceKernelFindModuleByName("sceMSFAT_Driver");
@@ -92,8 +102,172 @@ int sony_mkdir_ram_check(void)
         memcmp(digest, sony_mkdir_digest, sizeof(digest)))
         return 0;
     sony_text = module->text_addr;
+#ifdef MSMULTI_CARD_TRIAL
+    if (module->segmentsize[1] >= 0x88 + CONTEXT_BYTES &&
+        kernel_range(module->segmentaddr[1], 0x88 + CONTEXT_BYTES))
+        sony_data = module->segmentaddr[1];
+#endif
     return 1;
 }
+
+#ifdef MSMULTI_CARD_TRIAL
+static const volatile uint32_t *sony_fat_context(void)
+{
+    /* The profiled module initializes its stock context at data+0x88.
+       Opening fatms0:/ checks cached filesystem state, not the mount count. */
+    if (!sony_text || !sony_data)
+        return NULL;
+    const volatile uint32_t *stock = (const volatile uint32_t *)(sony_data + 0x88);
+    if (stock[DEVICE / 4] != sony_text + 0xcf68 || stock[(DEVICE + 4) / 4] != sony_text + 0xcf74 ||
+        stock[BACKEND / 4] != sony_data + 0x40 || stock[0x224 / 4] != sony_text + 0xcf4c)
+        return NULL;
+    return stock;
+}
+
+int sony_fat_stock_state(uint32_t *state, uint32_t *mounts)
+{
+    const volatile uint32_t *stock = sony_fat_context();
+    if (!stock)
+        return 0;
+    *state = stock[MEDIA_STATE / 4];
+    *mounts = stock[MOUNT_COUNT / 4];
+    return 1;
+}
+
+#ifndef MSWRITE_PATH_TRIAL
+enum {
+    FAT_MEDIA_OPEN = 0x02, FAT_MEDIA_INSERTED = 0x01,
+    FAT_EVENT_INSERT = 1, FAT_EVENT_REMOVE = 2,
+    FAT_REPROBE_TIMEOUT_US = 5000000, FAT_REPROBE_POLL_US = 10000,
+};
+
+static int fat_detection_name(const SceKernelEventFlagInfo *info)
+{
+    return !strncmp(info->name, "SceFatfsDetectMedium", sizeof(info->name));
+}
+
+static int fat_detection_idle(SceUID event, const volatile uint32_t *stock)
+{
+    SceKernelEventFlagInfo info = {.size = sizeof(info)};
+    return event > 0 && stock[MEDIA_EVENT / 4] == (uint32_t)event &&
+           sceKernelReferEventFlagStatus(event, &info) == 0 && fat_detection_name(&info) &&
+           !(info.currentPattern & (FAT_EVENT_INSERT | FAT_EVENT_REMOVE)) &&
+           info.numWaitThreads == 1 && !stock[DETECTING / 4];
+}
+
+static int fat_query_card(uint32_t *present)
+{
+    return sceIoDevctl("mscmhc0:", 0x02025806, NULL, 0, present, sizeof(*present));
+}
+
+static int fat_card_present(void)
+{
+    uint32_t present = 0;
+    return fat_query_card(&present) == 0 && present == 1;
+}
+
+int sony_fat_stock_detection(struct SonyFatDetection *detection)
+{
+    const volatile uint32_t *stock = sony_fat_context();
+    if (!stock)
+        return 0;
+    *detection = (struct SonyFatDetection){0};
+    detection->media_result = fat_query_card(&detection->present);
+    detection->event = stock[MEDIA_EVENT / 4];
+    detection->activity = stock[DETECTING / 4];
+    detection->state = stock[MEDIA_STATE / 4];
+    detection->mounts = stock[MOUNT_COUNT / 4];
+    detection->handle = stock[BLOCK_FD / 4];
+    SceKernelEventFlagInfo info = {.size = sizeof(info)};
+    detection->event_result = sceKernelReferEventFlagStatus((SceUID)detection->event, &info);
+    if (!detection->event_result) {
+        detection->event_name_matches = fat_detection_name(&info);
+        detection->waiters = info.numWaitThreads;
+        detection->pending = info.currentPattern;
+    }
+    return 1;
+}
+
+static int fat_wait_for_detection(SceUID event, const volatile uint32_t *stock, int reopened)
+{
+    uint32_t start = sceKernelGetSystemTimeLow();
+    do {
+        if (fat_detection_idle(event, stock)) {
+            uint32_t state = stock[MEDIA_STATE / 4];
+            uint32_t fd = stock[BLOCK_FD / 4];
+            if (reopened)
+                return fd && (state & FAT_MEDIA_OPEN) && !(state & SONY_FAT_WHOLE_DEVICE);
+            if (!fd && !(state & (FAT_MEDIA_OPEN | SONY_FAT_MOUNTED | SONY_FAT_WHOLE_DEVICE)) &&
+                !stock[MOUNT_COUNT / 4])
+                return 1;
+        }
+        sceKernelDelayThread(FAT_REPROBE_POLL_US);
+    } while (sceKernelGetSystemTimeLow() - start < FAT_REPROBE_TIMEOUT_US);
+    return 0;
+}
+
+enum SonyFatReprobe sony_fat_stock_reprobe(void)
+{
+    const volatile uint32_t *stock = sony_fat_context();
+    if (!stock || !fat_card_present())
+        return SONY_FAT_REPROBE_BUSY;
+    SceUID event = (SceUID)stock[MEDIA_EVENT / 4];
+    if (!fat_detection_idle(event, stock) || stock[MOUNT_COUNT / 4] || !stock[BLOCK_FD / 4] ||
+        stock[MEDIA_STATE / 4] != (FAT_MEDIA_INSERTED | FAT_MEDIA_OPEN | SONY_FAT_WHOLE_DEVICE))
+        return SONY_FAT_REPROBE_BUSY;
+
+    /* Sony's media refresh signals these same two events. Wait for its FAT
+       worker to finish closing the old handle before asking it to reopen. */
+    if (sceKernelSetEventFlag(event, FAT_EVENT_REMOVE) || !fat_wait_for_detection(event, stock, 0))
+        return SONY_FAT_REPROBE_REMOVAL;
+    if (!fat_card_present() || !fat_detection_idle(event, stock) ||
+        sceKernelSetEventFlag(event, FAT_EVENT_INSERT) || !fat_wait_for_detection(event, stock, 1))
+        return SONY_FAT_REPROBE_INSERTION;
+    return SONY_FAT_REPROBED;
+}
+
+#ifdef MSAUTO_FORMAT_TRIAL
+static int fat_read_mounted(void *context, uint32_t lba, uint8_t *sector)
+{
+    SceUID fd = *(const SceUID *)context;
+    SceOff position = (SceOff)lba * FAT32_SECTOR_BYTES;
+    return sceIoLseek(fd, position, PSP_SEEK_SET) == position &&
+           sceIoRead(fd, sector, FAT32_SECTOR_BYTES) == FAT32_SECTOR_BYTES;
+}
+
+int sony_fat_stock_volume(struct Fat32VolumeIdentity *identity)
+{
+    const volatile uint32_t *stock = sony_fat_context();
+    if (!stock || !(stock[MEDIA_STATE / 4] & SONY_FAT_MOUNTED))
+        return 0;
+    SceUID mutex = (SceUID)stock[MUTEX / 4];
+    SceUInt timeout = 100000;
+    int (*lock)(SceUID, int, SceUInt *) = (void *)(sony_text + SONY_LOCK_MUTEX);
+    int (*unlock)(SceUID, int) = (void *)(sony_text + SONY_UNLOCK_MUTEX);
+    if (mutex <= 0 || lock(mutex, 1, &timeout) < 0)
+        return 0;
+    SceUID fd = (SceUID)stock[BLOCK_FD / 4];
+    int matched = 0;
+    if (fd > 0 && stock[MUTEX / 4] == (uint32_t)mutex &&
+        stock[MOUNT_COUNT / 4] && !stock[DETECTING / 4] &&
+        (stock[MEDIA_STATE / 4] & SONY_FAT_MOUNTED)) {
+        /* Use Sony's open backing handle. Restore its position before releasing
+           the filesystem mutex, including when reading the volume fails. */
+        SceOff saved = sceIoLseek(fd, 0, PSP_SEEK_CUR);
+        if (saved >= 0) {
+            matched = fat32_read_volume_identity(fat_read_mounted, &fd, identity);
+            if (stock[BLOCK_FD / 4] != (uint32_t)fd ||
+                sceIoLseek(fd, saved, PSP_SEEK_SET) != saved)
+                matched = 0;
+            matched = matched && stock[MOUNT_COUNT / 4] && !stock[DETECTING / 4] &&
+                      (stock[MEDIA_STATE / 4] & SONY_FAT_MOUNTED);
+        }
+    }
+    return unlock(mutex, 1) == 0 && matched;
+}
+#endif
+#endif
+#endif
 
 static int unsupported(void)
 {

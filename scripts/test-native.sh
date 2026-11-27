@@ -1,5 +1,14 @@
 #!/bin/sh
 set -eu
+cc -std=c11 -Wall -Wextra -Werror -I firmware/tools/msformat \
+    tests/native/test_ms_format_layout.c firmware/tools/msformat/layout.c \
+    firmware/tools/msformat/fat32_init.c -o /tmp/test-ms-format-layout
+/tmp/test-ms-format-layout
+cc -std=c11 -Wall -Wextra -Werror -DMSDIRS_TRIAL -I firmware/tools/msformat \
+    tests/native/test_ms_format_job.c firmware/tools/msformat/job.c firmware/tools/msformat/layout.c \
+    firmware/tools/msformat/fat32_init.c firmware/tools/msformat/fat32_ram.c \
+    firmware/tools/msformat/fat32_dirs.c -o /tmp/test-ms-format-job
+/tmp/test-ms-format-job
 mkdir -p /tmp/prox-signed-include
 python3 scripts/native_signed_templates.py firmware/contrib/PrxEncrypter/main.c /tmp/prox-signed-include/native_signed_templates.h
 cc -std=c99 -Wall -Wextra -Werror -I firmware/Common -I firmware/Updater -I /tmp/prox-signed-include \

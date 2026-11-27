@@ -24,7 +24,8 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def verify_binary(data, symbols, build_id, title, physical, directories, directory_card):
+def verify_binary(data, symbols, build_id, title, physical, directories, directory_card, whole_card, auto_format,
+                  write_path):
     if data[:4] != b"\0PBP" or len(data) < 40:
         raise ValueError("Invalid PBP header")
     version, *offsets = struct.unpack_from("<9I", data, 4)
@@ -35,6 +36,17 @@ def verify_binary(data, symbols, build_id, title, physical, directories, directo
             or not elf.startswith(b"\x7fELF") or build_id.encode() + b"\0" not in elf):
         raise ValueError("Invalid trial EBOOT identity")
     names = {line.split()[-1] for line in symbols.splitlines() if line.strip()}
+    if write_path:
+        required = {"stock_format_transaction", "stock_format_locked_write_status", "stock_format_locked_read",
+                    "ms_auto_measure", "ms_auto_check_boundary", "ms_card_matches", "ms_probe_sector",
+                    "sony_fat_stock_state", "sceIoOpen", "sceIoClose", "sceIoUnassign", "sctrlKernelExitVSH"}
+        forbidden = {"ms_format_execute", "stock_write_trial", "stock_format_partition_trial",
+                     "stock_format_refresh_media", "ms_mount_first", "sony_fat_stock_reprobe",
+                     "sceKernelSetEventFlag", "sceIoWrite", "sceIoDevctl"}
+        if not required <= names or forbidden & names or any(
+                path in elf for path in (b"MSPART.BIN", b"MSDREF.BIN", b"flash0:")):
+            raise ValueError("Unexpected single-sector write path inventory")
+        return
     required = {"stock_read_sector", "native_fat_check", "native_fat_mount", "native_fat_read",
                 "native_fat_format_ram", "fat32_initialize", "fat32_ram_verify",
                 "native_fat_unmount", "sceIoAddDrv", "sceIoDelDrv", "sceIoOpen",
@@ -59,11 +71,27 @@ def verify_binary(data, symbols, build_id, title, physical, directories, directo
             forbidden |= {"stock_read_sector", "sceIoRead", "sceIoLseek"}
             if any(path in elf for path in (b"msstor:", b"ms0:", b"fatms0:", b"flash0:")):
                 raise ValueError("The RAM directory trial includes a physical storage path")
+    if whole_card:
+        required.discard("stock_format_partition_trial")
+        required |= {"ms_format_preview", "ms_format_execute", "stock_format_transaction",
+                     "stock_format_locked_write", "stock_format_refresh_media", "sony_fat_stock_state",
+                     "sony_fat_stock_reprobe", "sceKernelSetEventFlag", "sceKernelReferEventFlagStatus",
+                     "estimate_capacity", "sceIoGetstat",
+                     "sceIoAssign", "sceIoUnassign", "sceIoDevctl"}
+        forbidden -= {"sceIoAssign", "sceIoUnassign", "sceIoDevctl"}
+        if any(path not in elf for path in (b"msstor0:\0", b"msstor0p1:\0", b"fatms0:\0", b"ms0:/PSP/GAME\0")):
+            raise ValueError("Missing stock partition 1 mount paths")
+    if auto_format:
+        required |= {"ms_auto_measure", "ms_auto_check_boundary", "ms_card_capture", "ms_card_matches",
+                     "ms_probe_sector"}
+        if any(name in elf for name in (b"MSPART.BIN", b"MSDREF.BIN")):
+            raise ValueError("The automatic formatter embeds a per-card reference filename")
     if not required <= names or (forbidden & names):
         raise ValueError("Unexpected trial I/O inventory")
 
 
-def compile_in(directory, image, build_id, log, run_host_tests, title, physical, directories, directory_card):
+def compile_in(directory, image, build_id, log, run_host_tests, title, physical, directories, directory_card,
+               whole_card, auto_format, write_path):
     checks = ""
     if run_host_tests:
         checks = ('gcc -std=c11 -Wall -Wextra -Werror -fsanitize=undefined '
@@ -84,13 +112,34 @@ def compile_in(directory, image, build_id, log, run_host_tests, title, physical,
                        'firmware/tools/msformat/fat32_init.c firmware/tools/msformat/fat32_ram.c '
                        'firmware/tools/msformat/fat32_dirs.c tests/native/test_msdirs_ram.c '
                        '-o test-msdirs-ram; ./test-msdirs-ram')
+        if whole_card:
+            flags = ('gcc -std=c11 -Wall -Wextra -Werror -fsanitize=undefined '
+                     '-fno-sanitize-recover=all -DMSDIRS_TRIAL -I firmware/tools/msformat ')
+            checks += ('; ' + flags + 'firmware/tools/msformat/fat32_init.c firmware/tools/msformat/layout.c '
+                       'tests/native/test_ms_format_layout.c -o test-ms-format-layout; ./test-ms-format-layout; '
+                       + flags + 'firmware/tools/msformat/fat32_init.c firmware/tools/msformat/fat32_ram.c '
+                       'firmware/tools/msformat/fat32_dirs.c firmware/tools/msformat/layout.c '
+                       'firmware/tools/msformat/job.c tests/native/test_ms_format_job.c '
+                       '-o test-ms-format-job; ./test-ms-format-job')
+        if auto_format:
+            checks += ('; ' + flags + '-I firmware/tools/msdiag firmware/tools/msdiag/auto_probe.c '
+                       'firmware/tools/msdiag/capacity.c tests/native/test_msdiag_auto_probe.c '
+                       '-o test-ms-auto-probe; ./test-ms-auto-probe; '
+                       + flags + 'firmware/tools/msformat/fat32_init.c firmware/tools/msformat/layout.c '
+                       'firmware/tools/msformat/card_snapshot.c tests/native/test_ms_card_snapshot.c '
+                       '-o test-ms-card-snapshot; ./test-ms-card-snapshot')
+            checks += ('; ' + flags + 'firmware/tools/msformat/fat32_init.c firmware/tools/msformat/layout.c '
+                       'firmware/tools/msformat/write_probe.c tests/native/test_ms_write_probe.c '
+                       '-o test-ms-write-probe; ./test-ms-write-probe')
     command = ["docker", "run", "--rm", "--network", "none", "--mount",
                f"type=bind,source={directory},target=/src", "-w", "/src", image, "sh", "-ec",
                'make -C firmware/tools/msswitch "BUILD_ID=$1" "PHYSICAL_FORMAT_TRIAL=$2" '
-               '"RAM_DIRECTORY_TRIAL=$3" "PHYSICAL_DIRECTORY_TRIAL=$4"; '
+               '"RAM_DIRECTORY_TRIAL=$3" "PHYSICAL_DIRECTORY_TRIAL=$4" "WHOLE_CARD_TRIAL=$5" "AUTO_FORMAT_TRIAL=$6" '
+               '"WRITE_PATH_TRIAL=$7"; '
                'psp-nm firmware/tools/msswitch/msswitch.elf > symbols.txt; ' + checks,
                "msswitch-build", build_id, str(int(physical)),
-               str(int(directories and not directory_card)), str(int(directory_card))]
+               str(int(directories and not directory_card)), str(int(directory_card)), str(int(whole_card)),
+               str(int(auto_format)), str(int(write_path))]
     with log.open("wb") as stream:
         result = subprocess.run(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT)
     if result.returncode:
@@ -98,7 +147,7 @@ def compile_in(directory, image, build_id, log, run_host_tests, title, physical,
         raise SystemExit(result.returncode)
     binary = (directory / TOOL / "EBOOT.PBP").read_bytes()
     verify_binary(binary, (directory / "symbols.txt").read_text(), build_id, title, physical,
-                  directories, directory_card)
+                  directories, directory_card, whole_card, auto_format, write_path)
     return binary
 
 
@@ -115,9 +164,15 @@ def main():
     variants.add_argument("--physical-format-trial", action="store_true")
     variants.add_argument("--ram-directory-trial", action="store_true")
     variants.add_argument("--physical-directory-trial", action="store_true")
+    variants.add_argument("--whole-card-trial", action="store_true")
+    variants.add_argument("--reference-free-format-trial", action="store_true")
+    variants.add_argument("--write-path-trial", action="store_true")
     args = parser.parse_args()
     physical = args.physical_format_trial
-    directory_card = args.physical_directory_trial
+    write_path = args.write_path_trial
+    auto_format = args.reference_free_format_trial or write_path
+    whole_card = args.whole_card_trial or auto_format
+    directory_card = args.physical_directory_trial or whole_card
     directories = args.ram_directory_trial or directory_card
     folder, title, readme = "MSSWITCH", "PRO-X Partition Switch Trial", "README.md"
     if physical:
@@ -126,6 +181,12 @@ def main():
         folder, title, readme = "MSDIRS", "PRO-X FAT32 RAM Directory Trial", "DIRECTORY-TRIAL.md"
     if directory_card:
         folder, title, readme = "MSDIRCARD", "PRO-X FAT32 Physical Directory Trial", "DIRECTORY-CARD-TRIAL.md"
+    if whole_card:
+        folder, title, readme = "MSMULTI", "PRO-X Memory Stick Whole Card Trial", "WHOLE-CARD-TRIAL.md"
+    if auto_format:
+        folder, title, readme = "MSAUTOFMT", "PRO-X Memory Stick Auto Format", "AUTO-FORMAT-TRIAL.md"
+    if write_path:
+        folder, title, readme = "MSWRPATH", "PRO-X Memory Stick Write Path Trial", "WRITE-PATH-TRIAL.md"
     eboot = f"release/PSP/GAME/{folder}/EBOOT.PBP"
     build_id = folder.lower() + "-" + uuid.uuid4().hex[:12]
     paths = [TOOL / name for name in (
@@ -142,6 +203,20 @@ def main():
     if directory_card:
         paths += [TOOL / name for name in ("dirs_card.c", "dirs_card.h", "verify-directory-trial.py",
                                           "verify-format-trial.py")]
+    if whole_card:
+        paths += [TOOL / name for name in ("card_mount.c", "card_mount.h")]
+        if not auto_format:
+            paths += [TOOL / "verify-whole-card.py"]
+        paths += [DIAG / name for name in ("capacity.c", "capacity.h")]
+        paths += [Path("firmware/tools/msformat") / name for name in ("layout.c", "layout.h", "job.c", "job.h")]
+        paths += [Path("tests/native") / name for name in ("test_ms_format_layout.c", "test_ms_format_job.c")]
+    if auto_format:
+        paths += [TOOL / "auto_card.c"]
+        paths += [DIAG / name for name in ("psp_media.c", "psp_media.h", "auto_probe.c", "auto_probe.h")]
+        paths += [Path("firmware/tools/msformat") / name for name in ("card_snapshot.c", "card_snapshot.h")]
+        paths += [Path("tests/native") / name for name in ("test_msdiag_auto_probe.c", "test_ms_card_snapshot.c")]
+        paths += [Path("firmware/tools/msformat") / name for name in ("write_probe.c", "write_probe.h")]
+        paths += [Path("tests/native/test_ms_write_probe.c")]
     paths += [DIAG / name for name in ("probe.c", "probe.h", "stock_reader.c", "stock_reader.h")]
     paths += [Path("firmware/tools/msformat") / name for name in (
         "fat32_init.c", "fat32_init.h", "fat32_ram.c", "fat32_ram.h",
@@ -165,17 +240,20 @@ def main():
     write_files(work, source)
     log = logs / f"{build_id}.log"
     print(f"Build log: {log.relative_to(ROOT)}", flush=True)
-    binary = compile_in(work, image, build_id, log, True, title, physical, directories, directory_card)
+    binary = compile_in(work, image, build_id, log, True, title, physical, directories, directory_card,
+                        whole_card, auto_format, write_path)
     files = {
         eboot: binary,
         "README.md": source[(TOOL / readme).as_posix()],
         "LICENSE": source["LICENSE"],
         **{f"licenses/{path.name}": source[path.as_posix()] for path in LICENSES},
     }
-    if physical or directory_card:
+    if physical or (directory_card and not auto_format):
         files["verify-format-trial.py"] = source[(TOOL / "verify-format-trial.py").as_posix()]
-    if directory_card:
+    if directory_card and not auto_format:
         files["verify-directory-trial.py"] = source[(TOOL / "verify-directory-trial.py").as_posix()]
+    if whole_card and not auto_format:
+        files["verify-whole-card.py"] = source[(TOOL / "verify-whole-card.py").as_posix()]
     manifest = {
         "tool": title,
         "build_id": build_id,
@@ -200,7 +278,7 @@ def main():
     with ZipFile(source_zip) as archive:
         archive.extractall(replay)
     if compile_in(replay, image, build_id, logs / f"{build_id}-source-replay.log",
-                  False, title, physical, directories, directory_card) != binary:
+                  False, title, physical, directories, directory_card, whole_card, auto_format, write_path) != binary:
         raise ValueError("Companion source does not reproduce the EBOOT")
     checksums = "".join(f"{sha((dest / name).read_bytes())}  {name}\n"
                         for name in (binary_zip.name, source_zip.name, eboot, "build-manifest.json"))

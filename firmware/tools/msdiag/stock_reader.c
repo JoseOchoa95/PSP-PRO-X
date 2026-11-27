@@ -10,6 +10,9 @@
 
 #include "probe.h"
 #include "stock_reader.h"
+#ifdef MSMULTI_CARD_TRIAL
+#include "capacity.h"
+#endif
 #ifdef MSDIAG_WRITE_TRIAL
 #include "write_trial.h"
 #endif
@@ -90,6 +93,9 @@ static const struct AddressRelocation address_relocations[] = {
     {0x3230, 0x3238, 0x3c020000, 0x8c420164, 1},
     {0x3234, 0x3240, 0x3c030000, 0x8c645094, 1},
     {0x79a4, 0x79a8, 0x3c060001, 0x24c6ecc8, 0},
+#ifdef MSDIAG_ATTRIBUTE_PROBE
+    {0x7780, 0x7784, 0x3c060001, 0x24c6ec4c, 0},
+#endif
 #ifdef MSDIAG_WRITE_TRIAL
     {0x32d4, 0x32dc, 0x3c020000, 0x8c435094, 1},
     {0x330c, 0x3310, 0x3c020000, 0x8c420164, 1},
@@ -187,16 +193,12 @@ const char *stock_reader_init(struct StockReader *reader, uint32_t reported_bloc
     return NULL;
 }
 
-const char *stock_read_sector(const struct StockReader *reader, uint32_t lba,
-                              void *buffer, int *result, struct StockReadTrace *trace)
+static const char *prepare_read(const struct StockReader *reader, uint32_t lba,
+                                struct StockFile *request)
 {
     uintptr_t io = reader->data + IO_CONTEXT;
     uintptr_t media = reader->data + MEDIA_CONTEXT;
     uint32_t type = runtime_word(media + MEDIA_TYPE);
-    struct StockFile request = {0};
-    StockRead read = (StockRead)(reader->text + STOCK_READ);
-    ReadDispatch dispatch = (ReadDispatch)(reader->text + RAW_DISPATCH);
-    struct TracedRead traced = {dispatch, trace, lba};
     if ((type != 64 && type != 65) ||
         runtime_word(reader->data + ACTIVE_TABLE) != reader->text + PRO_TABLE ||
         runtime_word(reader->text + PRO_TABLE) != reader->text + PRO_READ)
@@ -206,8 +208,21 @@ const char *stock_read_sector(const struct StockReader *reader, uint32_t lba,
         !runtime_word(io + 4) || runtime_word(io + 4) != runtime_word(media + CONTROLLER) ||
         runtime_word(media + SECTOR_COUNT) != reader->reported_blocks)
         return "Stock I/O context or media changed.";
-    request.file.arg = (void *)io;
-    request.position = (uint64_t)lba * SECTOR_BYTES;
+    request->file.arg = (void *)io;
+    request->position = (uint64_t)lba * SECTOR_BYTES;
+    return NULL;
+}
+
+const char *stock_read_sector(const struct StockReader *reader, uint32_t lba,
+                              void *buffer, int *result, struct StockReadTrace *trace)
+{
+    struct StockFile request = {0};
+    const char *error = prepare_read(reader, lba, &request);
+    if (error)
+        return error;
+    StockRead read = (StockRead)(reader->text + STOCK_READ);
+    ReadDispatch dispatch = (ReadDispatch)(reader->text + RAW_DISPATCH);
+    struct TracedRead traced = {dispatch, trace, lba};
     /* Same mode and dispatch as Sony's whole-device read wrapper. The worker
        handles its own mutex, power and completion. The position is local. */
     if (trace) {
@@ -219,6 +234,45 @@ const char *stock_read_sector(const struct StockReader *reader, uint32_t lba,
     active_read = NULL;
     return NULL;
 }
+
+#ifdef MSDIAG_ATTRIBUTE_PROBE
+enum { PRO_READ_ATTRIBUTES = 0x7738, ATTRIBUTE_PAGES = 64 };
+typedef int (*ReadAttributes)(void *media, uint32_t page, int count, void *buffer);
+
+static const struct StockReader *attribute_reader;
+static uint32_t attribute_page;
+static unsigned attribute_calls;
+
+static int read_attributes(uint32_t lba, unsigned count, void *buffer)
+{
+    const struct StockReader *reader = attribute_reader;
+    struct StockFile request = {0};
+    if (!reader || lba || count != 1 || attribute_calls++ || prepare_read(reader, 0, &request))
+        return -1;
+    return ((ReadAttributes)(reader->text + PRO_READ_ATTRIBUTES))(
+        (void *)(reader->data + MEDIA_CONTEXT), attribute_page, 1, buffer);
+}
+
+const char *stock_read_attribute_page(const struct StockReader *reader, uint32_t page, void *buffer,
+                                     int *result)
+{
+    struct StockFile request = {0};
+    const char *error = prepare_read(reader, 0, &request);
+    if (error)
+        return error;
+    if (page >= ATTRIBUTE_PAGES || attribute_reader || ((uintptr_t)buffer & 63))
+        return "Invalid attribute page or transfer buffer.";
+    if (!matches_code(reader, PRO_READ_ATTRIBUTES, PRO_READ,
+                      "\x80\x50\xbd\xfd\xf0\x34\x45\x0c\x4e\xfc\x81\xb4\x8e\x9c\x06\xc1\xc1\x5c\x8f\x2d"))
+        return "Stock attribute read code did not match the 6.61 profile.";
+    attribute_reader = reader;
+    attribute_page = page;
+    attribute_calls = 0;
+    *result = ((StockRead)(reader->text + STOCK_READ))(&request, buffer, SECTOR_BYTES, 0, read_attributes);
+    attribute_reader = NULL;
+    return attribute_calls == 1 ? NULL : "The stock worker did not complete one attribute read.";
+}
+#endif
 
 #ifdef MSDIAG_WRITE_TRIAL
 enum {
@@ -242,7 +296,7 @@ static struct WriteTrial *write_trial;
 #endif
 static unsigned char write_check_sector[SECTOR_BYTES] __attribute__((aligned(64)));
 
-static const char *write_trial_state(const struct StockReader *reader,
+static const char *write_media_state(const struct StockReader *reader,
                                      struct StockWriteState *observed)
 {
     uintptr_t io = reader->data + IO_CONTEXT;
@@ -251,8 +305,7 @@ static const char *write_trial_state(const struct StockReader *reader,
                                     runtime_word(media + 0x4c18), runtime_word(media + 0x4c1c)};
     if (observed)
         *observed = state;
-    if (reader->reported_blocks != TRIAL_REPORTED_BLOCKS ||
-        runtime_word(media + SECTOR_COUNT) != TRIAL_REPORTED_BLOCKS)
+    if (!reader->reported_blocks || runtime_word(media + SECTOR_COUNT) != reader->reported_blocks)
         return "Stock sector count changed.";
     if ((state.media_type != 64 && state.media_type != 65) ||
         runtime_word(reader->data + ACTIVE_TABLE) != reader->text + PRO_TABLE ||
@@ -272,14 +325,33 @@ static const char *write_trial_state(const struct StockReader *reader,
     return NULL;
 }
 
-const char *stock_write_trial_check(const struct StockReader *reader, struct StockWriteState *observed)
+static const char *check_write_media(const struct StockReader *reader, struct StockWriteState *observed)
 {
     if (!matches_code(reader, RAW_WRITE, RAW_WRITE_END,
                       "\x56\x4b\xd3\x78\x15\xbb\x49\x25\x9f\xa0\x79\xe4\x54\xe0\x73\x27\xd4\x49\xf2\xd1") ||
         !matches_code(reader, PRO_WRITE, PRO_WRITE_END,
                       "\xa1\x59\xbf\xf5\x69\x8d\xc1\x86\x6a\x00\x30\xe5\x62\x0e\x0b\xd5\xe0\x48\xe7\x09"))
         return "Stock write code did not match.";
-    return write_trial_state(reader, observed);
+    return write_media_state(reader, observed);
+}
+
+#ifdef MSFORMAT_TRIAL
+static unsigned char format_write_sector[SECTOR_BYTES] __attribute__((aligned(64)));
+#endif
+
+#ifndef MSWRITE_PATH_TRIAL
+static const char *write_trial_state(const struct StockReader *reader, struct StockWriteState *observed)
+{
+    if (reader->reported_blocks != TRIAL_REPORTED_BLOCKS)
+        return "Wrong trial adapter sector count.";
+    return write_media_state(reader, observed);
+}
+
+const char *stock_write_trial_check(const struct StockReader *reader, struct StockWriteState *observed)
+{
+    if (reader->reported_blocks != TRIAL_REPORTED_BLOCKS)
+        return "Wrong trial adapter sector count.";
+    return check_write_media(reader, observed);
 }
 
 #ifndef MSFORMAT_TRIAL
@@ -358,8 +430,6 @@ struct LockedFormat {
 };
 
 static struct LockedFormat *active_format;
-static unsigned char format_write_sector[SECTOR_BYTES] __attribute__((aligned(64)));
-
 static int format_read(struct StockFormatTrial *trial, uint32_t lba)
 {
     ReadDispatch read = (ReadDispatch)(trial->reader->text + RAW_DISPATCH);
@@ -584,5 +654,101 @@ int stock_format_partition_trial(struct StockFormatTrial *trial)
 #endif
            trial->verified == FORMAT_METADATA_SECTORS;
 }
+#endif
+#endif
+
+#ifdef MSMULTI_CARD_TRIAL
+struct StockFormatAccess {
+    const struct StockReader *reader;
+    StockFormatOperation operation;
+    void *context;
+    uint32_t open_handles, sector_limit;
+    int started;
+};
+
+static struct StockFormatAccess *transaction;
+
+static int transaction_live(struct StockFormatAccess *access, uint32_t lba)
+{
+    struct StockWriteState state;
+    return access && access == transaction && access->started && lba < access->sector_limit &&
+           !write_media_state(access->reader, &state) && state.open_handles == access->open_handles;
+}
+
+int stock_format_locked_read(struct StockFormatAccess *access, uint32_t lba, void *buffer)
+{
+    if (!transaction_live(access, lba))
+        return 0;
+    ReadDispatch read = (ReadDispatch)(access->reader->text + RAW_DISPATCH);
+    if (read(lba, 1, write_check_sector) != 0)
+        return 0;
+    memcpy(buffer, write_check_sector, SECTOR_BYTES);
+    return transaction_live(access, lba);
+}
+
+int stock_format_locked_write_status(struct StockFormatAccess *access, uint32_t lba,
+                                     const void *buffer, int *command)
+{
+    if (!transaction_live(access, lba))
+        return 0;
+    memcpy(format_write_sector, buffer, SECTOR_BYTES);
+    ReadDispatch write = (ReadDispatch)(access->reader->text + RAW_WRITE);
+    int result = write(lba, 1, format_write_sector);
+    if (command)
+        *command = result;
+    return result == 0 && transaction_live(access, lba);
+}
+
+int stock_format_locked_write(struct StockFormatAccess *access, uint32_t lba, const void *buffer)
+{
+    return stock_format_locked_write_status(access, lba, buffer, NULL);
+}
+
+static int run_format_transaction(uint32_t lba, unsigned count, void *buffer)
+{
+    struct StockFormatAccess *access = transaction;
+    if (!access || access->started || lba || count != 1 || buffer != format_write_sector)
+        return -1;
+    access->started = 1;
+    access->operation(access, access->context);
+    /* The caller owns operation status. Never retry a partly completed format. */
+    return 0;
+}
+
+int stock_format_transaction(const struct StockReader *reader, StockFormatOperation operation,
+                             void *context, uint32_t sector_limit)
+{
+    struct StockWriteState state;
+    if (!operation || transaction || sector_limit < reader->reported_blocks ||
+        sector_limit > CAPACITY_LIMIT_BYTES / SECTOR_BYTES || check_write_media(reader, &state))
+        return 0;
+    struct StockFormatAccess access = {reader, operation, context, state.open_handles, sector_limit, 0};
+    struct StockFile request = {0};
+    request.file.arg = (void *)(reader->data + IO_CONTEXT);
+    transaction = &access;
+    int result = ((StockRead)(reader->text + STOCK_READ))(
+        &request, format_write_sector, SECTOR_BYTES, 1, run_format_transaction);
+    transaction = NULL;
+    return access.started ? (result == SECTOR_BYTES ? 1 : -1) : 0;
+}
+
+#ifndef MSWRITE_PATH_TRIAL
+int stock_format_refresh_media(const struct StockReader *reader)
+{
+    /* Sony FAT issues this control after successful media formatting. Its PRO
+       handler reloads the attributes and first MBR entry into driver state. */
+    if (transaction || !reader->reported_blocks ||
+        runtime_word(reader->data + MEDIA_CONTEXT + SECTOR_COUNT) != reader->reported_blocks ||
+        runtime_word(reader->data + ACTIVE_TABLE) != reader->text + PRO_TABLE ||
+        runtime_word(reader->text + PRO_TABLE + 12) != reader->text + 0x43b8 ||
+        runtime_word(reader->text + 0x1f24) != 0x3c020210 ||
+        runtime_word(reader->text + 0x1f28) != 0x3442d816 ||
+        runtime_word(reader->text + 0x1f2c) != 0x12020061 ||
+        runtime_word(reader->text + 0x3e14) != 0x920301be ||
+        runtime_word(reader->text + 0x3f00) != 0xae514c04)
+        return -1;
+    return sceIoDevctl("msstor0:", 0x0210d816, NULL, 0, NULL, 0);
+}
+#endif
 #endif
 #endif
