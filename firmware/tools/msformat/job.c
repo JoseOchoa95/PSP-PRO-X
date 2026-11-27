@@ -100,37 +100,67 @@ static int write_and_verify(const struct MsFormatBackend *backend, void *device,
            verify_sector(backend, device, lba, expected, result);
 }
 
-static int write_volume(const struct MsFormatBackend *backend, void *device, struct Fat32Ram *image,
-                        uint32_t metadata, struct MsFormatResult *result)
+static int read_metadata(const struct MsFormatBackend *backend, void *device, uint32_t lba,
+                         unsigned count, uint8_t *data, struct MsFormatResult *result)
 {
-    uint8_t expected[FAT32_SECTOR_BYTES] = {0}, actual[FAT32_SECTOR_BYTES];
-    uint32_t start = image->start;
-    if (!write_and_verify(backend, device, start, expected, result) ||
-        !write_and_verify(backend, device, start + BACKUP_BOOT, expected, result))
-        return 0;
-    int verified_change = 0;
-    for (uint32_t lba = 1; lba < metadata; ++lba) {
-        if (lba == BACKUP_BOOT)
-            continue;
-        uint32_t absolute = start + lba;
-        if (!fat32_ram_read(image, lba, expected) || !read_sector(backend, device, absolute, actual, result))
-            return 0;
-        if (!memcmp(actual, expected, sizeof(actual)))
-            continue;
-        if (!write_sector(backend, device, absolute, expected, result) ||
-            (!verified_change && !verify_sector(backend, device, absolute, expected, result)))
-            return 0;
-        verified_change = 1;
-    }
-    if (!fat32_ram_read(image, BACKUP_BOOT, expected) ||
-        !write_and_verify(backend, device, start + BACKUP_BOOT, expected, result) ||
-        !fat32_ram_read(image, 0, expected) || !write_and_verify(backend, device, start, expected, result))
-        return 0;
-    for (uint32_t lba = 0; lba < metadata; ++lba) {
-        if (!fat32_ram_read(image, lba, expected) || !verify_sector(backend, device, start + lba, expected, result))
+    if (count > 1 && backend->read_batch && backend->read_batch(device, lba, count, data))
+        return 1;
+    for (unsigned i = 0; i < count; ++i) {
+        if (!read_sector(backend, device, lba + i, data + i * FAT32_SECTOR_BYTES, result))
             return 0;
     }
     return 1;
+}
+
+static int compare_metadata(const struct MsFormatBackend *backend, void *device, struct Fat32Ram *image,
+                            uint32_t metadata, int update, struct MsFormatResult *result)
+{
+    uint8_t expected[FAT32_SECTOR_BYTES];
+    uint8_t actual[MS_FORMAT_READ_BATCH_SECTORS * FAT32_SECTOR_BYTES];
+    int verified_change = 0;
+    for (uint32_t base = update ? 1 : 0; base < metadata;) {
+        unsigned count = metadata - base;
+        if (count > MS_FORMAT_READ_BATCH_SECTORS)
+            count = MS_FORMAT_READ_BATCH_SECTORS;
+        if (!read_metadata(backend, device, image->start + base, count, actual, result))
+            return 0;
+        for (unsigned i = 0; i < count; ++i) {
+            uint32_t relative = base + i;
+            if (update && relative == BACKUP_BOOT)
+                continue;
+            if (!fat32_ram_read(image, relative, expected))
+                return 0;
+            if (!memcmp(actual + i * FAT32_SECTOR_BYTES, expected, sizeof(expected)))
+                continue;
+            uint32_t absolute = image->start + relative;
+            if (!update) {
+                result->sector_failure = MS_SECTOR_MISMATCH;
+                result->failure_lba = absolute;
+                return 0;
+            }
+            if (!write_sector(backend, device, absolute, expected, result) ||
+                (!verified_change && !verify_sector(backend, device, absolute, expected, result)))
+                return 0;
+            verified_change = 1;
+        }
+        base += count;
+    }
+    return 1;
+}
+
+static int write_volume(const struct MsFormatBackend *backend, void *device, struct Fat32Ram *image,
+                        uint32_t metadata, struct MsFormatResult *result)
+{
+    uint8_t expected[FAT32_SECTOR_BYTES] = {0};
+    uint32_t start = image->start;
+    if (!write_and_verify(backend, device, start, expected, result) ||
+        !write_and_verify(backend, device, start + BACKUP_BOOT, expected, result) ||
+        !compare_metadata(backend, device, image, metadata, 1, result) ||
+        !fat32_ram_read(image, BACKUP_BOOT, expected) ||
+        !write_and_verify(backend, device, start + BACKUP_BOOT, expected, result) ||
+        !fat32_ram_read(image, 0, expected) || !write_and_verify(backend, device, start, expected, result))
+        return 0;
+    return compare_metadata(backend, device, image, metadata, 0, result);
 }
 
 static int publish_table(const struct MsFormatBackend *backend, void *device,

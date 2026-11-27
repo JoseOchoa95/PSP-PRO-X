@@ -306,7 +306,7 @@ static int mount_partition_one(void *context, const struct MsFormatMedia *identi
 }
 
 static const struct MsFormatBackend backend = {inspect_card, exclusive_card, read_card, write_card,
-                                               stage_card, mount_partition_one, show_volume_result};
+                                               stage_card, mount_partition_one, show_volume_result, NULL};
 
 static int read_trial_sector(uint32_t lba)
 {

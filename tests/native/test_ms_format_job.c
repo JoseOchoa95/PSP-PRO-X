@@ -6,15 +6,18 @@
 #include "fat32_dirs.h"
 #include "job.h"
 
-enum Failure { OK, UNVERIFIED, SWAP, DENIED, BAD_TREE, WRITE_ERROR, READBACK, DROPPED_WRITE, CLEANUP, MOUNT };
+enum Failure {
+    OK, UNVERIFIED, SWAP, DENIED, BAD_TREE, WRITE_ERROR, READBACK, DROPPED_WRITE, CLEANUP, MOUNT,
+    BATCH_REFUSED, LATE_READBACK,
+};
 
-enum { SECOND_BOOT = 230688768 };
+enum { FIRST_BOOT = 2048, SECOND_BOOT = 230688768, CORRUPT_METADATA = FIRST_BOOT + 41 };
 
 static struct TestDisk {
     enum Failure mode;
     struct MsFormatPlan plan;
-    int locked;
-    unsigned writes, stages, mounts, entries, reports;
+    int locked, first_boot_published;
+    unsigned writes, stages, mounts, entries, reports, sector_reads, batch_reads;
     struct { uint32_t lba; uint8_t data[512]; } sectors[160];
 } disk;
 
@@ -119,9 +122,8 @@ static int allowed(const struct TestDisk *test, uint32_t lba)
     return 0;
 }
 
-static int read_sector(void *context, uint32_t lba, uint8_t *out)
+static void read_fixture(const struct TestDisk *test, uint32_t lba, uint8_t *out)
 {
-    const struct TestDisk *test = context;
     assert(test->locked && allowed(test, lba));
     memset(out, 0, 512);
     if (test->mode == DROPPED_WRITE && lba == SECOND_BOOT)
@@ -134,6 +136,27 @@ static int read_sector(void *context, uint32_t lba, uint8_t *out)
             break;
         }
     }
+    if (test->mode == LATE_READBACK && test->first_boot_published && lba == CORRUPT_METADATA)
+        out[0] ^= 1;
+}
+
+static int read_sector(void *context, uint32_t lba, uint8_t *out)
+{
+    struct TestDisk *test = context;
+    ++test->sector_reads;
+    read_fixture(test, lba, out);
+    return 1;
+}
+
+static int read_batch(void *context, uint32_t lba, unsigned count, uint8_t *out)
+{
+    struct TestDisk *test = context;
+    assert(count > 1 && count <= MS_FORMAT_READ_BATCH_SECTORS && !test->sectors[0].data[510]);
+    ++test->batch_reads;
+    if (test->mode == BATCH_REFUSED)
+        return 0;
+    for (unsigned i = 0; i < count; ++i)
+        read_fixture(test, lba + i, out + i * FAT32_SECTOR_BYTES);
     return 1;
 }
 
@@ -154,6 +177,8 @@ static int write_sector(void *context, uint32_t lba, const uint8_t *data)
         test->sectors[i].lba = lba;
     }
     memcpy(test->sectors[i].data, data, 512);
+    if (lba == FIRST_BOOT && data[510] == 0x55)
+        test->first_boot_published = 1;
     return 1;
 }
 
@@ -175,7 +200,7 @@ static void verify_report(void *context, unsigned index, uint32_t writes)
 }
 
 static const struct MsFormatBackend backend = {inspect, exclusive, read_sector, write_sector,
-                                               seed_initial_contents, mount_first, verify_report};
+                                               seed_initial_contents, mount_first, verify_report, read_batch};
 static struct Fat32Ram scratch;
 
 static void run(enum Failure injection, enum MsFormatFailure expected, unsigned verified, int wrote)
@@ -195,7 +220,11 @@ static void run(enum Failure injection, enum MsFormatFailure expected, unsigned 
         assert(disk.stages == 2 && result.writes < 32);
         assert(disk.sectors[0].data[510] == 0);
     }
-    assert(disk.mounts == (unsigned)(injection == OK || injection == MOUNT));
+    if (injection == LATE_READBACK) {
+        assert(result.sector_failure == MS_SECTOR_MISMATCH && result.failure_lba == CORRUPT_METADATA);
+        assert(disk.batch_reads && disk.sectors[0].data[510] == 0);
+    }
+    assert(disk.mounts == (unsigned)(injection == OK || injection == MOUNT || injection == BATCH_REFUSED));
     assert(ms_format_execute(&backend, &disk, &preview, &scratch).failure == MS_FORMAT_NO_PREVIEW);
 }
 
@@ -215,7 +244,12 @@ int main(void)
     run(DROPPED_WRITE, MS_FORMAT_VOLUME_IO, 1, 1);
     run(CLEANUP, MS_FORMAT_RELEASE_FAILED, 5, 1);
     run(MOUNT, MS_FORMAT_FIRST_MOUNT, 5, 1);
+    run(LATE_READBACK, MS_FORMAT_VOLUME_IO, 0, 1);
+    run(BATCH_REFUSED, MS_FORMAT_COMPLETE, 5, 1);
+    unsigned single_reads = disk.sector_reads;
+    unsigned writes = disk.writes;
     run(OK, MS_FORMAT_COMPLETE, 5, 1);
+    assert(disk.batch_reads && disk.writes == writes && disk.sector_reads + disk.batch_reads < single_reads / 4);
     puts("PASS: preview, cancellation, wrong card and bounds, volume and table readback, final mount and failures");
     return 0;
 }
