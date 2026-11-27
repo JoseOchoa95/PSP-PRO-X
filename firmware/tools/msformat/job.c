@@ -34,6 +34,7 @@ static int matches_preview(const struct MsFormatBackend *backend, void *device,
            live.reported_sectors == preview->media.reported_sectors &&
            live.verified_sectors == preview->media.verified_sectors &&
            !memcmp(live.identity, preview->media.identity, sizeof(live.identity)) &&
+           !memcmp(&live.gpt, &preview->media.gpt, sizeof(live.gpt)) &&
            ms_format_layout(live.reported_sectors, live.verified_sectors, &plan) == MS_FORMAT_EXTENDED &&
            plan.usable_sectors == expected->usable_sectors && plan.full_sectors == expected->full_sectors &&
            plan.final_sectors == expected->final_sectors && plan.volume_count == expected->volume_count &&
@@ -175,6 +176,24 @@ static int publish_table(const struct MsFormatBackend *backend, void *device,
     return write_and_verify(backend, device, lba, expected, result);
 }
 
+static int check_gpt_removal(const struct MsFormatBackend *backend, void *device, const struct MsGptLayout *gpt,
+                             int clear, struct MsFormatResult *result)
+{
+    uint8_t empty[FAT32_SECTOR_BYTES] = {0};
+    for (uint32_t offset = 0; offset < gpt->sectors_per_copy; ++offset) {
+        const uint32_t addresses[] = {gpt->backup_start + gpt->sectors_per_copy - 1 - offset, 1 + offset};
+        for (unsigned i = 0; i < sizeof(addresses) / sizeof(addresses[0]); ++i) {
+            uint32_t lba = addresses[i];
+            if (clear && !write_sector(backend, device, lba, empty, result))
+                return 0;
+            if (!verify_sector(backend, device, lba, empty, result))
+                return 0;
+            result->gpt_sectors_cleared += clear;
+        }
+    }
+    return 1;
+}
+
 static enum MsFormatFailure format_locked(const struct MsFormatBackend *backend, void *device,
                                           const struct MsFormatPreview *preview, struct Fat32Ram *scratch,
                                           struct MsFormatResult *result)
@@ -182,6 +201,7 @@ static enum MsFormatFailure format_locked(const struct MsFormatBackend *backend,
     if (!matches_preview(backend, device, preview))
         return MS_FORMAT_MEDIA_CHANGED;
     const struct MsFormatPlan *plan = &preview->plan;
+    const struct MsGptLayout *gpt = &preview->media.gpt;
     struct MsFormatVolume volume;
     uint8_t signature[4];
     for (unsigned i = 0; i < plan->volume_count; ++i) {
@@ -205,6 +225,8 @@ static enum MsFormatFailure format_locked(const struct MsFormatBackend *backend,
             }
             if (!write_and_verify(backend, device, 0, empty, result))
                 return MS_FORMAT_TABLE_IO;
+            if (!check_gpt_removal(backend, device, gpt, 1, result))
+                return MS_FORMAT_GPT_IO;
         }
         uint32_t writes_before = result->writes;
         if (!write_volume(backend, device, scratch, metadata, result))
@@ -218,6 +240,8 @@ static enum MsFormatFailure format_locked(const struct MsFormatBackend *backend,
             !publish_table(backend, device, plan, volume.ebr, signature, result))
             return MS_FORMAT_TABLE_IO;
     }
+    if (!check_gpt_removal(backend, device, gpt, 0, result))
+        return MS_FORMAT_GPT_IO;
     return publish_table(backend, device, plan, 0, signature, result) ? MS_FORMAT_COMPLETE : MS_FORMAT_TABLE_IO;
 }
 

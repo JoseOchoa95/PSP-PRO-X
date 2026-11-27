@@ -13,6 +13,12 @@
 - Exercise Sony's format dispatch in RAM and add MSFORMAT for bounded physical FAT32 initialization of partition 3 on the backed-up trial card. The owner verified 9,694 metadata sectors on the PSP. The Windows direct reader independently checked the resulting layout.
 - Add MSDIRS and MSDIRCARD to stage initial contents with Sony's FAT directory routine and verify them. MSDIRCARD reproduces the 17 folders, including `ISO`, `ISO/VIDEO` and `SEPLUGINS`, plus the empty, hidden, read-only `MEMSTICK.IND` and `MSTK_PRO.IND` files. The owner reported 10,782 verified sectors on partition 3. The direct reader independently matched the contents, MBR, partition boundaries and five control sectors.
 
+## v0.5.3 — GPT-to-MBR formatting (unreleased)
+
+- Preview and convert a supported GPT card to an MBR FAT32 layout during confirmed formatting in MSAUTOFMT. The app verifies both GPT copies before writing and checks that their metadata was removed before publishing the new MBR.
+- Refuse the conversion when the card boundary or GPT structures cannot be verified. Conversion erases all volumes on the confirmed card.
+- Verify conversion on the tested 256 GB card. The PSP mounted the first FAT32 volume, and a direct USB reader confirmed the new MBR, all three FAT32 volumes, and removal of both GPT copies.
+
 ## v0.5.2 — FAT32 format performance (unreleased)
 
 - Group contiguous FAT32 metadata reads in MSAUTOFMT to reduce Memory Stick transfers. Each metadata sector still receives a final readback check. The formatter falls back to single-sector reads if a batch is rejected and reports how many batches completed.

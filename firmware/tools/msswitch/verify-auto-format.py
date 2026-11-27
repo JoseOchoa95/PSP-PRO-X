@@ -131,9 +131,14 @@ def main():
     parser.add_argument("device_sectors", type=int, help="Expected sector count from the PSP preview")
     parser.add_argument("adapter_sectors", type=int, help="Adapter sector count from the PSP preview")
     parser.add_argument("--require-labels", action="store_true", help="Require PART labels on all volumes")
+    parser.add_argument("--gpt-sectors-per-copy", type=int, default=0,
+                        help="Verify that both former GPT copies were zeroed, including their headers")
     args = parser.parse_args()
     if args.disk < 0 or not 0 < args.adapter_sectors < args.device_sectors:
         parser.error("Enter a valid disk number and the two sector counts from the preview.")
+    count = args.gpt_sectors_per_copy
+    if count and (not 33 <= count <= 1025 or 2 * count + 1 >= args.device_sectors):
+        parser.error("Enter the number of sectors of one former GPT copy, including its header.")
     geometry = json.loads(subprocess.check_output(
         ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
          f"Get-Disk -Number {args.disk} -ErrorAction Stop | Select-Object Size, LogicalSectorSize,"
@@ -152,6 +157,12 @@ def main():
             return block[:]
 
         verify(read, args.device_sectors, args.adapter_sectors, args.require_labels)
+        if count:
+            empty = bytes(SECTOR_BYTES)
+            for offset in range(count):
+                for lba in (1 + offset, args.device_sectors - 1 - offset):
+                    require(read(lba) == empty, f"Former GPT metadata was not cleared at LBA {lba}.")
+            print(f"PASS: all {2 * count} former GPT metadata sectors are zero.")
 
 
 if __name__ == "__main__":

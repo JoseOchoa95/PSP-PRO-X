@@ -7,6 +7,7 @@ from pathlib import Path
 import runpy
 import struct
 import subprocess
+import sys
 import uuid
 from zipfile import ZipFile
 
@@ -84,6 +85,8 @@ def verify_binary(data, symbols, build_id, title, physical, directories, directo
     if auto_format:
         required |= {"ms_auto_measure", "ms_auto_check_boundary", "ms_card_capture", "ms_card_matches",
                      "ms_probe_sector"}
+        if not write_path:
+            required.add("ms_gpt_inspect")
         if any(name in elf for name in (b"MSPART.BIN", b"MSDREF.BIN")):
             raise ValueError("The automatic formatter embeds a per-card reference filename")
     if not required <= names or (forbidden & names):
@@ -122,6 +125,9 @@ def compile_in(directory, image, build_id, log, run_host_tests, title, physical,
                        'firmware/tools/msformat/job.c tests/native/test_ms_format_job.c '
                        '-o test-ms-format-job; ./test-ms-format-job')
         if auto_format:
+            checks += ('; ' + flags + 'firmware/tools/msformat/fat32_init.c firmware/tools/msformat/layout.c '
+                       'firmware/tools/msformat/gpt.c tests/native/test_ms_format_gpt.c -lz '
+                       '-o test-ms-format-gpt; ./test-ms-format-gpt')
             checks += ('; ' + flags + '-I firmware/tools/msdiag firmware/tools/msdiag/auto_probe.c '
                        'firmware/tools/msdiag/capacity.c tests/native/test_msdiag_auto_probe.c '
                        '-o test-ms-auto-probe; ./test-ms-auto-probe; '
@@ -208,15 +214,18 @@ def main():
         if not auto_format:
             paths += [TOOL / "verify-whole-card.py"]
         paths += [DIAG / name for name in ("capacity.c", "capacity.h")]
-        paths += [Path("firmware/tools/msformat") / name for name in ("layout.c", "layout.h", "job.c", "job.h")]
+        paths += [Path("firmware/tools/msformat") / name for name in ("layout.c", "layout.h", "job.c", "job.h", "gpt.h")]
         paths += [Path("tests/native") / name for name in ("test_ms_format_layout.c", "test_ms_format_job.c")]
     if auto_format:
         paths += [TOOL / "auto_card.c"]
+        if not write_path:
+            paths += [TOOL / "verify-auto-format.py"]
         paths += [DIAG / name for name in ("psp_media.c", "psp_media.h", "auto_probe.c", "auto_probe.h")]
         paths += [Path("firmware/tools/msformat") / name for name in ("card_snapshot.c", "card_snapshot.h")]
         paths += [Path("tests/native") / name for name in ("test_msdiag_auto_probe.c", "test_ms_card_snapshot.c")]
         paths += [Path("firmware/tools/msformat") / name for name in ("write_probe.c", "write_probe.h")]
         paths += [Path("tests/native/test_ms_write_probe.c")]
+        paths += [Path("firmware/tools/msformat/gpt.c"), Path("tests/native/test_ms_format_gpt.c")]
     paths += [DIAG / name for name in ("probe.c", "probe.h", "stock_reader.c", "stock_reader.h")]
     paths += [Path("firmware/tools/msformat") / name for name in (
         "fat32_init.c", "fat32_init.h", "fat32_ram.c", "fat32_ram.h",
@@ -248,12 +257,14 @@ def main():
         "LICENSE": source["LICENSE"],
         **{f"licenses/{path.name}": source[path.as_posix()] for path in LICENSES},
     }
-    if physical or (directory_card and not auto_format):
+    if physical or (directory_card and not write_path):
         files["verify-format-trial.py"] = source[(TOOL / "verify-format-trial.py").as_posix()]
-    if directory_card and not auto_format:
+    if directory_card and not write_path:
         files["verify-directory-trial.py"] = source[(TOOL / "verify-directory-trial.py").as_posix()]
     if whole_card and not auto_format:
         files["verify-whole-card.py"] = source[(TOOL / "verify-whole-card.py").as_posix()]
+    if auto_format and not write_path:
+        files["verify-auto-format.py"] = source[(TOOL / "verify-auto-format.py").as_posix()]
     manifest = {
         "tool": title,
         "build_id": build_id,
@@ -272,6 +283,9 @@ def main():
     source_zip = dest / f"pro-x-{build_id}-661-source.zip"
     SHARED["archive_and_verify"](binary_zip, files)
     SHARED["archive_and_verify"](source_zip, source)
+    if auto_format and not write_path:
+        subprocess.run([sys.executable, str(dest / "verify-auto-format.py"), "--help"],
+                       check=True, stdout=subprocess.DEVNULL)
     if (dest / eboot).read_bytes() != binary:
         raise ValueError("Loose EBOOT differs from the archive")
     replay = work.with_name(build_id + "-source-replay")

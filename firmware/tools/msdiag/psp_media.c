@@ -127,7 +127,7 @@ const char *ms_auto_measure(SceUID file, struct MsAutoMedia *media)
     media->layout = ms_format_layout(media->reported, capacity->estimate.sectors, &media->plan);
     if (media->layout == MS_FORMAT_EXTENDED && !media->gpt && capacity->estimate.finding == CAPACITY_CANDIDATE &&
         capacity->alias_checks && capacity->distinct_checks == capacity->alias_checks) {
-        media->have_snapshot = ms_card_capture(&media->plan, media->reported, ms_auto_read_sector,
+        media->have_snapshot = ms_card_capture(&media->plan, NULL, media->reported, ms_auto_read_sector,
                                                &media->reader, &media->snapshot) &&
                                !memcmp(media->snapshot.mbr, controls.mbr, sizeof(controls.mbr)) &&
                                controls_match(&media->reader, &controls);

@@ -19,6 +19,8 @@ struct MsFormatVolume {
     uint32_t start, sectors, ebr;
 };
 
+typedef int (*MsReadSector)(void *device, uint32_t lba, uint8_t sector[FAT32_SECTOR_BYTES]);
+
 /* The caller supplies a verified extent or a verified prefix at least as large as the cap. */
 enum MsFormatLayoutResult ms_format_layout(uint64_t reported_sectors, uint64_t verified_sectors,
                                            struct MsFormatPlan *plan);
