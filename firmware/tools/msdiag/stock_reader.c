@@ -686,6 +686,23 @@ int stock_format_locked_read(struct StockFormatAccess *access, uint32_t lba, voi
     return transaction_live(access, lba);
 }
 
+#ifdef MSAUTO_FORMAT_TRIAL
+int stock_format_locked_read_batch(struct StockFormatAccess *access, uint32_t lba, unsigned count, void *buffer)
+{
+    static uint8_t aligned[STOCK_FORMAT_READ_BATCH_SECTORS * SECTOR_BYTES] __attribute__((aligned(64)));
+    if (count < 2 || count > STOCK_FORMAT_READ_BATCH_SECTORS || !transaction_live(access, lba) ||
+        count > access->sector_limit - lba)
+        return 0;
+    ReadDispatch read = (ReadDispatch)(access->reader->text + RAW_DISPATCH);
+    unsigned bytes = count * SECTOR_BYTES;
+    memset(aligned, 0xa5, bytes);
+    if (read(lba, count, aligned) != 0 || !transaction_live(access, lba))
+        return 0;
+    memcpy(buffer, aligned, bytes);
+    return 1;
+}
+#endif
+
 int stock_format_locked_write_status(struct StockFormatAccess *access, uint32_t lba,
                                      const void *buffer, int *command)
 {

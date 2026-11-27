@@ -63,6 +63,10 @@ typedef void (*StockFormatOperation)(struct StockFormatAccess *access, void *con
 int stock_format_transaction(const struct StockReader *reader, StockFormatOperation operation,
                              void *context, uint32_t sector_limit);
 int stock_format_locked_read(struct StockFormatAccess *access, uint32_t lba, void *buffer);
+#ifdef MSAUTO_FORMAT_TRIAL
+enum { STOCK_FORMAT_READ_BATCH_SECTORS = 8 };
+int stock_format_locked_read_batch(struct StockFormatAccess *access, uint32_t lba, unsigned count, void *buffer);
+#endif
 int stock_format_locked_write(struct StockFormatAccess *access, uint32_t lba, const void *buffer);
 int stock_format_locked_write_status(struct StockFormatAccess *access, uint32_t lba,
                                      const void *buffer, int *command);

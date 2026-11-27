@@ -23,6 +23,8 @@ enum MsFormatAccess {
 
 typedef void (*MsFormatLockedOperation)(void *context);
 
+enum { MS_FORMAT_READ_BATCH_SECTORS = 8 };
+
 struct MsFormatBackend {
     /* A successful inspection attests to the usable extent and insertion identity. */
     int (*inspect)(void *device, struct MsFormatMedia *media);
@@ -38,6 +40,8 @@ struct MsFormatBackend {
     int (*mount_first)(void *device, const struct MsFormatMedia *media,
                        const struct MsFormatVolume *volume);
     void (*volume_verified)(void *device, unsigned index, uint32_t writes);
+    /* Optional contiguous metadata read. A failure falls back to sector reads. */
+    int (*read_batch)(void *device, uint32_t lba, unsigned count, uint8_t *sectors);
 };
 
 enum MsFormatFailure {

@@ -13,6 +13,10 @@
 - Exercise Sony's format dispatch in RAM and add MSFORMAT for bounded physical FAT32 initialization of partition 3 on the backed-up trial card. The owner verified 9,694 metadata sectors on the PSP. The Windows direct reader independently checked the resulting layout.
 - Add MSDIRS and MSDIRCARD to stage initial contents with Sony's FAT directory routine and verify them. MSDIRCARD reproduces the 17 folders, including `ISO`, `ISO/VIDEO` and `SEPLUGINS`, plus the empty, hidden, read-only `MEMSTICK.IND` and `MSTK_PRO.IND` files. The owner reported 10,782 verified sectors on partition 3. The direct reader independently matched the contents, MBR, partition boundaries and five control sectors.
 
+## v0.5.2 — FAT32 format performance (unreleased)
+
+- Group contiguous FAT32 metadata reads in MSAUTOFMT to reduce Memory Stick transfers. Each metadata sector still receives a final readback check. The formatter falls back to single-sector reads if a batch is rejected and reports how many batches completed.
+
 ## v0.5.1 — automatic FAT32 formatting (unreleased)
 
 - Add MSAUTO and MSAUTOFMT to preview and format FAT32 partitions on MBR cards directly on the PSP without a per-card reference file. Layouts use the adapter's reported size rounded down to whole GiB and the verified card capacity up to a 1 TB planning limit.

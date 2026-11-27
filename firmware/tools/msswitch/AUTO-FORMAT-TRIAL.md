@@ -2,6 +2,8 @@
 
 This standalone 6.61 test app measures the inserted microSD through its Memory Stick adapter, presents the FAT32 plan, and requires a separate confirmation to erase and format it. Use the backed-up 256 GB card for the first console trial. The app derives capacity and two live sector witnesses from the card. The evidence must establish an exact boundary and distinguish the sampled address periods. The 1 TB cap applies to planning. The app directs cards in the ordinary capacity range to Sony's Format Memory Stick setting. GPT conversion is pending.
 
+The formatter reads contiguous FAT32 metadata in batches of up to eight sectors and falls back to individual reads if Sony's driver rejects a batch. It verifies every metadata sector after writing. Keep the `Metadata read batches` line and the per-volume times when reporting a test.
+
 Copy the PSP directory from release to the root of a working Memory Stick. On the PSP, launch the app and press X for a formatter check in RAM. When the app asks and the Memory Stick light is off, insert the backed-up trial card with its adapter. Press X to scan. Review the card size and all partition sizes on the preview. Hold L and R and press X to confirm. Leave the card inserted while each partition formats and verifies. When the result appears, take a photo and press O to return to the XMB. Check that Memory Stick opens and that the PSP/GAME folder is accessible.
 
 The app writes the partition layout and FAT32 metadata. Each formatted volume receives the initial PSP folders and indicator files. The app restores partition 1 as ms0: and checks the mounted filesystem. The app package does not install firmware.

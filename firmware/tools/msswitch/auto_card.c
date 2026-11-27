@@ -27,6 +27,10 @@ static struct FormatCard {
     struct StockReader reader;
     struct StockFormatAccess *access;
     uint32_t metadata_start, metadata_length, started_us;
+#ifndef MSWRITE_PATH_TRIAL
+    unsigned read_batches;
+    int batch_unavailable;
+#endif
     int detached, probe_unsafe;
 } card;
 static SceUID raw = -1;
@@ -173,6 +177,24 @@ static enum MsFormatAccess exclusive(void *context, MsFormatLockedOperation oper
 }
 
 #ifndef MSWRITE_PATH_TRIAL
+_Static_assert(MS_FORMAT_READ_BATCH_SECTORS <= (int)STOCK_FORMAT_READ_BATCH_SECTORS,
+               "format read batch fits the stock transfer buffer");
+
+static int read_metadata_batch(void *context, uint32_t lba, unsigned count, uint8_t *buffer)
+{
+    struct FormatCard *target = context;
+    if (target->batch_unavailable || lba < target->metadata_start ||
+        lba - target->metadata_start >= target->metadata_length ||
+        count > target->metadata_length - (lba - target->metadata_start) || !fat_is_idle())
+        return 0;
+    if (!stock_format_locked_read_batch(target->access, lba, count, buffer) || !fat_is_idle()) {
+        target->batch_unavailable = 1;
+        return 0;
+    }
+    ++target->read_batches;
+    return 1;
+}
+
 static int planned_write(const struct FormatCard *target, uint32_t lba)
 {
     if (!lba || (lba >= target->metadata_start && lba - target->metadata_start < target->metadata_length))
@@ -267,7 +289,7 @@ static void restore_original_mount(struct FormatCard *target)
 
 #ifndef MSWRITE_PATH_TRIAL
 static const struct MsFormatBackend backend = {
-    inspect, exclusive, read_locked, write_locked, stage, mount_first, verified,
+    inspect, exclusive, read_locked, write_locked, stage, mount_first, verified, read_metadata_batch,
 };
 #endif
 
@@ -500,7 +522,9 @@ void dirs_card_write(struct Fat32Ram *image)
         static const char *const errors[] = {"", "read failed", "write refused", "readback differs"};
         pspDebugScreenPrintf("LBA %u: %s\n", result.failure_lba, errors[result.sector_failure]);
     }
-    pspDebugScreenPrintf("\nVerified partitions: %u/%u  Format writes: %u\n"
+    pspDebugScreenPrintf("\nMetadata read batches: %u%s\n", card.read_batches,
+                         card.batch_unavailable ? " (single-sector fallback)" : "");
+    pspDebugScreenPrintf("Verified partitions: %u/%u  Format writes: %u\n"
                          "Result code: %u\nAuto format trial: %s\n\nO: exit\n",
                          result.verified_volumes, count, result.writes, (unsigned)result.failure,
                          result.failure == MS_FORMAT_COMPLETE ? "PASS" : "FAIL");
