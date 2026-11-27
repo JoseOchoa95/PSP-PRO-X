@@ -8,17 +8,18 @@
 
 enum Failure {
     OK, UNVERIFIED, SWAP, DENIED, BAD_TREE, WRITE_ERROR, READBACK, DROPPED_WRITE, CLEANUP, MOUNT,
-    BATCH_REFUSED, LATE_READBACK,
+    BATCH_REFUSED, LATE_READBACK, GPT_OK, GPT_CHANGED, GPT_DROPPED_WRITE, GPT_LATE_READBACK,
 };
 
 enum { FIRST_BOOT = 2048, SECOND_BOOT = 230688768, CORRUPT_METADATA = FIRST_BOOT + 41 };
+static const struct MsGptLayout gpt = {33, 1048576000 - 33, 7, 9};
 
 static struct TestDisk {
     enum Failure mode;
     struct MsFormatPlan plan;
     int locked, first_boot_published;
     unsigned writes, stages, mounts, entries, reports, sector_reads, batch_reads;
-    struct { uint32_t lba; uint8_t data[512]; } sectors[160];
+    struct { uint32_t lba; uint8_t data[512]; } sectors[256];
 } disk;
 
 static void put32(uint8_t *out, uint32_t value)
@@ -88,7 +89,12 @@ static int seed_initial_contents(void *context, struct Fat32Ram *image, const st
 static int inspect(void *context, struct MsFormatMedia *media)
 {
     const struct TestDisk *test = context;
-    *media = (struct MsFormatMedia){232259584, 1048576000, {3}};
+    *media = (struct MsFormatMedia){.reported_sectors = 232259584, .verified_sectors = 1048576000,
+                                    .identity = {3}};
+    if (test->mode >= GPT_OK)
+        media->gpt = gpt;
+    if (test->mode == GPT_CHANGED && test->locked)
+        ++media->gpt.backup_crc;
     if (test->mode == SWAP && test->locked)
         media->identity[0] = 4;
     return test->mode != UNVERIFIED;
@@ -108,7 +114,7 @@ static enum MsFormatAccess exclusive(void *context, MsFormatLockedOperation run,
 
 static int allowed(const struct TestDisk *test, uint32_t lba)
 {
-    if (lba == 0)
+    if (lba == 0 || (test->mode >= GPT_OK && ms_gpt_contains(&gpt, lba)))
         return 1;
     for (unsigned i = 0; i < test->plan.volume_count; ++i) {
         struct MsFormatVolume volume;
@@ -126,7 +132,8 @@ static void read_fixture(const struct TestDisk *test, uint32_t lba, uint8_t *out
 {
     assert(test->locked && allowed(test, lba));
     memset(out, 0, 512);
-    if (test->mode == DROPPED_WRITE && lba == SECOND_BOOT)
+    if ((test->mode == DROPPED_WRITE && lba == SECOND_BOOT) ||
+        (test->mode >= GPT_OK && ms_gpt_contains(&gpt, lba)))
         memset(out, 0xa5, 512);
     for (unsigned i = 0; i < test->entries; ++i) {
         if (test->sectors[i].lba == lba) {
@@ -138,6 +145,8 @@ static void read_fixture(const struct TestDisk *test, uint32_t lba, uint8_t *out
     }
     if (test->mode == LATE_READBACK && test->first_boot_published && lba == CORRUPT_METADATA)
         out[0] ^= 1;
+    if (test->mode == GPT_LATE_READBACK && test->first_boot_published && lba == gpt.backup_start)
+        out[0] = 0xa5;
 }
 
 static int read_sector(void *context, uint32_t lba, uint8_t *out)
@@ -166,7 +175,8 @@ static int write_sector(void *context, uint32_t lba, const uint8_t *data)
     assert(test->locked && allowed(test, lba));
     if (++test->writes == 6 && test->mode == WRITE_ERROR)
         return 0;
-    if (test->mode == DROPPED_WRITE && lba == SECOND_BOOT)
+    if ((test->mode == DROPPED_WRITE && lba == SECOND_BOOT) ||
+        (test->mode == GPT_DROPPED_WRITE && lba == gpt.backup_start))
         return 1;
     unsigned i = 0;
     while (i < test->entries && test->sectors[i].lba != lba)
@@ -224,7 +234,14 @@ static void run(enum Failure injection, enum MsFormatFailure expected, unsigned 
         assert(result.sector_failure == MS_SECTOR_MISMATCH && result.failure_lba == CORRUPT_METADATA);
         assert(disk.batch_reads && disk.sectors[0].data[510] == 0);
     }
-    assert(disk.mounts == (unsigned)(injection == OK || injection == MOUNT || injection == BATCH_REFUSED));
+    if (injection == GPT_DROPPED_WRITE || injection == GPT_LATE_READBACK) {
+        assert(result.sector_failure == MS_SECTOR_MISMATCH && result.failure_lba == gpt.backup_start);
+        assert(disk.sectors[0].data[510] == 0);
+    }
+    if (injection == GPT_OK)
+        assert(result.gpt_sectors_cleared == 66);
+    assert(disk.mounts == (unsigned)(injection == OK || injection == MOUNT || injection == BATCH_REFUSED ||
+                                    injection == GPT_OK));
     assert(ms_format_execute(&backend, &disk, &preview, &scratch).failure == MS_FORMAT_NO_PREVIEW);
 }
 
@@ -250,6 +267,10 @@ int main(void)
     unsigned writes = disk.writes;
     run(OK, MS_FORMAT_COMPLETE, 5, 1);
     assert(disk.batch_reads && disk.writes == writes && disk.sector_reads + disk.batch_reads < single_reads / 4);
+    run(GPT_CHANGED, MS_FORMAT_MEDIA_CHANGED, 0, 0);
+    run(GPT_DROPPED_WRITE, MS_FORMAT_GPT_IO, 0, 1);
+    run(GPT_LATE_READBACK, MS_FORMAT_GPT_IO, 5, 1);
+    run(GPT_OK, MS_FORMAT_COMPLETE, 5, 1);
     puts("PASS: preview, cancellation, wrong card and bounds, volume and table readback, final mount and failures");
     return 0;
 }

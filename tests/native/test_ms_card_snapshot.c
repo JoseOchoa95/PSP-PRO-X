@@ -34,7 +34,7 @@ int main(void)
     struct MsCardSnapshot snapshot;
     struct Card card = {PHYSICAL, 2048, HIGH, END_SAMPLE, 0, 0, 0, 0};
     assert(ms_format_layout(REPORTED, PHYSICAL, &plan) == MS_FORMAT_EXTENDED);
-    assert(ms_card_capture(&plan, REPORTED, read_card, &card, &snapshot));
+    assert(ms_card_capture(&plan, NULL, REPORTED, read_card, &card, &snapshot));
     assert(snapshot.witnesses[0].lba == HIGH && snapshot.witnesses[1].lba == END_SAMPLE);
     card.swapped = 1;
     assert(!ms_card_matches(&snapshot, 0, read_card, &card));
@@ -43,11 +43,16 @@ int main(void)
     assert(ms_card_matches(&snapshot, 0, read_card, &card));
     assert(!ms_card_matches(&snapshot, 1, read_card, &card));
     card.blank = 1;
-    assert(!ms_card_capture(&plan, REPORTED, read_card, &card, &snapshot));
+    assert(!ms_card_capture(&plan, NULL, REPORTED, read_card, &card, &snapshot));
     assert(!ms_card_matches(&snapshot, 1, read_card, &card));
     card.blank = 0;
     card.repeat_bytes = 1;
-    assert(!ms_card_capture(&plan, REPORTED, read_card, &card, &snapshot));
+    assert(!ms_card_capture(&plan, NULL, REPORTED, read_card, &card, &snapshot));
+
+    const struct MsGptLayout gpt = {33, PHYSICAL - 33, 0, 0};
+    card.first = card.forbidden = PHYSICAL - 1;
+    card.alternate = HIGH;
+    assert(!ms_card_capture(&plan, &gpt, REPORTED, read_card, &card, &snapshot));
 
     card.length = 1048576000;
     assert(ms_format_layout(243269632, card.length, &plan) == MS_FORMAT_EXTENDED);
@@ -57,7 +62,7 @@ int main(void)
     card.first = logical.ebr + 1;
     card.alternate = card.length - 1024;
     card.repeat_bytes = 0;
-    assert(ms_card_capture(&plan, logical.ebr, read_card, &card, &snapshot));
+    assert(ms_card_capture(&plan, NULL, logical.ebr, read_card, &card, &snapshot));
     assert(snapshot.witnesses[0].lba == card.first && snapshot.witnesses[1].lba == card.alternate);
     puts("PASS: live card witnesses, MBR changes, missing evidence, media swap and extended layout");
     return 0;

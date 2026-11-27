@@ -72,11 +72,20 @@ static int no_gpt(struct FormatCard *target)
            memcmp(sector, "EFI PART", 8);
 }
 
+static int partition_marks_match(struct FormatCard *target)
+{
+    if (!target->identity.gpt.sectors_per_copy)
+        return no_gpt(target);
+    struct MsGptLayout live;
+    return ms_gpt_inspect(&target->measured.plan, read_locked, target, &live) &&
+           !memcmp(&live, &target->identity.gpt, sizeof(live));
+}
+
 static int inspect(void *context, struct MsFormatMedia *identity)
 {
     struct FormatCard *target = context;
     if (target->access &&
-        (!ms_card_matches(&target->measured.snapshot, 1, read_locked, target) || !no_gpt(target)))
+        (!ms_card_matches(&target->measured.snapshot, 1, read_locked, target) || !partition_marks_match(target)))
         return 0;
     *identity = target->identity;
     return 1;
@@ -108,7 +117,7 @@ static void run_locked(struct StockFormatAccess *access, void *context)
 #ifdef MSWRITE_PATH_TRIAL
     job->admitted = 1;
 #else
-    job->admitted = preflight_write(job->target);
+    job->admitted = partition_marks_match(job->target) && preflight_write(job->target);
 #endif
     if (job->admitted)
         job->operation(job->context);
@@ -197,7 +206,8 @@ static int read_metadata_batch(void *context, uint32_t lba, unsigned count, uint
 
 static int planned_write(const struct FormatCard *target, uint32_t lba)
 {
-    if (!lba || (lba >= target->metadata_start && lba - target->metadata_start < target->metadata_length))
+    if (!lba || ms_gpt_contains(&target->identity.gpt, lba) ||
+        (lba >= target->metadata_start && lba - target->metadata_start < target->metadata_length))
         return 1;
     const struct MsFormatPlan *plan = &target->measured.plan;
     for (unsigned i = plan->primary_count; i < plan->volume_count; ++i) {
@@ -298,18 +308,31 @@ static const char *prepare_preview(struct FormatCard *target)
     const char *error = ms_auto_measure(raw, &target->measured);
     if (error)
         return error;
-    const struct MsAutoMedia *measured = &target->measured;
+    struct MsAutoMedia *measured = &target->measured;
     pspDebugScreenPrintf("Adapter: %u sectors   Card: %u sectors\n",
                          measured->reported, measured->capacity.estimate.sectors);
-    if (measured->gpt)
-        return "GPT detected. GPT conversion is pending.";
 #ifdef MSWRITE_PATH_TRIAL
+    if (measured->gpt)
+        return "GPT is not supported by the write-path trial.";
     if (measured->capacity.estimate.sectors != WRITE_PROBE_SECTORS || !measured->reported ||
         WRITE_PROBE_LBA % measured->reported == 0)
         return "Only the prepared 500 GiB trial card can be tested.";
 #endif
     if (measured->layout == MS_FORMAT_STOCK)
         return "Use the Sony format option in System Settings.";
+#ifndef MSWRITE_PATH_TRIAL
+    if (measured->gpt) {
+        const struct AutoCapacity *capacity = &measured->capacity;
+        if (measured->layout != MS_FORMAT_EXTENDED || capacity->estimate.finding != CAPACITY_CANDIDATE ||
+            capacity->estimate.sectors != measured->plan.usable_sectors || !capacity->alias_checks ||
+            capacity->distinct_checks != capacity->alias_checks)
+            return "GPT detected. The usable boundary is inconclusive.";
+        if (!ms_gpt_inspect(&measured->plan, ms_auto_read_sector, &measured->reader, &target->identity.gpt))
+            return "GPT metadata is damaged or unsupported.";
+        measured->have_snapshot = ms_card_capture(&measured->plan, &target->identity.gpt, measured->reported,
+                                                   ms_auto_read_sector, &measured->reader, &measured->snapshot);
+    }
+#endif
     if (!measured->have_snapshot)
         return "The boundary or the two live witnesses were inconclusive.";
     target->identity.reported_sectors = measured->reported;
@@ -335,6 +358,8 @@ static void show_preview(const struct FormatCard *target)
 #else
     const struct MsFormatPlan *plan = &target->preview.plan;
     uint32_t gib = target->identity.verified_sectors * UINT64_C(100) / SECTORS_PER_GIB;
+    if (target->identity.gpt.sectors_per_copy)
+        pspDebugScreenPrintf("GPT verified. Format replaces it with MBR.\n");
     pspDebugScreenPrintf("Card: %u.%02u GiB. Planning cap: 1 TB.\n"
                          "%u FAT32 volumes (%u primary, %u logical)\n"
                          "Live witness LBAs: %u, %u\n\n",
@@ -524,6 +549,9 @@ void dirs_card_write(struct Fat32Ram *image)
     }
     pspDebugScreenPrintf("\nMetadata read batches: %u%s\n", card.read_batches,
                          card.batch_unavailable ? " (single-sector fallback)" : "");
+    if (card.identity.gpt.sectors_per_copy)
+        pspDebugScreenPrintf("GPT sectors cleared: %u/%u\n", result.gpt_sectors_cleared,
+                             2 * card.identity.gpt.sectors_per_copy);
     pspDebugScreenPrintf("Verified partitions: %u/%u  Format writes: %u\n"
                          "Result code: %u\nAuto format trial: %s\n\nO: exit\n",
                          result.verified_volumes, count, result.writes, (unsigned)result.failure,

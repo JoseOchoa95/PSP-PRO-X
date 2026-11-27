@@ -28,7 +28,7 @@ CFLAGS += -DMSMULTI_CARD_TRIAL
 PSP_EBOOT_TITLE = PRO-X Memory Stick Whole Card Trial
 endif
 ifeq ($(AUTO_FORMAT_TRIAL),1)
-OBJS := $(filter-out dirs_card.o,$(OBJS)) auto_card.o psp_media.o auto_probe.o card_snapshot.o write_probe.o
+OBJS := $(filter-out dirs_card.o,$(OBJS)) auto_card.o psp_media.o auto_probe.o card_snapshot.o write_probe.o gpt.o
 CFLAGS += -DMSAUTO_FORMAT_TRIAL
 PSP_EBOOT_TITLE = PRO-X Memory Stick Auto Format
 endif

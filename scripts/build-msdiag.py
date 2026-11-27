@@ -133,7 +133,7 @@ def main():
         tool_files += tuple(TOOL / name for name in ("auto_probe.c", "auto_probe.h", "auto_main.c", "psp_media.c", "psp_media.h", "AUTO-PREVIEW.md"))
         tool_files += tuple(Path("firmware/tools/msformat") / name for name in
                             ("layout.c", "layout.h", "fat32_init.c", "fat32_init.h", "card_snapshot.c",
-                             "card_snapshot.h", "fat32_dirs.h", "fat32_ram.h"))
+                             "card_snapshot.h", "fat32_dirs.h", "fat32_ram.h", "gpt.h"))
         tool_files += (Path("tests/native/test_msdiag_auto_probe.c"), Path("tests/native/test_ms_card_snapshot.c"))
     if attribute_probe:
         tool_files += (TOOL / "attribute_main.c", TOOL / readme)

@@ -67,7 +67,7 @@ static void show(unsigned page, int scanned)
     if (device.capacity.distinct_checks < device.capacity.alias_checks)
         pspDebugScreenPrintf("Equal samples are inconclusive for aliasing.\n");
     if (device.gpt)
-        pspDebugScreenPrintf("GPT detected. Conversion is pending.\n");
+        pspDebugScreenPrintf("GPT detected. Read-only preview.\n");
     else if (device.have_snapshot)
         pspDebugScreenPrintf("Live witness LBAs: %u, %u\n", device.snapshot.witnesses[0].lba, device.snapshot.witnesses[1].lba);
     else if (device.layout == MS_FORMAT_EXTENDED)

@@ -3,11 +3,12 @@
 #define MSFORMAT_JOB_H
 
 #include "fat32_ram.h"
-#include "layout.h"
+#include "gpt.h"
 
 struct MsFormatMedia {
     uint64_t reported_sectors, verified_sectors;
     uint8_t identity[20];
+    struct MsGptLayout gpt;
 };
 
 struct MsFormatPreview {
@@ -54,6 +55,7 @@ enum MsFormatFailure {
     MS_FORMAT_TABLE_IO,
     MS_FORMAT_RELEASE_FAILED,
     MS_FORMAT_FIRST_MOUNT,
+    MS_FORMAT_GPT_IO,
 };
 
 enum MsFormatSectorFailure {
@@ -67,6 +69,7 @@ struct MsFormatResult {
     enum MsFormatFailure failure;
     unsigned verified_volumes;
     uint32_t writes;
+    uint32_t gpt_sectors_cleared;
     enum MsFormatSectorFailure sector_failure;
     uint32_t failure_lba;
 };

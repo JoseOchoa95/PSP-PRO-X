@@ -46,7 +46,7 @@ int ms_card_matches(const struct MsCardSnapshot *snapshot, int include_mbr,
     return 1;
 }
 
-int ms_card_capture(const struct MsFormatPlan *plan, uint32_t reported, MsReadSector read,
+int ms_card_capture(const struct MsFormatPlan *plan, const struct MsGptLayout *gpt, uint32_t reported, MsReadSector read,
                     void *device, struct MsCardSnapshot *snapshot)
 {
     if (!snapshot)
@@ -66,6 +66,7 @@ int ms_card_capture(const struct MsFormatPlan *plan, uint32_t reported, MsReadSe
         for (unsigned j = 0; j < sizeof(offsets) / sizeof(offsets[0]); ++j) {
             int64_t candidate = (int64_t)bases[i] + offsets[j];
             if (candidate <= 0 || candidate >= length || (!found && candidate < reported) ||
+                ms_gpt_contains(gpt, (uint32_t)candidate) ||
                 !safe_witness(plan, (uint32_t)candidate) || (uint32_t)candidate == snapshot->witnesses[0].lba)
                 continue;
             if (!read(device, (uint32_t)candidate, sector))
