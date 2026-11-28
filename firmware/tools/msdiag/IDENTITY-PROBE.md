@@ -1,0 +1,9 @@
+# PRO-X Memory Stick Identity Probe
+
+MSID reads the System Info record from the Memory Stick PRO attribute area on PSP 6.61. It reads the record twice and compares both reads with Sony's cached record. It shows short fingerprints for the serial field and PRO ID separately, along with a fingerprint for the full record and the driver-reported sector count. The identity comparison does not depend on the filesystem or any data sector. An all-zero or all-`ff` field is shown as unavailable.
+
+Copy `release/PSP` to a working launch card. Start MSID. With the Memory Stick light off, insert card A with the test adapter and press X. Record scan 1. Remove and reinsert A in the same adapter, then press X again. Scan card B in the same adapter. If a second adapter is available, scan A with it as a further control. Keep the app running so each reading can be compared with scan 1. Circle returns to the PSP menu.
+
+Favor two cards of the same nominal capacity if available. Stable fingerprints for card A across adapters and a distinct fingerprint for B are evidence that the field follows those cards. In the physical test, two 512 GB microSD cards in the same adapter returned the same serial and PRO ID fingerprints despite reporting different geometry. This rules out both fields as unique identifiers for those cards. The native microSD identity remains unverified. The app performs no card writes and does not authorize formatting.
+
+Thanks to the [Linux Memory Stick maintainers](https://github.com/torvalds/linux/blob/master/drivers/memstick/core/mspro_block.c) for documenting the System Info field layout in the driver, to [uOFW contributors](https://github.com/uofw/upspd) for the PSP platform and Memory Stick PRO references, and to [PSPDEV contributors](https://github.com/pspdev/pspsdk) for the SDK.

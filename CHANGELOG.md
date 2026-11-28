@@ -13,6 +13,16 @@
 - Exercise Sony's format dispatch in RAM and add MSFORMAT for bounded physical FAT32 initialization of partition 3 on the backed-up trial card. The owner verified 9,694 metadata sectors on the PSP. The Windows direct reader independently checked the resulting layout.
 - Add MSDIRS and MSDIRCARD to stage initial contents with Sony's FAT directory routine and verify them. MSDIRCARD reproduces the 17 folders, including `ISO`, `ISO/VIDEO` and `SEPLUGINS`, plus the empty, hidden, read-only `MEMSTICK.IND` and `MSTK_PRO.IND` files. The owner reported 10,782 verified sectors on partition 3. The direct reader independently matched the contents, MBR, partition boundaries and five control sectors.
 
+## v0.5.4 — Memory Stick diagnostics (unreleased)
+
+- Add MSBLANK, a standalone PSP diagnostic that tests two zero-filled high sectors on the backed-up 256 GB trial card. It checks lower addresses for unexpected changes and verifies restoration after reopening the card.
+- Verify MSBLANK on the tested 256 GB card. An independent direct USB read confirmed that the MBR and all ten sampled sectors matched the pre-trial bytes.
+- Add the read-only MSID diagnostic to compare identity fields without using filesystem data. Two physical microSD cards in the same adapter returned matching serial and PRO ID fields.
+- Add the read-only MSCHANGE diagnostic to invalidate a previous review after a Memory Stick is removed and reinserted. The owner confirmed the behavior on a PSP with a readable card and a card that prompted the console to format it.
+- Discard the MSAUTOFMT format plan when the PSP reports a Memory Stick change. The owner confirmed on a PSP that removing the card discarded the plan and that a fresh scan allowed formatting to complete.
+- Offer a separately confirmed capacity check for eligible cards with zero-filled samples. On the prepared 256 GB card, the direct reader verified restoration, then confirmed the three FAT32 volumes, labels and initial contents created by the PSP. The owner confirmed that the first partition mounted automatically.
+- Keep the 1 TB planning cap. Hardware testing at that capacity was waived for this ticket.
+
 ## v0.5.3 — GPT-to-MBR formatting (unreleased)
 
 - Preview and convert a supported GPT card to an MBR FAT32 layout during confirmed formatting in MSAUTOFMT. The app verifies both GPT copies before writing and checks that their metadata was removed before publishing the new MBR.

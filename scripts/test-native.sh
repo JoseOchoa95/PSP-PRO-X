@@ -13,6 +13,21 @@ cc -std=c11 -Wall -Wextra -Werror -I firmware/tools/msformat \
     tests/native/test_ms_format_gpt.c firmware/tools/msformat/gpt.c firmware/tools/msformat/layout.c \
     firmware/tools/msformat/fat32_init.c -lz -o /tmp/test-ms-format-gpt
 /tmp/test-ms-format-gpt
+cc -std=c11 -Wall -Wextra -Werror -I firmware/tools/msformat \
+    tests/native/test_ms_blank_probe.c firmware/tools/msformat/blank_probe.c -o /tmp/test-ms-blank-probe
+/tmp/test-ms-blank-probe
+cc -std=c11 -Wall -Wextra -Werror -I firmware/tools/msformat \
+    firmware/tools/msformat/fat32_init.c firmware/tools/msformat/layout.c \
+    firmware/tools/msformat/card_snapshot.c firmware/tools/msformat/blank_probe.c \
+    firmware/tools/msformat/blank_capacity.c tests/native/test_ms_blank_capacity.c -o /tmp/test-ms-blank-capacity
+/tmp/test-ms-blank-capacity
+cc -std=c11 -Wall -Wextra -Werror -I firmware/tools/msdiag \
+    tests/native/test_msdiag_identity.c firmware/tools/msdiag/identity_probe.c firmware/tools/msdiag/probe.c \
+    -o /tmp/test-msdiag-identity
+/tmp/test-msdiag-identity
+cc -std=c11 -Wall -Wextra -Werror -I firmware/tools/msdiag \
+    tests/native/test_msdiag_media_session.c firmware/tools/msdiag/media_session.c -o /tmp/test-msdiag-media-session
+/tmp/test-msdiag-media-session
 mkdir -p /tmp/prox-signed-include
 python3 scripts/native_signed_templates.py firmware/contrib/PrxEncrypter/main.c /tmp/prox-signed-include/native_signed_templates.h
 cc -std=c99 -Wall -Wextra -Werror -I firmware/Common -I firmware/Updater -I /tmp/prox-signed-include \

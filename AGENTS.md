@@ -249,7 +249,7 @@ version, for example `6.61 PRO-X <version>`, using the same generated version
 source as the installer, Fast Recovery, updater and package metadata. Do not
 leave the previous PRO-X version in that display or change Sony's numeric
 firmware/HEN compatibility values. Check the compiled label and destination
-capacity locally, and record the expected/observed label in PSP test results.
+capacity locally. When the only change requiring validation is the product version or its displayed label, verify the compiled label, destination capacity and matching package metadata locally. Record these results and omit the physical label check. A version bump accompanying a behavioral change does not waive that change's PSP test requirements.
 
 This product numbering must not alter Sony firmware version 6.61, PRO HEN compatibility values, configuration magic, ABI, or the contracts required by Infinity. Do not lengthen a patched display string without verifying its destination capacity. Record the new product version in supported build metadata rather than changing compatibility fields.
 
@@ -284,7 +284,7 @@ Implementation and local validation are separate from committing and publishing 
 
 Do not create a commit, push the feature branch, or open a PR until BOTH conditions are met:
 
-1. All required tests and checks for the requested change have passed, including the user's PSP test of the compiled firmware delivered in `builds/` when the change affects firmware.
+1. All required tests and checks for the requested change have passed, including the user's PSP test of the compiled firmware delivered in `builds/` when the change affects firmware. Apply the product-version-only exception above when the compiled label is the only remaining check.
 2. The user has given explicit authorization for the reviewed change set after being shown the result.
 
 Before requesting authorization:

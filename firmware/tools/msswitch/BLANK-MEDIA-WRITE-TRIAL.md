@@ -1,0 +1,9 @@
+# PRO-X Memory Stick Uniform Sector Trial
+
+MSBLANK is a standalone PSP 6.61 diagnostic for the backed-up 256 GB trial card and its original Memory Stick adapter. Use the card with its current MBR and live sector witnesses. The app finds two zero-filled high sectors, records the original bytes of each lower control and displays the selected high addresses before any write. This test exercises uniform samples on a card that can already be identified.
+
+Copy `release/PSP` to the root of a working launch card. Launch the app, wait for the Memory Stick light to go out, insert the backed-up 256 GB card with its original adapter, and press X to scan. When the preview shows both samples, hold L and R and press X to run the temporary writes. Keep the card inserted until the result appears. Circle exits or cancels the preview.
+
+The trial writes a pattern to each high sector in turn and checks the lower addresses corresponding to known repeat periods. To attempt restoration, the changed sectors must contain the exact test pattern and agree on the original bytes that a single write can restore. The original MBR and live witnesses must still identify the card. The app verifies restored bytes, closes the raw handle and reopens the card read-only for a second comparison. A successful run reports `independent, restored` for both samples, `Original bytes after reopen: MATCH` and `Uniform sector trial: PASS`. A failure stops the trial and reports whether restoration could be verified. The tested 256 GB card passed, and a direct USB reader verified the MBR and all ten sampled sectors after the trial. Qualification of completely blank cards remains pending.
+
+Thanks to [PSPDEV](https://github.com/pspdev/pspsdk) for the PSP SDK used to build the diagnostic and [uOFW](https://github.com/uofw/uofw) for the PSP driver reference used by the existing trials.

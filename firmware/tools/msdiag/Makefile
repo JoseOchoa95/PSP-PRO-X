@@ -13,10 +13,19 @@ VPATH = ../msformat
 INCDIR += ../msformat
 PSP_EBOOT_TITLE = PRO-X Memory Stick Auto Preview
 endif
-ifeq ($(ATTRIBUTE_PROBE),1)
+ifneq ($(filter 1,$(ATTRIBUTE_PROBE) $(IDENTITY_PROBE)),)
 OBJS = attribute_main.o probe.o stock_reader.o systemctrl_exit.o
 CFLAGS += -DMSDIAG_ATTRIBUTE_PROBE
 PSP_EBOOT_TITLE = PRO-X Memory Stick Attribute Probe
+endif
+ifeq ($(IDENTITY_PROBE),1)
+OBJS += identity_probe.o
+CFLAGS += -DMSDIAG_IDENTITY_PROBE
+PSP_EBOOT_TITLE = PRO-X Memory Stick Identity Probe
+endif
+ifeq ($(MEDIA_EVENT_PROBE),1)
+OBJS = media_event_main.o media_session.o systemctrl_exit.o
+PSP_EBOOT_TITLE = PRO-X Memory Stick Change Probe
 endif
 PSPSDK = $(shell psp-config --pspsdk-path)
 include $(PSPSDK)/lib/build.mak

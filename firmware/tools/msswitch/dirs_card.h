@@ -14,5 +14,12 @@ void dirs_card_test_mount(void);
 int dirs_card_preview_repeat(void);
 #endif
 int dirs_card_cleanup(void);
+#if defined(MSAUTO_FORMAT_TRIAL) && !defined(MSWRITE_PATH_TRIAL)
+int dirs_card_preview_current(void);
+int dirs_card_start_monitor(void);
+int dirs_card_stop_monitor(void);
+int dirs_card_needs_qualification(void);
+int dirs_card_qualify(void);
+#endif
 
 #endif

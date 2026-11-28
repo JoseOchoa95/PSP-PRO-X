@@ -5,9 +5,9 @@
 #include "card_snapshot.h"
 #include "fat32_dirs.h"
 
-static int safe_witness(const struct MsFormatPlan *plan, uint32_t lba)
+int ms_card_witness_allowed(const struct MsFormatPlan *plan, uint32_t lba)
 {
-    if (!lba || lba >= plan->usable_sectors)
+    if (!plan || !plan->volume_count || !lba || lba >= plan->usable_sectors)
         return 0;
     for (unsigned i = 0; i < plan->volume_count; ++i) {
         struct MsFormatVolume volume;
@@ -67,7 +67,8 @@ int ms_card_capture(const struct MsFormatPlan *plan, const struct MsGptLayout *g
             int64_t candidate = (int64_t)bases[i] + offsets[j];
             if (candidate <= 0 || candidate >= length || (!found && candidate < reported) ||
                 ms_gpt_contains(gpt, (uint32_t)candidate) ||
-                !safe_witness(plan, (uint32_t)candidate) || (uint32_t)candidate == snapshot->witnesses[0].lba)
+                !ms_card_witness_allowed(plan, (uint32_t)candidate) ||
+                (uint32_t)candidate == snapshot->witnesses[0].lba)
                 continue;
             if (!read(device, (uint32_t)candidate, sector))
                 goto failed;
