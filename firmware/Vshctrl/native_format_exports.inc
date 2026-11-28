@@ -1,0 +1,3 @@
+PSP_EXPORT_START(ProxNativeFormatForUser, 0, 0x4001)
+PSP_EXPORT_FUNC(proxNativeFormatRequest)
+PSP_EXPORT_END

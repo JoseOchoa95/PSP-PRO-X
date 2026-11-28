@@ -55,6 +55,7 @@
 #include "../Updater/ota_installer.h"
 #ifdef PROX_NATIVE_RESIDENT_QUERY
 #include <stdint.h>
+#include "prox_resident_image.h"
 #ifndef PROX_RESIDENT_BUILTIN_COMPLETION
 #include "resident_completion.h"
 #endif
@@ -207,6 +208,9 @@ void init_flash()
 void usage(void)
 {
 	printf(VERSION_STR " - based on PRO-C by Team PRO\n");
+#ifdef PROX_NATIVE_RESIDENT_QUERY
+	printf("Build: " PROX_RESIDENT_BUILD_ID "\n");
+#endif
 }
 
 struct InstallList {
@@ -595,6 +599,20 @@ void start_reboot(int mode)
 	sceKernelExitGame();
 }
 
+static void wait_for_fresh_cross(void)
+{
+	SceCtrlData ctl;
+	sceCtrlReadBufferPositive(&ctl, 1);
+	while (ctl.Buttons & PSP_CTRL_CROSS) {
+		sceKernelDelayThread(50000);
+		sceCtrlReadBufferPositive(&ctl, 1);
+	}
+	while (!(ctl.Buttons & PSP_CTRL_CROSS)) {
+		sceKernelDelayThread(50000);
+		sceCtrlReadBufferPositive(&ctl, 1);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int ret = 0;
@@ -652,7 +670,7 @@ version_OK:
 #endif
 	usage();
 
-	printf("Press X to launch CFW.\n");
+	printf("Press X to install CFW.\n");
 	if (!ota_mode) {
 		printf("Press Triangle to uninstall CFW.\n");
 		printf("Hold L to reinstall CFW.\n");
@@ -731,14 +749,7 @@ version_OK:
 			prox_ota_close();
 			printf(" Completed.\nPress X to start CFW.\n");
 
-			sceCtrlReadBufferPositive(&ctl, 1);
-			key = ctl.Buttons;
-
-			while (0 == (key & PSP_CTRL_CROSS)) {
-				sceKernelDelayThread(50000);
-				sceCtrlReadBufferPositive(&ctl, 1);
-				key = ctl.Buttons;
-			}
+			wait_for_fresh_cross();
 
 			printf("Now reboot to " VERSION_STR " :)\n");
 			prox_ota_close();
@@ -758,14 +769,7 @@ exit:
 	prox_ota_close();
 	printf("Press X to exit.\n");
 
-	sceCtrlReadBufferPositive(&ctl, 1);
-	key = ctl.Buttons;
-
-	while (0 == (key & PSP_CTRL_CROSS)) {
-		sceKernelDelayThread(50000);
-		sceCtrlReadBufferPositive(&ctl, 1);
-		key = ctl.Buttons;
-	}
+	wait_for_fresh_cross();
 
 	cleanup_exit();
 	sceKernelExitGame();

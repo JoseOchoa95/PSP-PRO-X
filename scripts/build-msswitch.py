@@ -88,8 +88,9 @@ def verify_binary(data, symbols, build_id, title, physical, directories, directo
         required |= {"ms_auto_measure", "ms_auto_check_boundary", "ms_card_capture", "ms_card_matches",
                      "ms_probe_sector"}
         if not write_path:
-            required |= {"ms_gpt_inspect", "dirs_card_preview_current", "dirs_card_start_monitor",
-                         "dirs_card_stop_monitor",
+            required |= {"ms_gpt_inspect", "ms_auto_format_current", "ms_auto_format_scan",
+                         "ms_auto_format_execute", "ms_format_preview_equal", "ms_ram_volume_stage",
+                         "dirs_card_start_monitor", "dirs_card_stop_monitor",
                          "ms_session_mark", "ms_session_observe", "ms_session_notify",
                          "sceKernelCreateCallback", "sceKernelCheckCallback", "sceKernelDeleteCallback",
                          "dirs_card_qualify", "ms_blank_capacity_capture", "ms_blank_capacity_restored",
@@ -223,22 +224,22 @@ def main():
     if physical:
         paths += [TOOL / readme, TOOL / "verify-format-trial.py"]
     if directories:
-        paths += [TOOL / name for name in (readme, "dirs_main.c", "sony_mkdir_ram.c",
-                                          "sony_mkdir_ram.h", "sony_mkdir_profile.inc")]
+        paths += [TOOL / name for name in (readme, "dirs_main.c", "ram_volume.c", "ram_volume.h",
+                                          "sony_mkdir_ram.c", "sony_mkdir_ram.h", "sony_mkdir_profile.inc")]
         paths += [Path("firmware/tools/msformat") / name for name in ("fat32_dirs.c", "fat32_dirs.h")]
         paths += [Path("tests/native/test_msdirs_ram.c")]
     if directory_card:
         paths += [TOOL / name for name in ("dirs_card.c", "dirs_card.h", "verify-directory-trial.py",
                                           "verify-format-trial.py")]
     if whole_card:
-        paths += [TOOL / name for name in ("card_mount.c", "card_mount.h")]
+        paths += [TOOL / name for name in ("card_mount.c", "card_mount.h", "format_output.h")]
         if not auto_format:
             paths += [TOOL / "verify-whole-card.py"]
         paths += [DIAG / name for name in ("capacity.c", "capacity.h")]
         paths += [Path("firmware/tools/msformat") / name for name in ("layout.c", "layout.h", "job.c", "job.h", "gpt.h")]
         paths += [Path("tests/native") / name for name in ("test_ms_format_layout.c", "test_ms_format_job.c")]
     if auto_format:
-        paths += [TOOL / "auto_card.c"]
+        paths += [TOOL / "auto_card.c", TOOL / "auto_format.h"]
         if not write_path:
             paths += [TOOL / "verify-auto-format.py"]
             paths += [DIAG / "media_session.c", DIAG / "media_session.h",

@@ -11,6 +11,7 @@ A community-driven custom firmware based on PRO-C for PSP-2000 consoles running 
 - **Storage checks and update cleanup.** The update offer shows the Memory Stick space needed for staging. The installer checks free space in internal storage before writing. The startup cleaner verifies the installed build before removing temporary firmware files, the downloaded EBOOT and the updater's `PROXDIAG` files from the card.
 - **PRO-C game and plugin features.** Launch PSP ISO and CSO images from the Memory Stick with selectable ISO drivers. Manage XMB, game and POPS plugins through the existing `seplugins` configuration.
 - **VSH and Recovery menus.** Adjust clock speeds and USB device selection, with optional translations and fonts.
+- **Memory Stick formatting preview in unreleased v0.6.0.** **Settings → System Settings → Format Memory Stick** shows a native, scrollable FAT32 layout for eligible extended-capacity cards and uses Sony's final confirmation. Physical PSP validation of the flow is planned for v0.6.1.
 
 ## Installation guide
 
@@ -22,6 +23,8 @@ A community-driven custom firmware based on PRO-C for PSP-2000 consoles running 
 4. After activation, you can remove `PSP/GAME/PROUPDATE`. Keep the matching **Fast Recovery** to reactivate PRO-X after a full shutdown.
 
 ### Update an existing installation
+
+If System Information shows plain `6.61` after a full shutdown and PRO-X is already installed, Fast Recovery can reactivate it before a manual update. The owner verified that the unreleased v0.6.0 installer `pro-x-5d0222eb0938` completed a manual update from plain `6.61` on one PSP-2000 with a previous PRO-X installation. Press X at the completion prompt to activate PRO-X and confirm the version in System Information. Physical validation of activation and initial installation on a console without previous PRO-X components is planned for v0.6.1.
 
 With a compatible resident version of PRO-X active, open **Settings → System Update → Update via Internet**. Use a Memory Stick with the displayed free space, charge the battery to at least 50% and connect DC IN power. Keep the card and charger connected through the restart. Use the manual installation steps above if you are on an earlier version than v0.4.0 or if your v0.4.0 installation has no completion resource.
 
@@ -39,7 +42,7 @@ Build with the pinned Docker toolchain; generated firmware and packages stay in 
 
 The standalone [MSDIAG utility](firmware/tools/msdiag/README.md) estimates Memory Stick capacity in read-only mode on the supported PSP 6.61 configuration. The owner reported exact matches with direct-reader measurements on the tested 256 GB and 512 GB card and adapter combinations. To build the utility locally, run `python scripts/build-msdiag.py` with the pinned toolchain image.
 
-The standalone Memory Stick trials were tested on one backed-up 256 GB card and adapter. The PSP formatted three primary FAT32 volumes and automatically mounted the first as `ms0:` in one run. A direct card reader independently checked the layout and the initial contents of all three volumes. Formatting other card and adapter combinations and integration with PSP Settings remain pending. [Partition switch trial](firmware/tools/msswitch/README.md) · [Whole-card trial](firmware/tools/msswitch/WHOLE-CARD-TRIAL.md)
+The standalone Memory Stick trials were tested on one backed-up 256 GB card and adapter. The PSP formatted three primary FAT32 volumes and automatically mounted the first as `ms0:` in one run. A direct card reader independently checked the layout and the initial contents of all three volumes. See the MSAUTOFMT results below for additional tested media. [Partition switch trial](firmware/tools/msswitch/README.md) · [Whole-card trial](firmware/tools/msswitch/WHOLE-CARD-TRIAL.md)
 
 MSAUTO is a read-only diagnostic that computes a capacity candidate and partition preview using the inserted card. It reports ambiguous samples separately. The owner verified ordinary format routing on an 8 GB card and the three-volume preview on the prepared 256 GB card without reference files. [MSAUTO diagnostic](firmware/tools/msdiag/AUTO-PREVIEW.md)
 
@@ -83,7 +86,7 @@ PRO-X is an independent fork and is not an official release from Team PRO, the A
 - **PSPDEV contributors** for the SDK and API documentation, the library NID catalog used to verify Sony's mutex imports, and the PRXTool kernel error reference. [PSPSDK](https://github.com/pspdev/pspsdk) · [PSPLibDoc](https://github.com/pspdev/psplibdoc) · [PRXTool](https://github.com/pspdev/prxtool)
 - **PSP Homebrew Community Wiki contributors** for the PSP error-code reference used during the MSDIRS investigation. [PSP Homebrew Community Wiki](https://github.com/psp-homebrew-community/wiki)
 - **PPSSPP contributors** for the PSP ELF loader used as a reference for packed relocations. [PPSSPP ELF reader](https://github.com/hrydgard/ppsspp/blob/master/Core/ELF/ElfReader.cpp)
-- **uOFW documentation contributors** for archiving the Memory Stick PRO specification. [upspd](https://github.com/uofw/upspd)
+- **uOFW contributors** for archiving the Memory Stick PRO specification and documenting the PSP kernel error codes used to diagnose the installer. [upspd](https://github.com/uofw/upspd) · [uOFW kernel reference](https://github.com/uofw/uofw)
 - **Linux Memory Stick maintainers** for the Memory Stick PRO attribute directory and System Info identity field reference. [Linux Memory Stick PRO driver](https://github.com/torvalds/linux/blob/master/drivers/memstick/core/mspro_block.c)
 - **Unicorn Engine and dosfstools contributors** for host replay and independent FAT32 validation. [Unicorn Engine](https://github.com/unicorn-engine/unicorn) · [dosfstools](https://github.com/dosfstools/dosfstools)
 

@@ -46,10 +46,20 @@ int main(void)
     assert(result.estimate.finding == CAPACITY_CANDIDATE && result.estimate.sectors == medium.sectors);
 
     medium.sectors = 67108864;
+    medium.calls = 0;
     result = probe_auto_capacity(medium.sectors, 0, read_sector, &medium);
-    assert(result.estimate.finding == CAPACITY_CANDIDATE && result.alias_checks == 0);
+    assert(result.estimate.finding == CAPACITY_CANDIDATE && result.estimate.sectors == medium.sectors);
+    assert(result.alias_checks == 0 && medium.calls == 5);
 
+    medium.sectors = 67108866;
+    medium.hole = 67108864;
+    assert(probe_auto_capacity(67108864, 0, read_sector, &medium).estimate.finding == CAPACITY_INCONCLUSIVE);
+    medium.hole = UINT32_MAX;
     medium.sectors = 500695040;
+    result = probe_auto_capacity(232259584, 0, read_sector, &medium);
+    assert(result.estimate.finding == CAPACITY_CANDIDATE && result.estimate.sectors == medium.sectors);
+    assert(result.distinct_checks == result.alias_checks);
+
     medium.uniform = 1;
     result = probe_auto_capacity(232259584, 1, read_sector, &medium);
     assert(result.estimate.finding == CAPACITY_CANDIDATE && result.alias_checks == 4 && !result.distinct_checks);

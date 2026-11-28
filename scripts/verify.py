@@ -180,6 +180,25 @@ def elf_data(path):
     return gzip.decompress(data[0x150:]) if data.startswith(b'~PSP') else data
 
 
+def verify_capacity_start_defaults(prx):
+    """Check the emitted syslib variable used by Module Manager at start."""
+    require(prx[:6] == b'\x7fELF\x01\x01', 'Capacity helper is not an ELF32 PRX')
+    program_headers = struct.unpack_from('<I', prx, 28)[0]
+    kind, base, virtual, info, size, *_ = struct.unpack_from('<8I', prx, program_headers)
+    require(kind == 1 and virtual == 0 and base + size <= len(prx), 'Invalid capacity helper segment')
+    start, end = struct.unpack_from('<II', prx, (info & 0x7fffffff) + 36)
+    require(0 < start < end <= size and end - start == 16, 'Invalid capacity helper syslib')
+    _, _, attributes, length, variables, functions, table = struct.unpack_from('<IHHBBHI', prx, base + start)
+    count = functions + variables
+    require(attributes == 0x8000 and length == 4 and table + 8 * count <= size, 'Invalid syslib exports')
+    nids = struct.unpack_from(f'<{count}I', prx, base + table)
+    addresses = struct.unpack_from(f'<{count}I', prx, base + table + 4 * count)
+    defaults = [address for nid, address in zip(nids[functions:], addresses[functions:]) if nid == 0x0f7c276c]
+    require(len(defaults) == 1 and defaults[0] + 16 <= size and
+            struct.unpack_from('<4I', prx, base + defaults[0]) == (3, 32, 16 * 1024, 0),
+            'Capacity helper must export the 16 KiB module-start stack')
+
+
 def verify_build(metadata):
     output = ROOT / metadata['output']
     require(inventory(output / 'PSP') == metadata['artifacts'], 'PBP files changed after build')
@@ -232,6 +251,15 @@ def verify_build(metadata):
         require(b'ProxUpdateForUser' not in (tree / 'Installer/installer.elf').read_bytes(),
                 'Manual installer must not require the private updater bridge')
         require(b'ProxUpdateForUser' in (tree / 'SystemControl/systemctrl.elf').read_bytes(), 'Private bridge missing')
+        vsh = (tree / 'Vshctrl/vshctrl.elf').read_bytes()
+        format_ui = (tree / 'Vshctrl/format-ui.bin').read_bytes()
+        require(format_ui and vsh.count(format_ui) == 1 and
+                b'ProxNativeFormatForUser' in vsh and b'prox_patch_native_format' in vsh and
+                b'ms_auto_format_scan' in vsh and b'ms_auto_format_execute' in vsh,
+                'Settings formatter and matching native user bridge must be linked')
+        require(all(text.encode('utf-16le') in vsh for text in (
+                'Se borrarán todos los datos.', 'Comprobando la Memory Stick\0')),
+                'Localized native format review text is missing')
         deps = json.loads((ROOT / 'scripts/updater-dependencies.json').read_text())
         for dependency in ['mbedtls', 'ca_bundle']:
             require(sha((ROOT / deps[dependency]['path']).read_bytes()) == deps[dependency]['sha256'],
@@ -240,6 +268,8 @@ def verify_build(metadata):
         dedicated_ota = metadata.get('resident_dedicated_ota',False)
         if metadata.get('resident_query'):
             installer_elf = (tree / 'Installer/installer.elf').read_bytes()
+            require(('Build: ' + metadata['build_id']).encode() in installer_elf,
+                    'Installer screen must show the package build ID')
             external_completion = (b'native-completion.rco', b'flash0:/kd/_proxc661.bin',
                                    b'prox_resident_completion_prepare', b'prox_completion_read_store')
             if dedicated_ota:
@@ -287,6 +317,7 @@ def verify_build(metadata):
                     not any(name in capacity_elf for name in (b'sceIoWrite\0', b'sceIoRemove\0', b'sceIoAssign\0',
                                                              b'sceIoUnassign\0', b'sceIoDevctl\0', b'sceKernelExitGame\0')),
                     'Capacity helper must be a read-only kernel module')
+            verify_capacity_start_defaults(capacity)
             embedded['Installer/flash_capacity/flash_capacity.prx'] = sha(capacity)
             worker = (tree / 'Updater/prox_updater.prx').read_bytes()
             worker_sha = sha(worker)
@@ -388,7 +419,7 @@ def main():
     changes = verify_source(reference)
     require(inventory(ROOT / 'firmware') == branded['source_files'], 'Sources changed since PRO-X compilation')
     results = {'source_scope': 'PASS', 'branding_files': changes,
-               'contracts': 'PASS: reviewed phase 2/3 scope; existing PRO exports/NIDs/config/HEN/boot paths preserved; private updater library and VSH syscall added',
+               'contracts': 'PASS: reviewed source scope, existing PRO exports/NIDs/config/HEN/boot paths, private updater and Settings format bridges',
                'phase2': {'status': 'prepared-for-hardware-test', 'verified_variants': 1,
                           'variant_id': WPA2_VARIANT, 'preference_default': 'enabled',
                           'hardware': 'NOT RUN'},

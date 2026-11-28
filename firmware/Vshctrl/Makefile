@@ -68,6 +68,20 @@ endif
 ifeq ($(CONFIG_661), 1)
 CFLAGS += -DCONFIG_661=1
 PSP_FW_VERSION = 661
+CFLAGS += -DPROX_FORMAT_RESIDENT=1 -DMSFORMAT_TRIAL -DMSDIAG_WRITE_TRIAL -DMSDIRS_CARD_TRIAL -DMSMULTI_CARD_TRIAL -DMSAUTO_FORMAT_TRIAL
+INCDIR += ../tools/msdiag ../tools/msformat ../tools/msswitch ../tools/mswrite
+VPATH += ../tools/msdiag ../tools/msformat ../tools/msswitch
+OBJS += memory_stick_format_platform.o memory_stick_format_review.o memory_stick_format_text.o
+OBJS += auto_card.o auto_probe.o psp_media.o media_session.o probe.o stock_reader.o capacity.o
+OBJS += job.o layout.o gpt.o card_snapshot.o write_probe.o blank_capacity.o blank_probe.o
+OBJS += fat32_init.o fat32_dirs.o fat32_ram.o fat32_probe.o sony_mkdir_ram.o ram_volume.o card_mount.o
+FORMAT_EXPORTS = native_format_exports.inc
+EXTRA_CLEAN += format-ui.o format-ui.bin memory_stick_format_ui_image.h
+
+memory_stick_format_platform.o: memory_stick_format_ui_image.h
+memory_stick_format_ui_image.h: memory_stick_format_ui.c memory_stick_format_ui.h make-format-ui-image.py
+	$(CC) -std=gnu11 -Os -ffreestanding -fno-pic -mno-abicalls -G0 -fno-jump-tables -Wall -Wextra -Werror -c memory_stick_format_ui.c -o format-ui.o
+	python3 make-format-ui-image.py format-ui.o format-ui.bin $@
 endif
 
 OBJS += $(IMPORTS)
@@ -77,8 +91,8 @@ ASFLAGS = $(CFLAGS)
 
 BUILD_PRX = 1
 PRX_EXPORTS = exports-native-query.exp
-exports-native-query.exp: exports.exp native_query_exports.inc
-	python3 -c 'from pathlib import Path; p=Path("exports.exp").read_text(); assert p.count("PSP_END_EXPORTS")==1; Path("exports-native-query.exp").write_text(p.replace("PSP_END_EXPORTS",Path("native_query_exports.inc").read_text()+"\nPSP_END_EXPORTS"))'
+exports-native-query.exp: exports.exp native_query_exports.inc $(FORMAT_EXPORTS)
+	python3 -c 'from pathlib import Path; p=Path("exports.exp").read_text(); assert p.count("PSP_END_EXPORTS")==1; Path("$@").write_text(p.replace("PSP_END_EXPORTS", "\n".join(Path(path).read_text() for path in "native_query_exports.inc $(FORMAT_EXPORTS)".split())+"\nPSP_END_EXPORTS"))'
 ifneq ($(filter -DPROX_NATIVE_OFFER_PREVIEW=1 -DPROX_NATIVE_OTA=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
 PRX_EXPORTS = exports-native-preview.exp
 exports-native-preview.exp: exports-native-query.exp native_preview_exports.inc

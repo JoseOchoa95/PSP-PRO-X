@@ -9,12 +9,12 @@ LIBS = -lpspctrl_driver
 EXTRA_TARGETS = EBOOT.PBP
 PSP_EBOOT_TITLE = PRO-X Partition Switch Trial
 ifeq ($(RAM_DIRECTORY_TRIAL),1)
-OBJS = dirs_main.o sony_mkdir_ram.o fat32_dirs.o fat32_init.o fat32_ram.o systemctrl_exit.o
+OBJS = dirs_main.o ram_volume.o sony_mkdir_ram.o fat32_dirs.o fat32_init.o fat32_ram.o systemctrl_exit.o
 CFLAGS += -DMSDIRS_TRIAL
 PSP_EBOOT_TITLE = PRO-X FAT32 RAM Directory Trial
 endif
 ifeq ($(PHYSICAL_DIRECTORY_TRIAL),1)
-OBJS = dirs_main.o dirs_card.o sony_mkdir_ram.o fat32_dirs.o fat32_init.o fat32_ram.o fat32_probe.o partition_view.o probe.o stock_reader.o systemctrl_exit.o
+OBJS = dirs_main.o dirs_card.o ram_volume.o sony_mkdir_ram.o fat32_dirs.o fat32_init.o fat32_ram.o fat32_probe.o partition_view.o probe.o stock_reader.o systemctrl_exit.o
 CFLAGS += -DMSDIRS_TRIAL -DMSDIRS_CARD_TRIAL -DMSFORMAT_TRIAL -DMSDIAG_WRITE_TRIAL
 PSP_EBOOT_TITLE = PRO-X FAT32 Physical Directory Trial
 endif

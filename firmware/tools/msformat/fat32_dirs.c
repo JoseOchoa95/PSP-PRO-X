@@ -1,6 +1,5 @@
 /* GPL-3.0-or-later */
 #include <string.h>
-#include <stdio.h>
 
 #include "fat32_dirs.h"
 
@@ -70,14 +69,19 @@ int fat32_ram_name_partition(struct Fat32Ram *volume, unsigned number)
 {
     struct Fat32Layout layout;
     uint8_t root[FAT32_SECTOR_BYTES], boot[FAT32_SECTOR_BYTES], backup[FAT32_SECTOR_BYTES];
-    char label[12];
-    int length = snprintf(label, sizeof(label), "PART %u", number);
-    if (!number || length < 1 || length >= (int)sizeof(label) ||
+    char label[] = "PART       ";
+    if (!number || number > 999999u ||
         !fat32_plan(volume->length, &layout) || !fat32_ram_read(volume, layout.root_sector, root) ||
         !fat32_ram_read(volume, 0, boot) || !fat32_ram_read(volume, 6, backup) ||
         memcmp(boot, backup, sizeof(boot)) || memcmp(boot + 71, "NO NAME    ", 11))
         return 0;
-    memset(label + length, ' ', 11 - length);
+    unsigned last = 5;
+    for (unsigned value = number; value >= 10; value /= 10)
+        ++last;
+    do {
+        label[last--] = '0' + number % 10;
+        number /= 10;
+    } while (number);
     for (unsigned offset = 0; offset + 2 * DIR_ENTRY_BYTES <= sizeof(root); offset += DIR_ENTRY_BYTES) {
         if (root[offset + 11] == 0x08)
             return 0;

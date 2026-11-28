@@ -24,21 +24,26 @@ void ms_format_cancel(struct MsFormatPreview *preview)
         memset(preview, 0, sizeof(*preview));
 }
 
+int ms_format_preview_equal(const struct MsFormatPreview *left, const struct MsFormatPreview *right)
+{
+    if (!left || !right)
+        return 0;
+    const struct MsFormatMedia *a = &left->media, *b = &right->media;
+    const struct MsFormatPlan *plan = &left->plan, *expected = &right->plan;
+    return a->reported_sectors == b->reported_sectors && a->verified_sectors == b->verified_sectors &&
+           !memcmp(a->identity, b->identity, sizeof(a->identity)) &&
+           !memcmp(&a->gpt, &b->gpt, sizeof(a->gpt)) &&
+           plan->usable_sectors == expected->usable_sectors && plan->full_sectors == expected->full_sectors &&
+           plan->final_sectors == expected->final_sectors && plan->volume_count == expected->volume_count &&
+           plan->primary_count == expected->primary_count;
+}
+
 static int matches_preview(const struct MsFormatBackend *backend, void *device,
                            const struct MsFormatPreview *preview)
 {
-    struct MsFormatMedia live = {0};
-    struct MsFormatPlan plan;
-    const struct MsFormatPlan *expected = &preview->plan;
-    return backend->inspect(device, &live) &&
-           live.reported_sectors == preview->media.reported_sectors &&
-           live.verified_sectors == preview->media.verified_sectors &&
-           !memcmp(live.identity, preview->media.identity, sizeof(live.identity)) &&
-           !memcmp(&live.gpt, &preview->media.gpt, sizeof(live.gpt)) &&
-           ms_format_layout(live.reported_sectors, live.verified_sectors, &plan) == MS_FORMAT_EXTENDED &&
-           plan.usable_sectors == expected->usable_sectors && plan.full_sectors == expected->full_sectors &&
-           plan.final_sectors == expected->final_sectors && plan.volume_count == expected->volume_count &&
-           plan.primary_count == expected->primary_count;
+    struct MsFormatPreview live = {0};
+    return ms_format_preview(backend, device, &live) == MS_FORMAT_EXTENDED &&
+           ms_format_preview_equal(&live, preview);
 }
 
 static uint32_t stage(const struct MsFormatBackend *backend, void *device, struct Fat32Ram *image,

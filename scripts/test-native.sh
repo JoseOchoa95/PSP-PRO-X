@@ -4,6 +4,19 @@ cc -std=c11 -Wall -Wextra -Werror -I firmware/tools/msformat \
     tests/native/test_ms_format_layout.c firmware/tools/msformat/layout.c \
     firmware/tools/msformat/fat32_init.c -o /tmp/test-ms-format-layout
 /tmp/test-ms-format-layout
+cc -std=c11 -Wall -Wextra -Werror -I firmware/Vshctrl \
+    tests/native/test_memory_stick_format_review.c firmware/Vshctrl/memory_stick_format_review.c \
+    firmware/tools/msformat/layout.c firmware/tools/msformat/fat32_init.c -o /tmp/test-memory-stick-format-review
+/tmp/test-memory-stick-format-review
+cc -std=c11 -Wall -Wextra -Werror -I firmware/Vshctrl \
+    tests/native/test_memory_stick_format_ui.c firmware/Vshctrl/memory_stick_format_ui.c \
+    firmware/Vshctrl/memory_stick_format_text.c firmware/Vshctrl/memory_stick_format_review.c \
+    firmware/tools/msformat/layout.c firmware/tools/msformat/fat32_init.c -o /tmp/test-memory-stick-format-ui
+/tmp/test-memory-stick-format-ui
+cc -std=c11 -Wall -Wextra -Werror -I firmware/tools/msdiag \
+    tests/native/test_msdiag_auto_probe.c firmware/tools/msdiag/auto_probe.c firmware/tools/msdiag/capacity.c \
+    -o /tmp/test-msdiag-auto-probe
+/tmp/test-msdiag-auto-probe
 cc -std=c11 -Wall -Wextra -Werror -DMSDIRS_TRIAL -I firmware/tools/msformat \
     tests/native/test_ms_format_job.c firmware/tools/msformat/job.c firmware/tools/msformat/layout.c \
     firmware/tools/msformat/fat32_init.c firmware/tools/msformat/fat32_ram.c \
@@ -293,7 +306,7 @@ bin2c /tmp/prox-resident-fixture/image.prx /tmp/prox-resident-fixture/flash_capa
 cc -std=c99 -Wall -Wextra -Werror -DPROX_CAPACITY_TEST \
     -I tests/native -I firmware/Installer -I firmware/Common -I firmware/Updater \
     -I /tmp/prox-resident-fixture -I artifacts/phase3/https-native/mbedtls/include \
-    tests/native/test_installer_capacity.c firmware/Installer/resident_capacity.c \
+    tests/native/test_installer_capacity.c firmware/Installer/resident_capacity.c firmware/Common/prox_flash_capacity.c \
     artifacts/phase3/https-native/mbedtls/library/sha256.c \
     artifacts/phase3/https-native/mbedtls/library/platform_util.c -o /tmp/test-installer-capacity
 /tmp/test-installer-capacity

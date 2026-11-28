@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### v0.6.0 — Native Memory Stick formatting
+
+- Preview verified extended-capacity cards from **Settings → System Settings → Format Memory Stick**. The native scrolling panel shows the card capacity, the FAT32 partition count, each partition's size and the 1 TB planning limit.
+- Show a native progress message while reading the card. Keep the warning, capacity and partition summary in the dialog's main text area.
+- Read the completed scan result from the native scheduler so verified cards advance to their confirmation. Render the checking message's three periods on the text baseline.
+- Avoid repeating the first out-of-range read when checking the reported end of an ordinary card on the fallback scan. Confirm the boundary before continuing to the original Sony prompt.
+- Keep Sony's final confirmation and formatting status. Canceling either screen or changing the inserted card discards the reviewed plan. Verified ordinary cards up to 128 GB use the original format flow.
+- Verify each FAT32 volume and leave the first partition mounted as `ms0:` before reporting completion. Cards with inconclusive read-only capacity checks remain ineligible for extended formatting from Settings.
+- Physical PSP validation of the revised layout and confirmed format is deferred to v0.6.1.
+
+### Manual installer
+
+- Show the exact build ID in PROUPDATE. When the mounted flash0 query is unavailable, scan both FAT copies in read-only mode. Recognize the Sony 6.61 logical flash boundary by verifying the final sector's position and a complete read of the preceding sector before writing firmware.
+- Read free space from the mounted flash0 FAT volume before trying the read-only helper. Require a valid capacity measurement before writing firmware.
+- Identify the failed step when PROUPDATE cannot measure free space in internal storage. Keep the failure visible until a fresh X press and require a separate X press to activate after a successful installation.
+- Start the read-only flash0 capacity helper with the standard module loader defaults. Declare its required stack in the helper and require a valid measurement before installation.
+- Pass an explicit request word to the one-shot flash0 capacity helper. The helper validates the word before reading.
+- Keep the verified temporary helper on the Memory Stick through measurement. Require successful cleanup before writing firmware.
+- The owner verified that PROUPDATE measured flash0 free space and completed a manual update from plain 6.61 on a PSP-2000 with PRO-X already installed. The remaining physical installation and activation checks are deferred to v0.6.1.
+
 ### Memory Stick diagnostic
 
 - Add a standalone, read-only PSP utility that reports the capacity exposed by the Memory Stick driver and estimates the card's capacity without a PC reference on the supported 6.61 configuration.

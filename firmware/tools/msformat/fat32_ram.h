@@ -5,7 +5,7 @@
 #include "fat32_init.h"
 
 enum { FAT32_RAM_SECTORS = 6 };
-#ifdef MSDIRS_TRIAL
+#if defined(MSDIRS_TRIAL) || defined(PROX_FORMAT_RESIDENT)
 #define FAT32_RAM_CAPACITY 32
 #else
 #define FAT32_RAM_CAPACITY FAT32_RAM_SECTORS

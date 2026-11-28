@@ -3,6 +3,7 @@ OBJS = main.o prox_flash_capacity.o prox_flash0_capacity.o
 INCDIR = ../../Common
 CFLAGS = -Os -G0 -Wall -Wextra -Werror
 BUILD_PRX = 1
+PRX_EXPORTS = exports.exp
 USE_KERNEL_LIBS = 1
 USE_KERNEL_LIBC = 1
 LDFLAGS = -nostartfiles
