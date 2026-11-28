@@ -240,7 +240,9 @@ static int run_trial(void)
 static void heading(void)
 {
     pspDebugScreenClear();
-#if defined(MSWRITE_PATH_TRIAL)
+#if defined(MSBLANK_TRIAL)
+    pspDebugScreenPrintf("PRO-X Memory Stick Uniform Sector Trial\n%s\n\n", MSSWITCH_BUILD_ID);
+#elif defined(MSWRITE_PATH_TRIAL)
     pspDebugScreenPrintf("PRO-X Memory Stick Write Path Trial\n%s\n\n", MSSWITCH_BUILD_ID);
 #elif defined(MSAUTO_FORMAT_TRIAL)
     pspDebugScreenPrintf("PRO-X Memory Stick Auto Format\n%s\n\n", MSSWITCH_BUILD_ID);
@@ -264,9 +266,15 @@ int main(void)
 #ifdef MSWRITE_PATH_TRIAL
     int stage = CHECK_CARD;
     pspDebugScreenPrintf("Wait for the Memory Stick light to go out.\n"
+#ifdef MSBLANK_TRIAL
+                         "Insert the backed-up 256 GB card with its original adapter.\n\nX: check card    O: exit\n");
+#else
                          "Insert the backed-up 512 GB trial card.\n\nX: check card    O: exit\n");
+#endif
 #elif defined(MSAUTO_FORMAT_TRIAL)
     int stage = PREPARE;
+    if (!dirs_card_start_monitor())
+        pspDebugScreenPrintf("Card-change monitor will retry at scan.\n\n");
     pspDebugScreenPrintf("X: check the formatter in RAM\nO: exit\n");
 #else
     int stage = dirs_card_load_reference() ? PREPARE : DONE;
@@ -289,6 +297,9 @@ int main(void)
 #ifdef MSDIRS_CARD_TRIAL
                 && dirs_card_cleanup()
 #endif
+#if defined(MSAUTO_FORMAT_TRIAL) && !defined(MSWRITE_PATH_TRIAL)
+                && dirs_card_stop_monitor()
+#endif
             ) {
                 int result = sctrlKernelExitVSH(NULL);
                 if (result >= 0)
@@ -299,6 +310,13 @@ int main(void)
             }
         }
 #ifdef MSDIRS_CARD_TRIAL
+#if defined(MSAUTO_FORMAT_TRIAL) && !defined(MSWRITE_PATH_TRIAL)
+        else if (stage == CONFIRM && !dirs_card_preview_current()) {
+            stage = CHECK_CARD;
+            heading();
+            pspDebugScreenPrintf("Card changed. Format plan discarded.\n\nX: scan again    O: exit\n");
+        }
+#endif
 #if defined(MSMULTI_CARD_TRIAL) && !defined(MSAUTO_FORMAT_TRIAL)
         else if (stage == CHECK_CARD && (pressed & PSP_CTRL_SQUARE)) {
             stage = DONE;
@@ -336,9 +354,16 @@ int main(void)
             } else if (stage == CONFIRM &&
                        (pad.Buttons & (PSP_CTRL_LTRIGGER | PSP_CTRL_RTRIGGER)) ==
                            (PSP_CTRL_LTRIGGER | PSP_CTRL_RTRIGGER)) {
-                stage = DONE;
                 heading();
-                dirs_card_write(&staged_volume);
+#if defined(MSAUTO_FORMAT_TRIAL) && !defined(MSWRITE_PATH_TRIAL)
+                if (dirs_card_needs_qualification()) {
+                    stage = dirs_card_qualify() ? CONFIRM : DONE;
+                } else
+#endif
+                {
+                    stage = DONE;
+                    dirs_card_write(&staged_volume);
+                }
             }
         }
 #else

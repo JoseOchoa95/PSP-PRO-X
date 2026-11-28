@@ -26,7 +26,7 @@ def sha(data):
 
 
 def verify_binary(data, symbols, build_id, title, physical, directories, directory_card, whole_card, auto_format,
-                  write_path):
+                  write_path, blank_trial=False):
     if data[:4] != b"\0PBP" or len(data) < 40:
         raise ValueError("Invalid PBP header")
     version, *offsets = struct.unpack_from("<9I", data, 4)
@@ -39,8 +39,10 @@ def verify_binary(data, symbols, build_id, title, physical, directories, directo
     names = {line.split()[-1] for line in symbols.splitlines() if line.strip()}
     if write_path:
         required = {"stock_format_transaction", "stock_format_locked_write_status", "stock_format_locked_read",
-                    "ms_auto_measure", "ms_auto_check_boundary", "ms_card_matches", "ms_probe_sector",
+                    "ms_auto_measure", "ms_auto_check_boundary", "ms_card_matches",
                     "sony_fat_stock_state", "sceIoOpen", "sceIoClose", "sceIoUnassign", "sctrlKernelExitVSH"}
+        required |= ({"ms_blank_probe_plan", "ms_blank_probe_capture", "ms_blank_probe_matches", "ms_blank_probe_run"}
+                     if blank_trial else {"ms_probe_sector"})
         forbidden = {"ms_format_execute", "stock_write_trial", "stock_format_partition_trial",
                      "stock_format_refresh_media", "ms_mount_first", "sony_fat_stock_reprobe",
                      "sceKernelSetEventFlag", "sceIoWrite", "sceIoDevctl"}
@@ -86,7 +88,12 @@ def verify_binary(data, symbols, build_id, title, physical, directories, directo
         required |= {"ms_auto_measure", "ms_auto_check_boundary", "ms_card_capture", "ms_card_matches",
                      "ms_probe_sector"}
         if not write_path:
-            required.add("ms_gpt_inspect")
+            required |= {"ms_gpt_inspect", "dirs_card_preview_current", "dirs_card_start_monitor",
+                         "dirs_card_stop_monitor",
+                         "ms_session_mark", "ms_session_observe", "ms_session_notify",
+                         "sceKernelCreateCallback", "sceKernelCheckCallback", "sceKernelDeleteCallback",
+                         "dirs_card_qualify", "ms_blank_capacity_capture", "ms_blank_capacity_restored",
+                         "ms_blank_probe_run"}
         if any(name in elf for name in (b"MSPART.BIN", b"MSDREF.BIN")):
             raise ValueError("The automatic formatter embeds a per-card reference filename")
     if not required <= names or (forbidden & names):
@@ -94,7 +101,7 @@ def verify_binary(data, symbols, build_id, title, physical, directories, directo
 
 
 def compile_in(directory, image, build_id, log, run_host_tests, title, physical, directories, directory_card,
-               whole_card, auto_format, write_path):
+               whole_card, auto_format, write_path, blank_trial=False):
     checks = ""
     if run_host_tests:
         checks = ('gcc -std=c11 -Wall -Wextra -Werror -fsanitize=undefined '
@@ -137,15 +144,25 @@ def compile_in(directory, image, build_id, log, run_host_tests, title, physical,
             checks += ('; ' + flags + 'firmware/tools/msformat/fat32_init.c firmware/tools/msformat/layout.c '
                        'firmware/tools/msformat/write_probe.c tests/native/test_ms_write_probe.c '
                        '-o test-ms-write-probe; ./test-ms-write-probe')
+            if not write_path:
+                checks += ('; ' + flags + '-I firmware/tools/msdiag firmware/tools/msdiag/media_session.c '
+                           'tests/native/test_msdiag_media_session.c -o test-ms-media-session; ./test-ms-media-session')
+                checks += ('; ' + flags + 'firmware/tools/msformat/fat32_init.c firmware/tools/msformat/layout.c '
+                           'firmware/tools/msformat/card_snapshot.c firmware/tools/msformat/blank_probe.c '
+                           'firmware/tools/msformat/blank_capacity.c tests/native/test_ms_blank_capacity.c '
+                           '-o test-ms-blank-capacity; ./test-ms-blank-capacity')
+        if blank_trial or (auto_format and not write_path):
+            checks += ('; ' + flags + 'firmware/tools/msformat/blank_probe.c tests/native/test_ms_blank_probe.c '
+                       '-o test-ms-blank-probe; ./test-ms-blank-probe')
     command = ["docker", "run", "--rm", "--network", "none", "--mount",
                f"type=bind,source={directory},target=/src", "-w", "/src", image, "sh", "-ec",
                'make -C firmware/tools/msswitch "BUILD_ID=$1" "PHYSICAL_FORMAT_TRIAL=$2" '
                '"RAM_DIRECTORY_TRIAL=$3" "PHYSICAL_DIRECTORY_TRIAL=$4" "WHOLE_CARD_TRIAL=$5" "AUTO_FORMAT_TRIAL=$6" '
-               '"WRITE_PATH_TRIAL=$7"; '
+               '"WRITE_PATH_TRIAL=$7" "BLANK_TRIAL=$8"; '
                'psp-nm firmware/tools/msswitch/msswitch.elf > symbols.txt; ' + checks,
                "msswitch-build", build_id, str(int(physical)),
                str(int(directories and not directory_card)), str(int(directory_card)), str(int(whole_card)),
-               str(int(auto_format)), str(int(write_path))]
+               str(int(auto_format)), str(int(write_path)), str(int(blank_trial))]
     with log.open("wb") as stream:
         result = subprocess.run(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT)
     if result.returncode:
@@ -153,7 +170,7 @@ def compile_in(directory, image, build_id, log, run_host_tests, title, physical,
         raise SystemExit(result.returncode)
     binary = (directory / TOOL / "EBOOT.PBP").read_bytes()
     verify_binary(binary, (directory / "symbols.txt").read_text(), build_id, title, physical,
-                  directories, directory_card, whole_card, auto_format, write_path)
+                  directories, directory_card, whole_card, auto_format, write_path, blank_trial)
     return binary
 
 
@@ -173,9 +190,11 @@ def main():
     variants.add_argument("--whole-card-trial", action="store_true")
     variants.add_argument("--reference-free-format-trial", action="store_true")
     variants.add_argument("--write-path-trial", action="store_true")
+    variants.add_argument("--blank-media-write-trial", action="store_true")
     args = parser.parse_args()
     physical = args.physical_format_trial
-    write_path = args.write_path_trial
+    blank_trial = args.blank_media_write_trial
+    write_path = args.write_path_trial or blank_trial
     auto_format = args.reference_free_format_trial or write_path
     whole_card = args.whole_card_trial or auto_format
     directory_card = args.physical_directory_trial or whole_card
@@ -193,6 +212,8 @@ def main():
         folder, title, readme = "MSAUTOFMT", "PRO-X Memory Stick Auto Format", "AUTO-FORMAT-TRIAL.md"
     if write_path:
         folder, title, readme = "MSWRPATH", "PRO-X Memory Stick Write Path Trial", "WRITE-PATH-TRIAL.md"
+    if blank_trial:
+        folder, title, readme = "MSBLANK", "PRO-X Memory Stick Uniform Sector Trial", "BLANK-MEDIA-WRITE-TRIAL.md"
     eboot = f"release/PSP/GAME/{folder}/EBOOT.PBP"
     build_id = folder.lower() + "-" + uuid.uuid4().hex[:12]
     paths = [TOOL / name for name in (
@@ -220,12 +241,19 @@ def main():
         paths += [TOOL / "auto_card.c"]
         if not write_path:
             paths += [TOOL / "verify-auto-format.py"]
+            paths += [DIAG / "media_session.c", DIAG / "media_session.h",
+                      Path("tests/native/test_msdiag_media_session.c")]
+            paths += [Path("firmware/tools/msformat") / name for name in ("blank_capacity.c", "blank_capacity.h")]
+            paths += [Path("tests/native/test_ms_blank_capacity.c")]
         paths += [DIAG / name for name in ("psp_media.c", "psp_media.h", "auto_probe.c", "auto_probe.h")]
         paths += [Path("firmware/tools/msformat") / name for name in ("card_snapshot.c", "card_snapshot.h")]
         paths += [Path("tests/native") / name for name in ("test_msdiag_auto_probe.c", "test_ms_card_snapshot.c")]
         paths += [Path("firmware/tools/msformat") / name for name in ("write_probe.c", "write_probe.h")]
         paths += [Path("tests/native/test_ms_write_probe.c")]
         paths += [Path("firmware/tools/msformat/gpt.c"), Path("tests/native/test_ms_format_gpt.c")]
+    if blank_trial or (auto_format and not write_path):
+        paths += [Path("firmware/tools/msformat") / name for name in ("blank_probe.c", "blank_probe.h")]
+        paths += [Path("tests/native/test_ms_blank_probe.c")]
     paths += [DIAG / name for name in ("probe.c", "probe.h", "stock_reader.c", "stock_reader.h")]
     paths += [Path("firmware/tools/msformat") / name for name in (
         "fat32_init.c", "fat32_init.h", "fat32_ram.c", "fat32_ram.h",
@@ -250,7 +278,7 @@ def main():
     log = logs / f"{build_id}.log"
     print(f"Build log: {log.relative_to(ROOT)}", flush=True)
     binary = compile_in(work, image, build_id, log, True, title, physical, directories, directory_card,
-                        whole_card, auto_format, write_path)
+                        whole_card, auto_format, write_path, blank_trial)
     files = {
         eboot: binary,
         "README.md": source[(TOOL / readme).as_posix()],
@@ -292,7 +320,8 @@ def main():
     with ZipFile(source_zip) as archive:
         archive.extractall(replay)
     if compile_in(replay, image, build_id, logs / f"{build_id}-source-replay.log",
-                  False, title, physical, directories, directory_card, whole_card, auto_format, write_path) != binary:
+                  False, title, physical, directories, directory_card, whole_card, auto_format, write_path,
+                  blank_trial) != binary:
         raise ValueError("Companion source does not reproduce the EBOOT")
     checksums = "".join(f"{sha((dest / name).read_bytes())}  {name}\n"
                         for name in (binary_zip.name, source_zip.name, eboot, "build-manifest.json"))

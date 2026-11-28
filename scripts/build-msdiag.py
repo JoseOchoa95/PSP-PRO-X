@@ -24,11 +24,13 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def build(work, image, build_id, auto_layout=False, attribute_probe=False, replay=False):
+def build(work, image, build_id, auto_layout=False, attribute_probe=False, replay=False, identity_probe=False,
+          media_event_probe=False):
     command = [
         "docker", "run", "--rm", "--network", "none", "--mount",
         f"type=bind,source={work},target=/src", "-w", "/src", image, "sh", "-ec",
-        'make -C firmware/tools/msdiag "BUILD_ID=$1" "AUTO_LAYOUT=$2" "ATTRIBUTE_PROBE=$3"; '
+        'make -C firmware/tools/msdiag "BUILD_ID=$1" "AUTO_LAYOUT=$2" "ATTRIBUTE_PROBE=$3" "IDENTITY_PROBE=$4" '
+        '"MEDIA_EVENT_PROBE=$5"; '
         'gcc -std=c11 -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=all '
         '-I firmware/tools/msdiag firmware/tools/msdiag/probe.c tests/native/test_msdiag_probe.c '
         '-o test-probe; ./test-probe; '
@@ -43,8 +45,17 @@ def build(work, image, build_id, auto_layout=False, attribute_probe=False, repla
         '-I firmware/tools/msformat firmware/tools/msformat/layout.c firmware/tools/msformat/fat32_init.c '
         'firmware/tools/msformat/card_snapshot.c tests/native/test_ms_card_snapshot.c '
         '-o test-card-snapshot; ./test-card-snapshot; fi; '
+        'if [ "$4" = 1 ]; then '
+        'gcc -std=c11 -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=all '
+        '-I firmware/tools/msdiag firmware/tools/msdiag/identity_probe.c firmware/tools/msdiag/probe.c '
+        'tests/native/test_msdiag_identity.c -o test-identity; ./test-identity; fi; '
+        'if [ "$5" = 1 ]; then '
+        'gcc -std=c11 -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=all '
+        '-I firmware/tools/msdiag firmware/tools/msdiag/media_session.c '
+        'tests/native/test_msdiag_media_session.c -o test-session; ./test-session; fi; '
         'psp-nm firmware/tools/msdiag/msdiag.elf > symbols.txt',
-        "msdiag-build", build_id, str(int(auto_layout)), str(int(attribute_probe)),
+        "msdiag-build", build_id, str(int(auto_layout)), str(int(attribute_probe)), str(int(identity_probe)),
+        str(int(media_event_probe)),
     ]
     log = ROOT / "artifacts/logs" / f"{build_id}{'-source-replay' if replay else ''}.log"
     log.parent.mkdir(parents=True, exist_ok=True)
@@ -57,7 +68,8 @@ def build(work, image, build_id, auto_layout=False, attribute_probe=False, repla
     return command
 
 
-def verify_executable(binary, symbols, build_id, auto_layout=False, attribute_probe=False):
+def verify_executable(binary, symbols, build_id, auto_layout=False, attribute_probe=False, identity_probe=False,
+                      media_event_probe=False):
     if len(binary) < 40 or binary[:4] != b"\0PBP":
         raise ValueError("Invalid PBP")
     version, *offsets = struct.unpack_from("<9I", binary, 4)
@@ -68,6 +80,10 @@ def verify_executable(binary, symbols, build_id, auto_layout=False, attribute_pr
     title = b"PRO-X Memory Stick Auto Preview\0" if auto_layout else b"PRO-X Memory Stick Diagnostic\0"
     if attribute_probe:
         title = b"PRO-X Memory Stick Attribute Probe\0"
+    if identity_probe:
+        title = b"PRO-X Memory Stick Identity Probe\0"
+    if media_event_probe:
+        title = b"PRO-X Memory Stick Change Probe\0"
     if (not param.startswith(b"\0PSF") or title not in param
             or not executable.startswith(b"\x7fELF") or build_id.encode() + b"\0" not in executable):
         raise ValueError("Unexpected PBP title, executable or build ID")
@@ -87,17 +103,27 @@ def verify_executable(binary, symbols, build_id, auto_layout=False, attribute_pr
         if any(name in executable for name in (b"MSPART.BIN", b"MSDREF.BIN", b"flash0:")) or not {
                 "stock_read_attribute_page", "decode_attribute_directory"} <= names:
             raise ValueError("Unexpected attribute probe dependencies")
+    if identity_probe and not {"ms_identity_system_info_offset", "ms_identity_decode", "sceKernelUtilsSha1Digest"} <= names:
+        raise ValueError("Missing identity probe dependencies")
+    if media_event_probe:
+        required = {"sceIoDevctl"}
+        read_only = required | {"sceIoChdir", "sceIoDopen", "sceIoDclose"}
+        callbacks = {"sceKernelCreateCallback", "sceKernelCheckCallback", "sceKernelDeleteCallback",
+                     "ms_session_mark", "ms_session_notify", "ms_session_observe"}
+        if not callbacks <= names or any(path in executable for path in (b"msstor:\0", b"flash0:\0")):
+            raise ValueError("Unexpected medium-change probe dependencies")
     if not required <= io_symbols <= read_only:
         raise ValueError(f"Unexpected PSP I/O symbols: {sorted(io_symbols)}")
     if ("sctrlKernelExitVSH" not in names or "sceKernelExitGame" in names
             or b"SystemCtrlForKernel\0" not in executable
             or struct.pack("<I", 0x2794CCF4) not in executable):
         raise ValueError("Missing or incorrect kernel VSH return import")
-    stock = {"sceKernelFindModuleByName", "stock_reader_init"}
-    if not attribute_probe:
-        stock |= {"stock_read_sector", "estimate_capacity"}
-    if not stock <= names:
-        raise ValueError("Missing stock-driver transfer diagnostic")
+    if not media_event_probe:
+        stock = {"sceKernelFindModuleByName", "stock_reader_init"}
+        if not attribute_probe:
+            stock |= {"stock_read_sector", "estimate_capacity"}
+        if not stock <= names:
+            raise ValueError("Missing stock-driver transfer diagnostic")
 
 
 def archive_and_verify(path, entries):
@@ -114,13 +140,20 @@ def main():
     variants = parser.add_mutually_exclusive_group()
     variants.add_argument("--auto-layout", action="store_true", help="Build the reference-free format preview")
     variants.add_argument("--attribute-probe", action="store_true", help="Inspect Memory Stick PRO attributes")
+    variants.add_argument("--identity-probe", action="store_true", help="Compare adapter-exposed identity fields")
+    variants.add_argument("--media-event-probe", action="store_true", help="Observe insertion and ejection events")
     args = parser.parse_args()
-    auto_layout, attribute_probe = args.auto_layout, args.attribute_probe
+    auto_layout, identity_probe, media_event_probe = args.auto_layout, args.identity_probe, args.media_event_probe
+    attribute_probe = args.attribute_probe or identity_probe
     folder, title, readme = "MSDIAG", "PRO-X Memory Stick Diagnostic", "README.md"
     if auto_layout:
         folder, title, readme = "MSAUTO", "PRO-X Memory Stick Auto Preview", "AUTO-PREVIEW.md"
     if attribute_probe:
         folder, title, readme = "MSATTR", "PRO-X Memory Stick Attribute Probe", "ATTRIBUTE-PROBE.md"
+    if identity_probe:
+        folder, title, readme = "MSID", "PRO-X Memory Stick Identity Probe", "IDENTITY-PROBE.md"
+    if media_event_probe:
+        folder, title, readme = "MSCHANGE", "PRO-X Memory Stick Change Probe", "MEDIA-CHANGE-PROBE.md"
     build_id = folder.lower() + "-" + uuid.uuid4().hex[:12]
     copy_path = f"release/PSP/GAME/{folder}/EBOOT.PBP"
     work = ROOT / "artifacts/work" / build_id
@@ -137,6 +170,11 @@ def main():
         tool_files += (Path("tests/native/test_msdiag_auto_probe.c"), Path("tests/native/test_ms_card_snapshot.c"))
     if attribute_probe:
         tool_files += (TOOL / "attribute_main.c", TOOL / readme)
+    if identity_probe:
+        tool_files += (TOOL / "identity_probe.c", TOOL / "identity_probe.h", Path("tests/native/test_msdiag_identity.c"))
+    if media_event_probe:
+        tool_files += tuple(TOOL / name for name in ("media_event_main.c", "media_session.c", "media_session.h", readme))
+        tool_files += (Path("tests/native/test_msdiag_media_session.c"),)
     licenses = tuple(Path("docs/licenses") / name for name in (
         "PSPSDK-LICENSE", "COPYING.NEWLIB", "GCC-GPL-3", "GCC-RUNTIME-EXCEPTION",
     ))
@@ -157,15 +195,17 @@ def main():
     source["source-snapshot.json"] = (json.dumps({"repository_head": head}) + "\n").encode()
     image = subprocess.check_output(["docker", "image", "inspect", IMAGE, "--format", "{{.Id}}"],
                                     cwd=ROOT, text=True).strip()
-    command = build(work, image, build_id, auto_layout, attribute_probe)
+    command = build(work, image, build_id, auto_layout, attribute_probe, identity_probe=identity_probe,
+                    media_event_probe=media_event_probe)
     binary = (work / TOOL / "EBOOT.PBP").read_bytes()
-    verify_executable(binary, (work / "symbols.txt").read_text(), build_id, auto_layout, attribute_probe)
+    verify_executable(binary, (work / "symbols.txt").read_text(), build_id, auto_layout, attribute_probe,
+                      identity_probe, media_event_probe)
     files = {
         copy_path: binary, "README.md": source[(TOOL / readme).as_posix()],
         "LICENSE": source["LICENSE"],
         **{f"licenses/{path.name}": source[path.as_posix()] for path in licenses},
     }
-    if not (auto_layout or attribute_probe):
+    if not (auto_layout or attribute_probe or media_event_probe):
         files["capture-reference.py"] = source[(TOOL / "capture-reference.py").as_posix()]
     manifest = {
         "tool": title,
@@ -191,11 +231,12 @@ def main():
     archive_and_verify(companion, source)
     if (dest / copy_path).read_bytes() != binary:
         raise ValueError("Loose EBOOT differs from the archived EBOOT")
-    if auto_layout or attribute_probe:
+    if auto_layout or attribute_probe or media_event_probe:
         replay = work.with_name(build_id + "-source-replay")
         with ZipFile(companion) as source_zip:
             source_zip.extractall(replay)
-        build(replay, image, build_id, auto_layout, attribute_probe, replay=True)
+        build(replay, image, build_id, auto_layout, attribute_probe, replay=True, identity_probe=identity_probe,
+              media_event_probe=media_event_probe)
         if (replay / TOOL / "EBOOT.PBP").read_bytes() != binary:
             raise ValueError("Companion source does not reproduce the EBOOT")
     hashes = {archive.name: sha(archive.read_bytes()), companion.name: sha(companion.read_bytes()),

@@ -28,14 +28,19 @@ CFLAGS += -DMSMULTI_CARD_TRIAL
 PSP_EBOOT_TITLE = PRO-X Memory Stick Whole Card Trial
 endif
 ifeq ($(AUTO_FORMAT_TRIAL),1)
-OBJS := $(filter-out dirs_card.o,$(OBJS)) auto_card.o psp_media.o auto_probe.o card_snapshot.o write_probe.o gpt.o
+OBJS := $(filter-out dirs_card.o,$(OBJS)) auto_card.o psp_media.o auto_probe.o card_snapshot.o write_probe.o gpt.o media_session.o blank_probe.o blank_capacity.o
 CFLAGS += -DMSAUTO_FORMAT_TRIAL
 PSP_EBOOT_TITLE = PRO-X Memory Stick Auto Format
 endif
 ifeq ($(WRITE_PATH_TRIAL),1)
-OBJS := $(filter-out card_mount.o job.o,$(OBJS))
+OBJS := $(filter-out card_mount.o job.o media_session.o blank_probe.o blank_capacity.o,$(OBJS))
 CFLAGS += -DMSWRITE_PATH_TRIAL
 PSP_EBOOT_TITLE = PRO-X Memory Stick Write Path Trial
+endif
+ifeq ($(BLANK_TRIAL),1)
+OBJS += blank_probe.o
+CFLAGS += -DMSBLANK_TRIAL
+PSP_EBOOT_TITLE = PRO-X Memory Stick Uniform Sector Trial
 endif
 PSPSDK = $(shell psp-config --pspsdk-path)
 include $(PSPSDK)/lib/build.mak

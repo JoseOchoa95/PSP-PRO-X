@@ -47,6 +47,16 @@ MSAUTOFMT is a standalone 6.61 test app that uses the live card to plan and form
 
 [MSATTR](firmware/tools/msdiag/ATTRIBUTE-PROBE.md) lists the live Memory Stick PRO attributes provided by the adapter. A physical scan on the 512 GB trial card confirmed that the raw System Info matches the Sony driver's reported capacity. Native SD CSD access remains unverified.
 
+[MSBLANK](firmware/tools/msswitch/BLANK-MEDIA-WRITE-TRIAL.md) tests temporary sector writes and restoration on the backed-up 256 GB card. The owner reported successful restoration on PSP, and a direct USB reader confirmed the MBR and all ten sampled sectors against their original bytes. The trial uses an existing card identity. Qualification of completely blank cards remains pending.
+
+[MSID](firmware/tools/msdiag/IDENTITY-PROBE.md) compares Memory Stick PRO serial and PRO ID fingerprints in read-only mode. Two physical microSD cards in the same adapter returned the same fingerprints for both fields. The native microSD identity remains unverified.
+
+[MSCHANGE](firmware/tools/msdiag/MEDIA-CHANGE-PROBE.md) checks Memory Stick changes in read-only mode. The owner confirmed on a PSP that removing and reinserting a card invalidated the previous review, including with a card that prompted the console to format it.
+
+The current MSAUTOFMT test build applies this check to its format plan. The owner confirmed that removing the card discarded the displayed plan and that the format completed after a fresh scan.
+
+The zero-filled sampling path in MSAUTOFMT uses separately authorized temporary writes and verifies restoration before offering an extended format. On a prepared 256 GB card, the direct USB reader confirmed restoration and verified the three FAT32 volumes and their initial contents after formatting. The owner confirmed that the first volume mounted on the PSP. The planning limit is 1 TB, with physical capacity testing through 512 GB.
+
 MSAUTOFMT assigns FAT32 labels such as `PART 1` to newly formatted volumes. Its read-only preview identifies which volume Sony has mounted using the stored serial and extent and displays its current label. The owner verified that the second 512 GB card mounted as `PART 1` after a repeat format. A direct USB reader confirmed all six labels.
 
 [MSWRPATH](firmware/tools/msswitch/WRITE-PATH-TRIAL.md) is a standalone one-sector write trial for comparing adapters on the backed-up 512 GB card. The first physical run reached the write and readback. The write reported success and the original data remained at the tested address. The failure also occurred through a direct USB reader, which passed a lower-sector write and restore on the same microSD. The second 512 GB card retained and restored data at the same sector through that reader.
@@ -74,7 +84,7 @@ PRO-X is an independent fork and is not an official release from Team PRO, the A
 - **PSP Homebrew Community Wiki contributors** for the PSP error-code reference used during the MSDIRS investigation. [PSP Homebrew Community Wiki](https://github.com/psp-homebrew-community/wiki)
 - **PPSSPP contributors** for the PSP ELF loader used as a reference for packed relocations. [PPSSPP ELF reader](https://github.com/hrydgard/ppsspp/blob/master/Core/ELF/ElfReader.cpp)
 - **uOFW documentation contributors** for archiving the Memory Stick PRO specification. [upspd](https://github.com/uofw/upspd)
-- **Linux Memory Stick maintainers** for the Memory Stick PRO attribute directory reference. [Linux Memory Stick PRO driver](https://github.com/torvalds/linux/blob/master/drivers/memstick/core/mspro_block.c)
+- **Linux Memory Stick maintainers** for the Memory Stick PRO attribute directory and System Info identity field reference. [Linux Memory Stick PRO driver](https://github.com/torvalds/linux/blob/master/drivers/memstick/core/mspro_block.c)
 - **Unicorn Engine and dosfstools contributors** for host replay and independent FAT32 validation. [Unicorn Engine](https://github.com/unicorn-engine/unicorn) · [dosfstools](https://github.com/dosfstools/dosfstools)
 
 Original copyright notices, license notices, and contributor acknowledgments must be retained.
