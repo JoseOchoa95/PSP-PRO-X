@@ -229,17 +229,17 @@ Keep generated binaries and packages out of source commits. Preserve existing ig
 
 Use [Semantic Versioning 2.0.0](https://semver.org/) for PRO-X product versions. During the `0.y.z` development series, follow these project rules for changes that will be delivered from a branch.
 
-Assign a new product version to each new pull request, including standalone diagnostic changes. Apply the version confirmation and build validation requirements below before submitting the pull request.
+Keep the current owner-confirmed product version throughout local development and PSP testing for a ticket. Assign the version for a new pull request during the PR submission cycle, after the change is ready for review. A local delivery, a correction following a PSP test, and creating a branch do not trigger a version bump.
 
 - **MINOR** for a new feature ticket with compatible functionality. Increment the middle number and reset PATCH to zero, such as `v0.1.0` to `v0.2.0`.
-- **PATCH** for a delivered follow-up to the same ticket or a small compatible fix, documentation, packaging or maintenance change. Increment the last number, such as `v0.1.0` to `v0.1.1`.
+- **PATCH** for a new PR following up on the same ticket or delivering a small compatible fix, documentation, packaging or maintenance change. Increment the last number, such as `v0.1.0` to `v0.1.1`.
 - **MAJOR** for an incompatible change to a supported public contract, such as an intentional break in updater or installation compatibility. Propose the bump and document the affected contract before proceeding.
 
-Each feature, fix or maintenance branch prepared for delivery gets a new product version. An integration branch delivering several changes together has one version based on the combined scope. Before assigning or changing a version, always propose the exact number and the reason for the bump, then ask the owner to confirm it or choose another. Wait for confirmation before changing product metadata or building under the proposed version. Confirm the release version with the owner before publication, using any explicit confirmation already given for that exact version and scope.
+Use the MINOR, PATCH or MAJOR rules above for the scope of the new PR. A new PR continuing the same ticket increments PATCH within its assigned series. For an integration PR, choose one version for the combined scope. Before changing product metadata for PR submission, propose the exact number and the reason and wait for the owner to confirm it or choose another. An existing confirmed version may serve as the first PR version for its scope. Confirm the release version before publication using any explicit confirmation already given for that exact version and scope.
 
-Check delivered build metadata, implementation records, accepted or merged PRs, tags and releases before proposing a version. Treat every previously assigned version as used, including tested or merged versions without a public release. Record an explicitly authorized reuse or temporary test version in `context/` with its scope and intended final version. Preserve the identity of existing binaries and published releases.
+Check delivered build metadata, implementation records, accepted or merged PRs, tags and releases before proposing a version. Versions assigned to earlier PRs remain used even when unreleased. Preserve the recorded product version, build identifier and hashes of every prior binary and release. Record any owner-authorized reuse of an earlier PR version or standalone temporary test version in the implementation record.
 
-Rebuilding the same approved revision, retrying a failed build or rerunning packaging keeps its confirmed product version. Use distinct build identifiers and hashes for separate compiled candidates. A delivered follow-up with source changes requires a newly confirmed version. Commits, pushes, PR updates, tags and release actions alone do not consume another version. Add a prerelease suffix only with the owner's explicit approval.
+Use distinct build identifiers and hashes for each local candidate compiled under the same product version, including candidates with source changes. Rebuilding and rerunning packaging keep the confirmed version. Updates to an open PR keep its version unless the owner explicitly changes it. Commits, pushes, tags and release actions alone do not trigger a bump. Add a prerelease suffix with the owner’s explicit approval. If the PR submission cycle changes only the product version after PSP validation, apply the version-only validation exception below and record the relationship between the validated and retagged build identities.
 
 Keep the product version consistent across build/package metadata, package filenames, manifests, applicable installer/Fast Recovery product labels, and the version reported to the user. Use conventional package filenames such as `pro-x-0.2.0-661.zip`; retain the `v` prefix in the human-facing version identifier.
 
@@ -261,7 +261,7 @@ Version assignment and building do not authorize commits, pushes, tags, PRs, or 
 
 After compilation and the required local checks pass:
 
-1. Verify the compiled files and package actually exist and match the current implementation and the ticket's product version assigned before compilation.
+1. Verify the compiled files and package actually exist and match the current implementation and the ticket's current owner-confirmed product version.
 2. Leave them in `builds/` and give the user their exact paths or accessible download links.
 3. Explain briefly what changed, which files to copy, how to install/update using the actual installer behavior, and how to test the feature.
 4. State which checks passed locally and which hardware tests are still pending.

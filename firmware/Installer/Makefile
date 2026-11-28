@@ -17,7 +17,9 @@ INCDIR = ../include ../Common ../Updater ../Updater/vendor/mbedtls/include
 CFLAGS = -Os -G0 -Wall -DMBEDTLS_CONFIG_FILE=\"prox_mbedtls_config.h\"
 ifneq ($(findstring -DPROX_NATIVE_RESIDENT_QUERY=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
 CFLAGS += -DPROX_NATIVE_RESIDENT_QUERY=1
-OBJS += resident_image.o resident_capacity.o
+OBJS += resident_image.o resident_capacity.o installer_flash_capacity.o
+installer_flash_capacity.o: ../Common/prox_flash_capacity.c ../Common/prox_flash_capacity.h
+	$(CC) $(CFLAGS) -I../Common -c $< -o $@
 ifneq ($(findstring -DPROX_NATIVE_DEDICATED_OTA=1,$(PROX_NATIVE_UPDATE_FLAGS)),)
 CFLAGS += -DPROX_RESIDENT_BUILTIN_COMPLETION=1
 else
@@ -25,7 +27,7 @@ OBJS += resident_completion.o ../Updater/native_completion_store.o ../Updater/na
 endif
 EXTRA_CLEAN += flash_capacity_prx.h
 pre-build: flash_capacity_prx.h
-flash_capacity_prx.h: flash_capacity/main.c flash_capacity/Makefile flash_capacity_result.h ../Common/prox_flash_capacity.c ../Common/prox_flash0_capacity.c ../Common/prox_flash_capacity.h
+flash_capacity_prx.h: flash_capacity/main.c flash_capacity/Makefile flash_capacity/exports.exp flash_capacity_result.h ../Common/prox_flash_capacity.c ../Common/prox_flash0_capacity.c ../Common/prox_flash_capacity.h
 	$(MAKE) -C flash_capacity
 	bin2c flash_capacity/flash_capacity.prx $@ flash_capacity_prx
 resident_capacity.o: flash_capacity_prx.h

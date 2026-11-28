@@ -249,6 +249,16 @@ int main(void)
 {
     struct MsFormatPreview preview;
     assert(ms_format_preview(&backend, &disk, &preview) == MS_FORMAT_EXTENDED);
+    struct MsFormatPreview changed = preview;
+    assert(ms_format_preview_equal(&preview, &changed));
+    ++changed.plan.final_sectors;
+    assert(!ms_format_preview_equal(&preview, &changed));
+    changed = preview;
+    changed.media.identity[0] ^= 1;
+    assert(!ms_format_preview_equal(&preview, &changed));
+    changed = preview;
+    ++changed.media.gpt.primary_crc;
+    assert(!ms_format_preview_equal(&preview, &changed));
     ms_format_cancel(&preview);
     assert(ms_format_execute(&backend, &disk, &preview, &scratch).failure == MS_FORMAT_NO_PREVIEW);
     assert(!disk.writes);

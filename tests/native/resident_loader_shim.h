@@ -3,6 +3,7 @@
 
 typedef unsigned int SceSize;
 typedef int SceUID;
+typedef long long SceOff;
 typedef struct { long long st_size; int st_mode; } SceIoStat;
 typedef struct { unsigned int size; int access, position; } SceKernelLMOption;
 typedef struct { unsigned int size, stacksize; } SceKernelSMOption;
@@ -13,6 +14,9 @@ typedef struct { unsigned int size, stacksize; } SceKernelSMOption;
 #define PSP_O_CREAT 0x0200
 #define PSP_O_TRUNC 0x0400
 #define PSP_O_EXCL 0x0800
+#define PSP_SEEK_SET 0
+#define PSP_SEEK_CUR 1
+#define PSP_SEEK_END 2
 unsigned int sceKernelDevkitVersion(void);
 int sceKernelGetModel(void);
 void sceKernelDcacheWritebackInvalidateAll(void);
@@ -20,9 +24,11 @@ void *sctrlHENFindFunction(const char *, const char *, unsigned int);
 int sceIoGetstat(const char *, SceIoStat *);
 int sceIoOpen(const char *, int, int);
 int sceIoRead(int, void *, unsigned int);
+SceOff sceIoLseek(int, SceOff, int);
 int sceIoWrite(int, const void *, unsigned int);
 int sceIoClose(int);
 int sceIoRemove(const char *);
+int sceIoDevctl(const char *, unsigned int, void *, int, void *, int);
 int kuKernelLoadModule(const char *, int, SceKernelLMOption *);
 int sceKernelStartModule(int, SceSize, void *, int *, SceKernelSMOption *);
 int sceKernelStopModule(int, SceSize, void *, int *, SceKernelSMOption *);

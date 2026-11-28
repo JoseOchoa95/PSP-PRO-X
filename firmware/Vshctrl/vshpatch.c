@@ -59,6 +59,9 @@ static STMOD_HANDLER previous;
 SEConfig conf;
 
 static void patch_sysconf_plugin_module(SceModule2 *mod);
+#ifdef PROX_FORMAT_RESIDENT
+void prox_patch_native_format(SceModule2 *mod);
+#endif
 static void patch_game_plugin_module(u32 text_addr);
 static void patch_vsh_module(SceModule2 * mod);
 
@@ -298,6 +301,10 @@ static void patch_sysconf_plugin_module(SceModule2 *mod)
 		 * label owns an explicitly sized user-readable UTF-16 buffer. */
 		prox_system_version_patch((void *)text_addr, mod->text_size,
 			g_offs->sysconf_plugin_patch.SystemVersion);
+#ifdef PROX_FORMAT_RESIDENT
+		if (psp_model == PSP_2000)
+			prox_patch_native_format(mod);
+#endif
 	} else {
 	minor_version = sctrlHENGetMinorVersion();
 

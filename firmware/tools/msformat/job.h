@@ -77,6 +77,7 @@ struct MsFormatResult {
 enum MsFormatLayoutResult ms_format_preview(const struct MsFormatBackend *backend, void *device,
                                             struct MsFormatPreview *preview);
 void ms_format_cancel(struct MsFormatPreview *preview);
+int ms_format_preview_equal(const struct MsFormatPreview *left, const struct MsFormatPreview *right);
 /* The caller confirms the preview before invoking this function. Execution consumes it. */
 struct MsFormatResult ms_format_execute(const struct MsFormatBackend *backend, void *device,
                                         struct MsFormatPreview *preview, struct Fat32Ram *scratch);

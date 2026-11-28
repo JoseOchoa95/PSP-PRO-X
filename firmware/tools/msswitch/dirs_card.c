@@ -18,6 +18,7 @@
 #include "capacity.h"
 #include "fat32_dirs.h"
 #include "job.h"
+#include "ram_volume.h"
 #include "sony_mkdir_ram.h"
 #define REFERENCE_PATH "ms0:/PSP/GAME/MSMULTI/MSPART.BIN"
 #else
@@ -287,7 +288,7 @@ static int stage_card(void *context, struct Fat32Ram *image, const struct MsForm
     write_length = fat.root_sector + (PSP_INITIAL_DIRECTORY_COUNT + 1) * fat.sectors_per_cluster;
     started_us = sceKernelGetSystemTimeLow();
     pspDebugScreenPrintf("Partition %u: prepare and verify FAT32 metadata\n", index + 1);
-    return dirs_card_stage(image, target->start, target->sectors, 0x50585041 + index);
+    return ms_ram_volume_stage(image, target->start, target->sectors, 0x50585041 + index);
 }
 
 static void show_volume_result(void *context, unsigned index, uint32_t writes)

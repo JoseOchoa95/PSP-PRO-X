@@ -1,16 +1,17 @@
 /* GPL-3.0-or-later */
-#include <pspdebug.h>
 #include <pspiofilemgr_kernel.h>
 #include <pspkernel.h>
 #include <psputils.h>
 #include <string.h>
 
 #include "card_mount.h"
+#include "format_output.h"
 #include "dirs_card.h"
 #include "fat32_dirs.h"
 #include "fat32_probe.h"
-#include "job.h"
+#include "auto_format.h"
 #include "psp_media.h"
+#include "ram_volume.h"
 #include "sony_mkdir_ram.h"
 #include "write_probe.h"
 #ifndef MSWRITE_PATH_TRIAL
@@ -132,12 +133,18 @@ static int review_present(struct FormatCard *target)
     return review_current(target);
 }
 
-int dirs_card_preview_current(void)
+void ms_auto_format_discard(void)
+{
+    ms_session_notify(&card.session);
+    card.blank_pending = 0;
+    ms_format_cancel(&card.preview);
+}
+
+int ms_auto_format_current(void)
 {
     if (review_present(&card))
         return 1;
-    card.blank_pending = 0;
-    ms_format_cancel(&card.preview);
+    ms_auto_format_discard();
     return 0;
 }
 #endif
@@ -219,22 +226,22 @@ static int detach_stock_fat(struct FormatCard *target)
 {
     uint32_t state, mounts;
     if (!sony_fat_stock_state(&state, &mounts)) {
-        pspDebugScreenPrintf("Stock FAT context could not be read.\n");
+        format_trace("Stock FAT context could not be read.\n");
         return 0;
     }
-    pspDebugScreenPrintf("FAT before: mounts %u, state 0x%08x\n", mounts, state);
+    format_trace("FAT before: mounts %u, state 0x%08x\n", mounts, state);
     if (mounts || (state & FAT_MOUNTED)) {
         int result = sceIoUnassign("ms0:");
-        pspDebugScreenPrintf("Detach ms0: 0x%08x\n", (unsigned)result);
+        format_trace("Detach ms0: 0x%08x\n", (unsigned)result);
         if (result < 0)
             return 0;
         target->detached = 1;
     }
     if (!sony_fat_stock_state(&state, &mounts)) {
-        pspDebugScreenPrintf("Stock FAT context changed.\n");
+        format_trace("Stock FAT context changed.\n");
         return 0;
     }
-    pspDebugScreenPrintf("FAT after: mounts %u, state 0x%08x\n", mounts, state);
+    format_trace("FAT after: mounts %u, state 0x%08x\n", mounts, state);
     return !mounts && !(state & FAT_MOUNTED);
 }
 
@@ -252,11 +259,11 @@ static enum MsFormatAccess exclusive(void *context, MsFormatLockedOperation oper
     if (!dirs_card_cleanup())
         return MS_FORMAT_ACCESS_CLEANUP_FAILED;
     if (!matched) {
-        pspDebugScreenPrintf("The card changed after the preview.\n");
+        format_trace("The card changed after the preview.\n");
         return MS_FORMAT_ACCESS_DENIED;
     }
     if (!sony_mkdir_ram_check()) {
-        pspDebugScreenPrintf("Stock FAT module profile could not be loaded.\n");
+        format_trace("Stock FAT module profile could not be loaded.\n");
         return MS_FORMAT_ACCESS_DENIED;
     }
 #ifndef MSWRITE_PATH_TRIAL
@@ -264,7 +271,7 @@ static enum MsFormatAccess exclusive(void *context, MsFormatLockedOperation oper
         return MS_FORMAT_ACCESS_DENIED;
 #endif
     if (!detach_stock_fat(target)) {
-        pspDebugScreenPrintf("Stock FAT did not enter its idle state.\n");
+        format_trace("Stock FAT did not enter its idle state.\n");
         return MS_FORMAT_ACCESS_DENIED;
     }
 
@@ -284,7 +291,7 @@ static enum MsFormatAccess exclusive(void *context, MsFormatLockedOperation oper
     if (!dirs_card_cleanup() || status < 0)
         return MS_FORMAT_ACCESS_CLEANUP_FAILED;
     if (!status)
-        pspDebugScreenPrintf("The card did not pass exclusive write preflight.\n");
+        format_trace("The card did not pass exclusive write preflight.\n");
     return status ? MS_FORMAT_ACCESS_OK : MS_FORMAT_ACCESS_DENIED;
 }
 
@@ -338,8 +345,8 @@ static int stage(void *context, struct Fat32Ram *image, const struct MsFormatVol
     target->metadata_start = volume->start;
     target->metadata_length = layout.root_sector + (PSP_INITIAL_DIRECTORY_COUNT + 1) * layout.sectors_per_cluster;
     target->started_us = sceKernelGetSystemTimeLow();
-    pspDebugScreenPrintf("P%u: format and verify FAT32 metadata\n", index + 1);
-    return dirs_card_stage(image, volume->start, volume->sectors, FIRST_VOLUME_ID + index) &&
+    format_trace("P%u: format and verify FAT32 metadata\n", index + 1);
+    return ms_ram_volume_stage(image, volume->start, volume->sectors, FIRST_VOLUME_ID + index) &&
            fat32_ram_name_partition(image, index + 1);
 }
 
@@ -347,7 +354,7 @@ static void verified(void *context, unsigned index, uint32_t writes)
 {
     const struct FormatCard *target = context;
     unsigned seconds = (sceKernelGetSystemTimeLow() - target->started_us) / 1000000;
-    pspDebugScreenPrintf("P%u verified: %u writes, %u seconds\n", index + 1, writes, seconds);
+    format_trace("P%u verified: %u writes, %u seconds\n", index + 1, writes, seconds);
 }
 
 static unsigned show_mounted_partition(const struct MsFormatPlan *plan)
@@ -356,7 +363,7 @@ static unsigned show_mounted_partition(const struct MsFormatPlan *plan)
     SceIoStat game;
     if (sceIoGetstat("ms0:/PSP/GAME", &game) < 0 || !FIO_S_ISDIR(game.st_mode) ||
         !sony_fat_stock_volume(&mounted)) {
-        pspDebugScreenPrintf("Mounted partition: unconfirmed\n");
+        format_trace("Mounted partition: unconfirmed\n");
         return 0;
     }
     const char *label = mounted.label[0] ? mounted.label : "PARTITION";
@@ -364,10 +371,10 @@ static unsigned show_mounted_partition(const struct MsFormatPlan *plan)
     struct MsFormatVolume expected;
     if (ms_format_volume(plan, index, &expected) && mounted.start == expected.start &&
         mounted.sectors == expected.sectors) {
-        pspDebugScreenPrintf("Mounted P%u: %s   LBA %u\n", (unsigned)index + 1, label, (unsigned)mounted.start);
+        format_trace("Mounted P%u: %s   LBA %u\n", (unsigned)index + 1, label, (unsigned)mounted.start);
         return index + 1;
     }
-    pspDebugScreenPrintf("Mounted FAT32: %s   LBA %u\n", label, (unsigned)mounted.start);
+    format_trace("Mounted FAT32: %s   LBA %u\n", label, (unsigned)mounted.start);
     return 0;
 }
 
@@ -405,7 +412,7 @@ static void restore_original_mount(struct FormatCard *target)
 #endif
     ) {
         int result = sceIoAssign("ms0:", "msstor0p1:", "fatms0:", IOASSIGN_RDWR, NULL, 0);
-        pspDebugScreenPrintf("Restore original ms0: 0x%08x\n", (unsigned)result);
+        format_trace("Restore original ms0: 0x%08x\n", (unsigned)result);
     }
 }
 
@@ -438,15 +445,16 @@ static int prepare_blank_samples(struct FormatCard *target)
 }
 #endif
 
-static const char *prepare_preview(struct FormatCard *target)
+static const char *prepare_preview(struct FormatCard *target, int allow_capacity_trial)
 {
     const char *error = ms_auto_measure(raw, &target->measured);
     if (error)
         return error;
     struct MsAutoMedia *measured = &target->measured;
-    pspDebugScreenPrintf("Adapter: %u sectors   Card: %u sectors\n",
+    format_trace("Adapter: %u sectors   Card: %u sectors\n",
                          measured->reported, measured->capacity.estimate.sectors);
 #ifdef MSWRITE_PATH_TRIAL
+    (void)allow_capacity_trial;
     if (measured->gpt)
         return "GPT is not supported by the write-path trial.";
 #ifdef MSBLANK_TRIAL
@@ -459,7 +467,7 @@ static const char *prepare_preview(struct FormatCard *target)
 #endif
 #endif
     if (measured->layout == MS_FORMAT_STOCK)
-        return "Use the Sony format option in System Settings.";
+        return NULL;
 #ifndef MSWRITE_PATH_TRIAL
     if (measured->gpt) {
         const struct AutoCapacity *capacity = &measured->capacity;
@@ -471,7 +479,7 @@ static const char *prepare_preview(struct FormatCard *target)
             return "GPT metadata is damaged or unsupported.";
         measured->have_snapshot = ms_card_capture(&measured->plan, &target->identity.gpt, measured->reported,
                                                    ms_auto_read_sector, &measured->reader, &measured->snapshot);
-    } else if (!measured->have_snapshot && measured->layout == MS_FORMAT_EXTENDED &&
+    } else if (allow_capacity_trial && !measured->have_snapshot && measured->layout == MS_FORMAT_EXTENDED &&
                measured->capacity.estimate.finding == CAPACITY_CANDIDATE && measured->capacity.alias_checks &&
                !measured->capacity.distinct_checks && measured->capacity.estimate.sectors == measured->plan.usable_sectors) {
         target->blank_pending = ms_blank_capacity_capture(&measured->plan, measured->reported,
@@ -498,26 +506,27 @@ static const char *prepare_preview(struct FormatCard *target)
     return NULL;
 }
 
+#ifndef PROX_FORMAT_RESIDENT
 static void show_preview(const struct FormatCard *target)
 {
 #ifdef MSBLANK_TRIAL
     (void)target;
     for (unsigned i = 0; i < BLANK_TEST_COUNT; ++i)
-        pspDebugScreenPrintf("Sample %u: LBA %u, %u lower controls\n", i + 1, blank_probes[i].high,
+        format_trace("Sample %u: LBA %u, %u lower controls\n", i + 1, blank_probes[i].high,
                              blank_probes[i].count);
-    pspDebugScreenPrintf("\nTemporary writes on the backed-up 256 GB card.\n"
+    format_trace("\nTemporary writes on the backed-up 256 GB card.\n"
                          "Original sectors must verify after restoration.\n"
                          "Keep the card inserted.\nL + R + X: test    O: cancel and exit\n");
 #elif defined(MSWRITE_PATH_TRIAL)
-    pspDebugScreenPrintf("\nOne-sector test at LBA %u.\nThe original sector will be restored.\n",
+    format_trace("\nOne-sector test at LBA %u.\nThe original sector will be restored.\n",
                          WRITE_PROBE_LBA);
-    pspDebugScreenPrintf("Target is %s the driver-reported end.\n",
+    format_trace("Target is %s the driver-reported end.\n",
                          WRITE_PROBE_LBA >= target->measured.reported ? "above" : "within");
-    pspDebugScreenPrintf("\nUse only the backed-up 512 GB trial card.\n"
+    format_trace("\nUse only the backed-up 512 GB trial card.\n"
                          "L + R + X: test write    O: cancel and exit\n");
 #else
     if (target->blank_pending) {
-        pspDebugScreenPrintf("\nCapacity candidate: %u sectors\n"
+        format_trace("\nCapacity candidate: %u sectors\n"
                              "The sampled sectors returned zeros.\n"
                              "Temporarily writes 2 sectors, then restores them.\n"
                              "Use only a backed-up card. Keep it inserted.\n\n"
@@ -528,8 +537,8 @@ static void show_preview(const struct FormatCard *target)
     const struct MsFormatPlan *plan = &target->preview.plan;
     uint32_t gib = target->identity.verified_sectors * UINT64_C(100) / SECTORS_PER_GIB;
     if (target->identity.gpt.sectors_per_copy)
-        pspDebugScreenPrintf("GPT verified. Format replaces it with MBR.\n");
-    pspDebugScreenPrintf("Card: %u.%02u GiB. Planning cap: 1 TB.\n"
+        format_trace("GPT verified. Format replaces it with MBR.\n");
+    format_trace("Card: %u.%02u GiB. Planning cap: 1 TB.\n"
                          "%u FAT32 volumes (%u primary, %u logical)\n"
                          "%s LBAs: %u, %u\n\n",
                          gib / 100, gib % 100, plan->volume_count, plan->primary_count,
@@ -539,7 +548,7 @@ static void show_preview(const struct FormatCard *target)
     unsigned first = 0;
     if (plan->volume_count > 7) {
         first = plan->volume_count - 1;
-        pspDebugScreenPrintf("P1 to P%u: %u GiB each (%u sectors)\n",
+        format_trace("P1 to P%u: %u GiB each (%u sectors)\n",
                              first, plan->full_sectors / SECTORS_PER_GIB, plan->full_sectors);
     }
     for (unsigned i = first; i < plan->volume_count; ++i) {
@@ -547,34 +556,59 @@ static void show_preview(const struct FormatCard *target)
         if (!ms_format_volume(plan, i, &volume))
             break;
         gib = (uint64_t)volume.sectors * 100 / SECTORS_PER_GIB;
-        pspDebugScreenPrintf("P%u: %u.%02u GiB  start %u  sectors %u\n",
+        format_trace("P%u: %u.%02u GiB  start %u  sectors %u\n",
                              i + 1, gib / 100, gib % 100, volume.start, volume.sectors);
     }
-    pspDebugScreenPrintf("\nErases the inserted card. Keep it inserted.\n"
+    format_trace("\nErases the inserted card. Keep it inserted.\n"
                          "L + R + X: format    O: cancel and exit\n");
 #endif
 }
+#endif
 
-int dirs_card_preview(void)
+static const char *scan_card(int allow_capacity_trial)
 {
     if (!dirs_card_cleanup())
-        return 0;
+        return "The previous card handle could not close.";
     memset(&card, 0, sizeof(card));
-    pspDebugScreenPrintf("Scanning the inserted card. Keep it inserted.\n");
     const char *error = NULL;
 #ifndef MSWRITE_PATH_TRIAL
     error = start_review(&card);
 #endif
     if (!error) {
         raw = sceIoOpen(raw_device, PSP_O_RDONLY, 0);
-        error = prepare_preview(&card);
+        error = prepare_preview(&card, allow_capacity_trial);
     }
     if (!dirs_card_cleanup())
         error = "The read-only card handle could not close.";
+    return error;
+}
+
+#ifndef MSWRITE_PATH_TRIAL
+enum MsFormatLayoutResult ms_auto_format_scan(struct MsFormatPreview *preview)
+{
+    if (!preview)
+        return MS_FORMAT_INVALID;
+    ms_format_cancel(preview);
+    if (scan_card(0) || !ms_auto_format_current()) {
+        ms_auto_format_discard();
+        return MS_FORMAT_INVALID;
+    }
+    *preview = card.preview;
+    return card.measured.layout;
+}
+#endif
+
+#ifndef PROX_FORMAT_RESIDENT
+int dirs_card_preview(void)
+{
+    format_trace("Scanning the inserted card. Keep it inserted.\n");
+    const char *error = scan_card(1);
+    if (!error && card.measured.layout == MS_FORMAT_STOCK)
+        error = "Use the Sony format option in System Settings.";
 #ifndef MSWRITE_PATH_TRIAL
     if (card.session != MS_SESSION_UNCHECKED) {
         if (review_present(&card)) {
-            pspDebugScreenPrintf("\n");
+            format_trace("\n");
             ms_mount_report();
             show_mounted_partition(&card.measured.plan);
         }
@@ -586,7 +620,7 @@ int dirs_card_preview(void)
 #ifndef MSWRITE_PATH_TRIAL
         ms_format_cancel(&card.preview);
 #endif
-        pspDebugScreenPrintf("\n%s\n\nX: check again    O: exit\n", error);
+        format_trace("\n%s\n\nX: check again    O: exit\n", error);
         return 0;
     }
     show_preview(&card);
@@ -645,7 +679,7 @@ static void run_capacity_trial(void *context)
         trial->peer_unchanged = 0;
         struct MsBlankResult result = ms_blank_probe_run(&check->probes[i], &check->samples[i], capacity_trial_read,
                                                         capacity_trial_write, capacity_trial_present, trial);
-        pspDebugScreenPrintf("LBA %u: result %u, writes %u, peer %s\n", trial->active_lba,
+        format_trace("LBA %u: result %u, writes %u, peer %s\n", trial->active_lba,
                              (unsigned)result.finding, result.writes, trial->peer_unchanged ? "MATCH" : "unverified");
         if (result.finding != MS_BLANK_INDEPENDENT || !trial->peer_unchanged)
             break;
@@ -675,21 +709,22 @@ int dirs_card_qualify(void)
     struct BlankCapacityTrial trial = {.target = &card};
     if (!card.blank_pending)
         return 0;
-    pspDebugScreenPrintf("Testing sampled sectors. Keep the card inserted.\n\n");
+    format_trace("Testing sampled sectors. Keep the card inserted.\n\n");
     enum MsFormatAccess access = exclusive(&card, run_capacity_trial, &trial);
     int restored = access == MS_FORMAT_ACCESS_OK && capacity_trial_reopen(&card);
     card.blank_pending = 0;
     if (!restored || trial.passed != MS_FORMAT_WITNESSES ||
         ms_format_preview(&backend, &card, &card.preview) != MS_FORMAT_EXTENDED) {
         ms_format_cancel(&card.preview);
-        pspDebugScreenPrintf("\nOriginal samples: %s\nCapacity check failed. Format unavailable.\n\nO: exit\n",
+        format_trace("\nOriginal samples: %s\nCapacity check failed. Format unavailable.\n\nO: exit\n",
                              restored ? "verified" : "unverified");
         return 0;
     }
-    pspDebugScreenPrintf("\nCapacity check: PASS. Original samples restored.\n\n");
+    format_trace("\nCapacity check: PASS. Original samples restored.\n\n");
     show_preview(&card);
     return 1;
 }
+#endif
 #endif
 
 #ifdef MSBLANK_TRIAL
@@ -757,17 +792,17 @@ void dirs_card_write(struct Fat32Ram *image)
                                            "write rejected or dropped", "restoration unverified"};
     for (unsigned i = 0; i < trial.tested; ++i) {
         const struct MsBlankResult *result = &trial.results[i];
-        pspDebugScreenPrintf("Sample %u LBA %u: %s\n", i + 1, blank_probes[i].high, findings[result->finding]);
+        format_trace("Sample %u LBA %u: %s\n", i + 1, blank_probes[i].high, findings[result->finding]);
         for (unsigned j = 0; j < blank_probes[i].count; ++j)
-            pspDebugScreenPrintf("  Control LBA %u\n", blank_probes[i].controls[j]);
+            format_trace("  Control LBA %u\n", blank_probes[i].controls[j]);
         if (result->alias_lba)
-            pspDebugScreenPrintf("  Alias LBA %u\n", result->alias_lba);
+            format_trace("  Alias LBA %u\n", result->alias_lba);
         success &= result->finding == MS_BLANK_INDEPENDENT;
         attempts += result->writes;
     }
     if (card.detached && (reopened || (!attempts && access != MS_FORMAT_ACCESS_CLEANUP_FAILED)))
         restore_original_mount(&card);
-    pspDebugScreenPrintf("Write attempts: %u, access: %u\nOriginal bytes after reopen: %s\n\n"
+    format_trace("Write attempts: %u, access: %u\nOriginal bytes after reopen: %s\n\n"
                          "Uniform sector trial: %s\n\nO: exit\n", attempts, (unsigned)access,
                          reopened ? "MATCH" : "unconfirmed", success ? "PASS" : "FAIL");
 }
@@ -857,22 +892,22 @@ void dirs_card_write(struct Fat32Ram *image)
         .target = &card, .lba = WRITE_PROBE_LBA,
         .attempt_command = NO_STOCK_COMMAND, .restore_command = NO_STOCK_COMMAND,
     };
-    pspDebugScreenPrintf("Adapter: %u sectors\nTarget LBA: %u\n\n", card.measured.reported, WRITE_PROBE_LBA);
+    format_trace("Adapter: %u sectors\nTarget LBA: %u\n\n", card.measured.reported, WRITE_PROBE_LBA);
     enum MsFormatAccess access = exclusive(&card, probe_locked, &path);
     int reopened = access == MS_FORMAT_ACCESS_OK && path.result.restored &&
                    path.controls_ok && reopen_matches(&path);
     if (card.detached && (reopened || (!path.writes && access != MS_FORMAT_ACCESS_CLEANUP_FAILED)))
         restore_original_mount(&card);
     static const char *const readbacks[] = {"unavailable", "original bytes", "test pattern", "different bytes"};
-    pspDebugScreenPrintf("Access: %u  Write attempts: %d\n", (unsigned)access, path.writes);
+    format_trace("Access: %u  Write attempts: %d\n", (unsigned)access, path.writes);
     if (path.attempt_command != NO_STOCK_COMMAND)
-        pspDebugScreenPrintf("Pattern Sony result: 0x%08x\n", (unsigned)path.attempt_command);
+        format_trace("Pattern Sony result: 0x%08x\n", (unsigned)path.attempt_command);
     if (path.restore_command != NO_STOCK_COMMAND)
-        pspDebugScreenPrintf("Restore Sony result: 0x%08x\n", (unsigned)path.restore_command);
-    pspDebugScreenPrintf("Readback: %s\nControls: %s\nOriginal after reopen: %s\n\n",
+        format_trace("Restore Sony result: 0x%08x\n", (unsigned)path.restore_command);
+    format_trace("Readback: %s\nControls: %s\nOriginal after reopen: %s\n\n",
                          readbacks[path.result.readback], path.controls_ok ? "MATCH" : "unconfirmed",
                          reopened ? "MATCH" : "unconfirmed");
-    pspDebugScreenPrintf("Write path: %s\n\nO: exit\n",
+    format_trace("Write path: %s\n\nO: exit\n",
                          reopened && path.result.accepted && path.result.readback == MS_PROBE_PATTERN ? "PASS" : "FAIL");
 }
 #else
@@ -889,42 +924,57 @@ static int preflight_write(struct FormatCard *target)
     target->probe_unsafe = path.writes && (!path.result.restored || !path.controls_ok);
     if (path.result.accepted && path.result.readback == MS_PROBE_PATTERN &&
         path.result.restored && path.controls_ok) {
-        pspDebugScreenPrintf("Extended write check: PASS (LBA %u)\n", lba);
+        format_trace("Extended write check: PASS (LBA %u)\n", lba);
         return 1;
     }
-    pspDebugScreenPrintf("The card could not be formatted.\n"
+    format_trace("The card could not be formatted.\n"
                          "Could not verify writes to some sectors.\n"
                          "Write check failed at LBA %u.\n", lba);
     if (target->probe_unsafe)
-        pspDebugScreenPrintf("Original sector or card controls could not be verified.\n");
+        format_trace("Original sector or card controls could not be verified.\n");
     return 0;
 }
 
+struct MsFormatResult ms_auto_format_execute(struct MsFormatPreview *confirmed, struct Fat32Ram *image)
+{
+    struct MsFormatResult result = {.failure = MS_FORMAT_NO_PREVIEW};
+    if (!card.blank_pending && card.preview.plan.volume_count &&
+        ms_format_preview_equal(confirmed, &card.preview) && ms_auto_format_current())
+        result = ms_format_execute(&backend, &card, confirmed, image);
+    ms_format_cancel(confirmed);
+    ms_format_cancel(&card.preview);
+    if (card.detached && !card.probe_unsafe && !result.writes && result.failure != MS_FORMAT_COMPLETE &&
+        result.failure != MS_FORMAT_RELEASE_FAILED)
+        restore_original_mount(&card);
+    card.detached = 0;
+    return result;
+}
+
+#ifndef PROX_FORMAT_RESIDENT
 void dirs_card_write(struct Fat32Ram *image)
 {
     if (card.blank_pending)
         return;
     unsigned count = card.preview.plan.volume_count;
-    pspDebugScreenPrintf("Formatting all volumes. Keep the card inserted.\n\n");
-    struct MsFormatResult result = ms_format_execute(&backend, &card, &card.preview, image);
-    if (card.detached && !card.probe_unsafe && !result.writes && result.failure != MS_FORMAT_COMPLETE &&
-        result.failure != MS_FORMAT_RELEASE_FAILED)
-        restore_original_mount(&card);
+    format_trace("Formatting all volumes. Keep the card inserted.\n\n");
+    struct MsFormatResult result = ms_auto_format_execute(&card.preview, image);
     if (card.session == MS_SESSION_INVALIDATED)
-        pspDebugScreenPrintf("The card changed. The format attempt was stopped.\n");
+        format_trace("The card changed. The format attempt was stopped.\n");
     if (result.sector_failure) {
         static const char *const errors[] = {"", "read failed", "write refused", "readback differs"};
-        pspDebugScreenPrintf("LBA %u: %s\n", result.failure_lba, errors[result.sector_failure]);
+        format_trace("LBA %u: %s\n", result.failure_lba, errors[result.sector_failure]);
     }
-    pspDebugScreenPrintf("\nMetadata read batches: %u%s\n", card.read_batches,
+    format_trace("\nMetadata read batches: %u%s\n", card.read_batches,
                          card.batch_unavailable ? " (single-sector fallback)" : "");
     if (card.identity.gpt.sectors_per_copy)
-        pspDebugScreenPrintf("GPT sectors cleared: %u/%u\n", result.gpt_sectors_cleared,
+        format_trace("GPT sectors cleared: %u/%u\n", result.gpt_sectors_cleared,
                              2 * card.identity.gpt.sectors_per_copy);
-    pspDebugScreenPrintf("Verified partitions: %u/%u  Format writes: %u\n"
+    format_trace("Verified partitions: %u/%u  Format writes: %u\n"
                          "Result code: %u\nAuto format trial: %s\n\nO: exit\n",
                          result.verified_volumes, count, result.writes, (unsigned)result.failure,
                          result.failure == MS_FORMAT_COMPLETE ? "PASS" : "FAIL");
 }
+#endif
+
 #endif
 #endif

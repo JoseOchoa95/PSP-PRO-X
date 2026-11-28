@@ -17,13 +17,11 @@ static enum CapacityReply read_at(void *context, uint32_t lba)
     return probe->read(probe->context, lba, probe->sector);
 }
 
-static struct CapacityEstimate verify_boundary(struct SectorProbe *probe, uint32_t first_outside)
+/* The caller has just observed a transfer failure at first_outside. */
+static struct CapacityEstimate confirm_boundary(struct SectorProbe *probe, uint32_t first_outside)
 {
     static const struct CapacityEstimate unknown = {CAPACITY_INCONCLUSIVE, 0};
-    if (!first_outside || first_outside + 1 >= CAP_SECTORS ||
-        read_at(probe, first_outside - 1) != CAPACITY_READ ||
-        read_at(probe, first_outside) != CAPACITY_TRANSFER_FAILURE ||
-        read_at(probe, first_outside - 1) != CAPACITY_READ ||
+    if (read_at(probe, first_outside - 1) != CAPACITY_READ ||
         read_at(probe, first_outside + 1) != CAPACITY_TRANSFER_FAILURE ||
         read_at(probe, first_outside - 1) != CAPACITY_READ)
         return unknown;
@@ -42,8 +40,11 @@ static struct CapacityEstimate scan_boundary(struct SectorProbe *probe, uint32_t
     uint32_t high = low + 1;
     for (;;) {
         enum CapacityReply status = read_at(probe, high);
-        if (status == CAPACITY_TRANSFER_FAILURE)
+        if (status == CAPACITY_TRANSFER_FAILURE) {
+            if (high == reported && high <= DECIMAL_CUTOFF)
+                return confirm_boundary(probe, high);
             break;
+        }
         if (status != CAPACITY_READ)
             return unknown;
         if (high == CAP_SECTORS - 1)
@@ -62,7 +63,10 @@ static struct CapacityEstimate scan_boundary(struct SectorProbe *probe, uint32_t
         else
             return unknown;
     }
-    return verify_boundary(probe, high);
+    if (high + 1 >= CAP_SECTORS || read_at(probe, high - 1) != CAPACITY_READ ||
+        read_at(probe, high) != CAPACITY_TRANSFER_FAILURE)
+        return unknown;
+    return confirm_boundary(probe, high);
 }
 
 static int compare_alias(struct SectorProbe *probe, uint32_t high, uint32_t low)

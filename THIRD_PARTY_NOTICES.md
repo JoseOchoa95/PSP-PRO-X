@@ -20,6 +20,10 @@ or GitHub tokens are included. The earlier transport prototype passed limited
 owner-supplied PSP tests; the full update candidate still requires physical
 installation validation.
 
+## Memory Stick Settings research
+
+Thanks to the RCOMage contributors for documenting the RCO object and text tables, the pspdecrypt contributors for the host-side RLZ decoder, the ARK-5 contributors for reference implementations using PAF and the Settings module, and the Unicorn Engine contributors for the MIPS replay used to verify the original confirmation callback. [RCOMage](https://github.com/kakaroto/RCOMage) · [pspdecrypt](https://github.com/John-K/pspdecrypt) · [ARK-5](https://github.com/PSP-Arkfive/ARK-5) · [Unicorn Engine](https://github.com/unicorn-engine/unicorn)
+
 PRO-X es un fork independiente basado en PRO-C de **Team PRO**, especialmente
 Coldbird y Virtuous Flame. No es una publicación oficial de Team PRO, Davee o ARK.
 Los avisos originales del árbol `firmware/` y `firmware/credit.txt` se conservan.
